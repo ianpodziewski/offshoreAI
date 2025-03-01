@@ -28,40 +28,20 @@ export function Formatting({ message }: { message: DisplayMessage }) {
       );
     },
     p: ({ children }: { children: React.ReactNode }) => {
-      // Override paragraph to add spacing and handle citations
+      // Paragraph override (for citations or spacing)
       return (
         <p className="my-3">
           {renderCitations(children, message.citations)}
         </p>
       );
     },
+    // NEW: Override unordered list
     ul: ({ children }: { children: React.ReactNode }) => {
-      // Unordered list with bullets
       return <ul className="list-disc list-inside ml-6 my-4">{children}</ul>;
     },
+    // NEW: Override list items
     li: ({ children }: { children: React.ReactNode }) => {
-      // Spacing between list items
       return <li className="my-1">{children}</li>;
-    },
-    h1: ({ children }: { children: React.ReactNode }) => {
-      // Heading level 1
-      return <h1 className="text-2xl font-bold my-4">{children}</h1>;
-    },
-    h2: ({ children }: { children: React.ReactNode }) => {
-      // Heading level 2
-      return <h2 className="text-xl font-bold my-3">{children}</h2>;
-    },
-    h3: ({ children }: { children: React.ReactNode }) => {
-      // Heading level 3
-      return <h3 className="text-lg font-semibold my-2">{children}</h3>;
-    },
-    blockquote: ({ children }: { children: React.ReactNode }) => {
-      // Blockquote styling
-      return (
-        <blockquote className="border-l-4 border-gray-300 pl-4 italic my-4">
-          {children}
-        </blockquote>
-      );
     },
   };
 
@@ -69,9 +49,8 @@ export function Formatting({ message }: { message: DisplayMessage }) {
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
-      components={components}
-      // Tailwind Typography classes for a more polished look
-      className="prose prose-neutral dark:prose-invert max-w-none"
+      components={components as any}
+      className="flex flex-col"
     >
       {processedContent}
     </ReactMarkdown>
