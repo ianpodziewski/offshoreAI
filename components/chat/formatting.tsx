@@ -9,15 +9,15 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 export function Formatting({ message }: { message: DisplayMessage }) {
   const processedContent = preprocessLaTeX(message.content);
+
   const components = {
-    // Override code blocks to use SyntaxHighlighter with some custom styling
     code: ({ children, className, ...rest }: any) => {
       const match = /language-(\w+)/.exec(className || "");
       return match ? (
         <SyntaxHighlighter
           {...rest}
           PreTag="div"
-          className="rounded-xl my-4" // adds margin for spacing
+          className="rounded-xl my-4"
           language={match[1]}
           children={String(children).replace(/\n$/, "")}
         />
@@ -27,25 +27,22 @@ export function Formatting({ message }: { message: DisplayMessage }) {
         </code>
       );
     },
-    // Custom paragraph component that applies a margin and renders citations
     p: ({ children }: { children: React.ReactNode }) => {
+      // Paragraph override (for citations or spacing)
       return (
-        <p className="my-4">
+        <p className="my-3">
           {renderCitations(children, message.citations)}
         </p>
       );
     },
-    // Custom heading components to add bold and spacing
-    h1: ({ children }: { children: React.ReactNode }) => {
-      return <h1 className="text-2xl font-bold my-4">{children}</h1>;
+    // NEW: Override unordered list
+    ul: ({ children }: { children: React.ReactNode }) => {
+      return <ul className="list-disc list-inside ml-6 my-4">{children}</ul>;
     },
-    h2: ({ children }: { children: React.ReactNode }) => {
-      return <h2 className="text-xl font-bold my-3">{children}</h2>;
+    // NEW: Override list items
+    li: ({ children }: { children: React.ReactNode }) => {
+      return <li className="my-1">{children}</li>;
     },
-    h3: ({ children }: { children: React.ReactNode }) => {
-      return <h3 className="text-lg font-bold my-2">{children}</h3>;
-    },
-    // Optionally, add more customizations for lists, blockquotes, etc.
   };
 
   return (
@@ -53,12 +50,13 @@ export function Formatting({ message }: { message: DisplayMessage }) {
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={components as any}
-      className="gap-3 flex flex-col"
+      className="flex flex-col"
     >
       {processedContent}
     </ReactMarkdown>
   );
 }
+
 
 
 
