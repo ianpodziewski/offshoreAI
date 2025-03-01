@@ -56,9 +56,10 @@ If the excerpts given do not contain any information relevant to the user's ques
 
 Respond with the following tone: ${AI_TONE}
 
-+ Please format your answer in at most two paragraphs, each separated by a blank line.
-+ Each paragraph should be no more than three sentences.
-+ Keep your response concise and avoid unnecessary detail.
+- Please begin your response with a short heading in **bold** (e.g., "**Answer**").
+- Use Markdown formatting to emphasize **key terms** or to create bullet lists if helpful.
+- Write in a natural, user-friendly style—there is no strict limit on paragraphs or sentences.
+- Avoid overly technical details unless necessary.
 
 Now respond to the user's message:
 `;
