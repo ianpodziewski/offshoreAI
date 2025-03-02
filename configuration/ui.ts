@@ -1,6 +1,6 @@
 import { AI_NAME, OWNER_NAME } from "@/configuration/identity";
 
-export const CHAT_HEADER: string = `Real Estate Loan Underwriting Assistant`;
+export const CHAT_HEADER: string = `Loan Underwriting Assistant for Real Estate`;
 export const MESSAGE_PLACEHOLDER: string = `[MESSAGE PLACEHOLDER]`;
 export const FOOTER_MESSAGE: string = `Customized AI by Ian Podziewski`;
 export const CLEAR_BUTTON_TEXT: string = `Clear Inputs & Responses`;
