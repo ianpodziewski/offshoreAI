@@ -1,39 +1,41 @@
 import React, { useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Text Input component (you can use your existing Input component here)
-const TextInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, ...props }, ref) => (
-    <input
-      type="text"
-      className={cn(
-        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      ref={ref}
-      {...props}
-    />
-  )
-);
+// Text Input component
+const TextInput = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ className, ...props }, ref) => (
+  <input
+    type="text"
+    className={cn(
+      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+      className
+    )}
+    ref={ref}
+    {...props}
+  />
+));
 TextInput.displayName = "TextInput";
 
-// File Input component (using the updated version that defaults to type="file")
-const FileInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type = "file", ...props }, ref) => (
-    <input
-      type={type}
-      className={cn(
-        "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      ref={ref}
-      {...props}
-    />
-  )
-);
+// File Input component (defaults to type="file")
+const FileInput = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(({ className, type = "file", ...props }, ref) => (
+  <input
+    type={type}
+    className={cn(
+      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+      className
+    )}
+    ref={ref}
+    {...props}
+  />
+));
 FileInput.displayName = "FileInput";
 
-export default function ChatInput() {
+function ChatInput() {
   const [message, setMessage] = useState("");
   const [file, setFile] = useState<File | null>(null);
 
@@ -60,10 +62,7 @@ export default function ChatInput() {
       />
 
       {/* File upload input */}
-      <FileInput
-        accept=".pdf,.docx,.txt" // adjust accepted file types as needed
-        onChange={handleFileChange}
-      />
+      <FileInput accept=".pdf,.docx,.txt" onChange={handleFileChange} />
 
       {/* Send button */}
       <button
@@ -75,6 +74,10 @@ export default function ChatInput() {
     </div>
   );
 }
+
+// Export ChatInput as a named export "Input" to match existing imports.
+export { ChatInput as Input };
+
 
 
 /*
