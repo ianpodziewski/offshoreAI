@@ -10,7 +10,7 @@ import ChatFooter from "@/components/chat/footer";
 
 // 1) Import pdfjs-dist and the worker
 import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.min.js";
 
 // 2) Point the PDF.js worker to its file
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
