@@ -1,9 +1,9 @@
 "use client";
 
-import { Input, FileInput } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { ArrowUp } from "lucide-react";
+import { useState, useRef } from "react";
+import { ArrowUp, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import ChatFooter from "@/components/chat/footer";
@@ -23,6 +23,8 @@ export default function ChatInput({
 }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const form = useForm({
     defaultValues: {
       message: "",
@@ -33,22 +35,16 @@ export default function ChatInput({
     setFile(e.target.files ? e.target.files[0] : null);
   };
 
+  const openFileDialog = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <>
       <div className="z-10 flex flex-col justify-center items-center fixed bottom-0 w-full p-5 bg-white shadow-[0_-10px_15px_-2px_rgba(255,255,255,1)] text-base">
         <div className="max-w-screen-lg w-full">
-          {/* File upload input added above the message form */}
-          <div className="mb-2">
-            <FileInput
-              accept=".pdf,.docx,.txt"
-              onChange={handleFileChange}
-            />
-            {file && (
-              <p className="text-sm text-gray-500">
-                Selected file: {file.name}
-              </p>
-            )}
-          </div>
           <Form {...form}>
             <form
               onSubmit={handleSubmit}
@@ -56,6 +52,26 @@ export default function ChatInput({
                 isFocused ? "ring-2 ring-ring ring-offset-2" : ""
               }`}
             >
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.docx,.txt"
+                onChange={handleFileChange}
+              />
+
+              {/* Plus button to trigger file dialog */}
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-full w-10 h-10 p-0 mr-2 flex items-center justify-center"
+                onClick={openFileDialog}
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+
+              {/* Text field */}
               <FormField
                 control={form.control}
                 name="message"
@@ -75,6 +91,8 @@ export default function ChatInput({
                   </FormItem>
                 )}
               />
+
+              {/* Send button */}
               <Button
                 type="submit"
                 className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
@@ -84,12 +102,20 @@ export default function ChatInput({
               </Button>
             </form>
           </Form>
+
+          {/* Optional: Show the file name if one is selected */}
+          {file && (
+            <p className="mt-2 text-sm text-gray-500">
+              Selected file: {file.name}
+            </p>
+          )}
         </div>
         <ChatFooter />
       </div>
     </>
   );
 }
+
 
 
 /*
