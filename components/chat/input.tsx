@@ -12,9 +12,6 @@ import ChatFooter from "@/components/chat/footer";
 import * as pdfjsLib from "pdfjs-dist";
 pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.min.js";
 
-// 2) Point the PDF.js worker to its file
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
-
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (combinedInput: string) => void;
