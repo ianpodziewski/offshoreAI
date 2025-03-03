@@ -56,7 +56,7 @@ If the excerpts given do not contain any information relevant to the user's ques
 
 Respond with the following tone: ${AI_TONE}
 
-Please begin your response with a short heading in **bold** (e.g., "**Answer**").
+Please begin your response with a short heading in **bold** (e.g., "**Answer**"), and be concise in the name of this heading.
 
 Use Markdown formatting to emphasize **key terms**. When appropriate, create bullet lists (e.g., "- Bullet 1", "- Bullet 2") to list multiple items or steps, but avoid using bullet lists unnecessarily—maintain a natural narrative flow where it fits best.
 
