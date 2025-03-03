@@ -31,14 +31,14 @@ export default function ChatInput({
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFile(e.target.files ? e.target.files[0] : null);
-  };
-
   const openFileDialog = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFile(e.target.files ? e.target.files[0] : null);
   };
 
   return (
@@ -52,7 +52,7 @@ export default function ChatInput({
                 isFocused ? "ring-2 ring-ring ring-offset-2" : ""
               }`}
             >
-              {/* Hidden file input */}
+              {/* Hidden file input (triggered by the plus button) */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -61,17 +61,7 @@ export default function ChatInput({
                 onChange={handleFileChange}
               />
 
-              {/* Plus button to trigger file dialog */}
-              <Button
-                type="button"
-                variant="ghost"
-                className="rounded-full w-10 h-10 p-0 mr-2 flex items-center justify-center"
-                onClick={openFileDialog}
-              >
-                <Plus className="w-5 h-5" />
-              </Button>
-
-              {/* Text field */}
+              {/* Text field (left side) */}
               <FormField
                 control={form.control}
                 name="message"
@@ -92,7 +82,17 @@ export default function ChatInput({
                 )}
               />
 
-              {/* Send button */}
+              {/* Plus button (in the middle) */}
+              <Button
+                type="button"
+                variant="ghost"
+                className="rounded-full w-10 h-10 p-0 flex items-center justify-center mr-2"
+                onClick={openFileDialog}
+              >
+                <Plus className="w-5 h-5" />
+              </Button>
+
+              {/* Send button (right side) */}
               <Button
                 type="submit"
                 className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
@@ -115,6 +115,7 @@ export default function ChatInput({
     </>
   );
 }
+
 
 
 
