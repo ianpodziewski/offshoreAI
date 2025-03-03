@@ -8,12 +8,35 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import ChatFooter from "@/components/chat/footer";
 
+// 1) Import pdfjs-dist and the worker
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.js";
+
+// 2) Point the PDF.js worker to its file
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  // Now expects a combined input string rather than a FormEvent.
   handleSubmit: (combinedInput: string) => void;
   input: string;
   isLoading: boolean;
+}
+
+// 3) A helper function to parse PDF files into text
+async function parsePdf(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let pdfText = "";
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    // Gather text from each item on the page
+    const pageText = textContent.items.map((item: any) => item.str).join(" ");
+    pdfText += `\n\nPage ${pageNum}:\n${pageText}`;
+  }
+
+  return pdfText.trim();
 }
 
 export default function ChatInput({
@@ -42,14 +65,21 @@ export default function ChatInput({
     setFile(e.target.files ? e.target.files[0] : null);
   };
 
-  // New async submit handler that processes both text input and file content.
+  // 4) Async submit handler to parse PDFs or read text files, then combine
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     let fileText = "";
+
     if (file) {
       try {
-        fileText = await file.text();
+        if (file.type === "application/pdf") {
+          // Parse PDF content
+          fileText = await parsePdf(file);
+        } else {
+          // Fallback for .txt, .docx, etc.
+          fileText = await file.text();
+        }
       } catch (error) {
         console.error("Error reading file:", error);
       }
@@ -139,6 +169,7 @@ export default function ChatInput({
     </>
   );
 }
+
 
 
 
