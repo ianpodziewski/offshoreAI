@@ -10,8 +10,7 @@ import ChatFooter from "@/components/chat/footer";
 
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  // (Optional) You might eventually pass the combined input further via a prop.
-  // For now, we’re simply logging it.
+  // Now expects a combined input string rather than a FormEvent.
   handleSubmit: (combinedInput: string) => void;
   input: string;
   isLoading: boolean;
@@ -43,7 +42,7 @@ export default function ChatInput({
     setFile(e.target.files ? e.target.files[0] : null);
   };
 
-  // New async submit handler that processes both inputs.
+  // New async submit handler that processes both text input and file content.
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -62,7 +61,7 @@ export default function ChatInput({
       : input;
 
     console.log("Combined input:", combinedInput);
-    // Pass the combined input to the next step (e.g., embedding and API call)
+    // Pass the combined input to the parent's handleSubmit.
     handleSubmit(combinedInput);
   };
 
@@ -140,6 +139,7 @@ export default function ChatInput({
     </>
   );
 }
+
 
 
 /*
