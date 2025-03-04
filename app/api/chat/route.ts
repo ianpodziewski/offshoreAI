@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
 
         fileStream.on("error", (err) => {
           reject(
-            NextResponse.json({ error: err.message }, { status: 500 })
+            NextResponse.json({ error: (err as Error).message }, { status: 500 })
           );
         });
       });
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         } catch (error: any) {
           reject(
             NextResponse.json(
-              { error: "Failed to parse PDF", details: error.message },
+              { error: "Failed to parse PDF", details: (error as Error).message },
               { status: 500 }
             )
           );
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
 
       busboy.on("error", (err) => {
         reject(
-          NextResponse.json({ error: err.message }, { status: 500 })
+          NextResponse.json({ error: (err as Error).message }, { status: 500 })
         );
       });
 
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (error: any) {
       reject(
-        NextResponse.json({ error: error.message }, { status: 500 })
+        NextResponse.json({ error: (error as Error).message }, { status: 500 })
       );
     }
   });
@@ -171,6 +171,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
