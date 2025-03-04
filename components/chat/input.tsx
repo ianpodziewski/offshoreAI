@@ -10,8 +10,8 @@ import ChatFooter from "@/components/chat/footer";
 
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  // We'll call handleSubmit after we get a response from the server
-  handleSubmit: (combinedInput: string) => void;
+  // Now accepts two parameters: combinedInput and an optional File
+  handleSubmit: (combinedInput: string, file?: File) => void;
   input: string;
   isLoading: boolean;
 }
@@ -34,54 +34,23 @@ export default function ChatInput({
 
   // Trigger the hidden file input
   const openFileDialog = () => {
-    fileInputRef.current?.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
-  // Store the file in state
+  // Store the selected file in state
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
   };
 
-  // When the user submits the form
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // When the form is submitted, call the parent's handleSubmit with the text and file
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    try {
-      // Create a FormData object to send file + text to /api/chat
-      const formData = new FormData();
-      if (file) {
-        formData.append("file", file);
-      }
-      // Also append the user text input
-      formData.append("message", input);
-
-      // Send it to the server
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        console.error("Upload failed:", response.statusText);
-        return;
-      }
-
-      // Server returns JSON with extracted PDF text and maybe combined text
-      const data = await response.json();
-      console.log("Server responded with:", data);
-
-      // Combine the server-extracted text with user input
-      // For example, if the server returns { pdfText: "...", userMessage: "..." }
-      // Or you can do it differently based on your route.ts logic
-      const combinedInput = `User Input:\n${input}\n\nPDF Text:\n${data.pdfText || data.text}`;
-
-      // Let your parent component handle the final combined string
-      handleSubmit(combinedInput);
-    } catch (error) {
-      console.error("Error uploading file:", error);
-    }
+    // Use the current input value; any additional client-side processing can be done here if needed.
+    handleSubmit(input, file);
   };
 
   return (
@@ -145,7 +114,7 @@ export default function ChatInput({
           </form>
         </Form>
 
-        {/* Show the file name if one is selected */}
+        {/* Show the selected file name */}
         {file && (
           <p className="mt-2 text-sm text-gray-500">
             Selected file: {file.name}
@@ -156,6 +125,7 @@ export default function ChatInput({
     </div>
   );
 }
+
 
 
 
