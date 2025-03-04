@@ -64,8 +64,7 @@ export async function POST(req: NextRequest) {
   // We will parse the form data manually using Busboy
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      // busboy requires raw headers in a normal object shape
-      // NextRequest headers are in a Headers map, so we convert them:
+      // Convert NextRequest headers to a plain object
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
@@ -82,9 +81,9 @@ export async function POST(req: NextRequest) {
 
       // When busboy finds a file...
       busboy.on("file", (_fieldname, fileStream, filename) => {
-        if (!filename) filename = `${randomUUID()}.pdf`; // fallback name
-
-        tmpFilePath = path.join(uploadsDir, filename);
+        // Use effectiveFilename to avoid modifying the readonly filename parameter
+        const effectiveFilename = filename || `${randomUUID()}.pdf`;
+        tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
 
@@ -100,16 +99,13 @@ export async function POST(req: NextRequest) {
         if (!tmpFilePath) {
           // No file was uploaded
           resolve(
-            NextResponse.json(
-              { error: "No file uploaded" },
-              { status: 400 }
-            )
+            NextResponse.json({ error: "No file uploaded" }, { status: 400 })
           );
           return;
         }
 
         try {
-          // Now parse the PDF using pdf-parse
+          // Parse the PDF using pdf-parse
           const dataBuffer = fs.readFileSync(tmpFilePath);
           const pdfData = await pdfParse(dataBuffer);
 
@@ -118,10 +114,7 @@ export async function POST(req: NextRequest) {
 
           // Return the extracted text
           resolve(
-            NextResponse.json(
-              { text: pdfData.text },
-              { status: 200 }
-            )
+            NextResponse.json({ text: pdfData.text }, { status: 200 })
           );
         } catch (error: any) {
           reject(
@@ -140,15 +133,13 @@ export async function POST(req: NextRequest) {
       });
 
       // Pipe the request's body to busboy
-      // `req.body` is a ReadableStream in Next.js, so we pipe it
       const readable = req.body;
       if (!readable) {
-        // No body stream, possibly an empty request
         resolve(
           NextResponse.json({ error: "No file uploaded" }, { status: 400 })
         );
       } else {
-        // Convert the ReadableStream to a node stream
+        // Convert the ReadableStream to a Node.js stream
         const nodeStream = ReadableStreamToNodeStream(readable);
         nodeStream.pipe(busboy);
       }
@@ -180,6 +171,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
