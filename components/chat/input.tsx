@@ -42,12 +42,23 @@ export default function ChatInput({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
+      console.log("📂 File selected:", e.target.files[0].name);
+    } else {
+      console.warn("⚠️ No file selected.");
     }
   };
 
   // Handle form submission
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    console.log("📤 Submitting chat input:", { input, file });
+
+    if (!input.trim() && !file) {
+      console.warn("⚠️ No input or file provided.");
+      return;
+    }
+
     handleSubmit(input, file || undefined);
   };
 
@@ -78,7 +89,10 @@ export default function ChatInput({
                   <FormControl>
                     <Input
                       {...field}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        handleInputChange(e);
+                        console.log("📝 Input changed:", e.target.value);
+                      }}
                       value={input}
                       className="border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                       onFocus={() => setIsFocused(true)}
@@ -95,33 +109,8 @@ export default function ChatInput({
               type="button"
               variant="ghost"
               className="rounded-full w-10 h-10 p-0 flex items-center justify-center mr-2"
-              onClick={openFileDialog}
-            >
-              <Plus className="w-5 h-5" />
-            </Button>
+              onCli
 
-            {/* Send Button */}
-            <Button
-              type="submit"
-              className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
-              disabled={input.trim() === "" || isLoading}
-            >
-              <ArrowUp className="w-5 h-5" />
-            </Button>
-          </form>
-        </Form>
-
-        {/* Show Selected File Name */}
-        {file && (
-          <p className="mt-2 text-sm text-gray-500">
-            Selected file: {file.name}
-          </p>
-        )}
-      </div>
-      <ChatFooter />
-    </div>
-  );
-}
 
 
 
