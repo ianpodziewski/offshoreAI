@@ -60,7 +60,10 @@ export default function useApp() {
     return newAssistantMessage;
   };
 
-  // Updated fetchAssistantResponse to send FormData (message + optional file)
+  /**
+   * Always send FormData with "message" (the combined user text),
+   * and optionally "file" if one is attached.
+   */
   const fetchAssistantResponse = async (combinedInput: string, file?: File) => {
     const formData = new FormData();
     formData.append("message", combinedInput);
@@ -93,8 +96,8 @@ export default function useApp() {
   const routeResponseToProperHandler = (payload: string) => {
     const payloads = payload.split("\n").filter((p) => p.trim() !== "");
     if (payloads.length === 0) return;
-    for (const payload of payloads) {
-      const parsedPayload = JSON.parse(payload);
+    for (const p of payloads) {
+      const parsedPayload = JSON.parse(p);
       if (streamedMessageSchema.safeParse(parsedPayload).success) {
         handleStreamedMessage(parsedPayload as StreamedMessage);
       } else if (streamedLoadingSchema.safeParse(parsedPayload).success) {
@@ -143,11 +146,13 @@ export default function useApp() {
     // Optionally handle finalization here.
   };
 
-  // Updated handleSubmit now accepts combinedInput and optional file.
+  /**
+   * handleSubmit now calls fetchAssistantResponse with form data
+   * containing "message" and optionally "file".
+   */
   const handleSubmit = async (combinedInput: string, file?: File) => {
     setIndicatorState([]);
     setIsLoading(true);
-    // Add the user message using the combined input
     const newUserMessage = addUserMessage(combinedInput);
 
     if (wordCount > WORD_CUTOFF) {
@@ -200,7 +205,7 @@ export default function useApp() {
   return {
     messages,
     handleInputChange,
-    handleSubmit, // Now accepts (combinedInput, file?)
+    handleSubmit,
     indicatorState,
     input,
     isLoading,
@@ -208,6 +213,7 @@ export default function useApp() {
     clearMessages,
   };
 }
+
 
 
 
