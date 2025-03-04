@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
 
       // Capture file if provided
       busboy.on("file", (_fieldname, fileStream, _info) => {
+        // Fix interpolation for filename
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
@@ -117,30 +118,37 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Construct the final prompt
+        // Construct the final prompt (backticks needed for multiline)
         const finalPrompt = `
-          Context from Database:
-          ${pineconeContext}
-          
-          ${userFileContext}
+Context from Database:
+${pineconeContext}
 
-          User Input:
-          ${userMessage}
+${userFileContext}
+
+User Input:
+${userMessage}
         `;
 
         // Stream response to OpenAI
         const stream = new ReadableStream({
           async start(controller) {
             try {
+              // Let the UI know we're loading
               controller.enqueue(
                 new TextEncoder().encode(
-                  JSON.stringify({ type: "loading", indicator: { status: "Generating answer...", icon: "thinking" } }) + "\n"
+                  JSON.stringify({
+                    type: "loading",
+                    indicator: { status: "Generating answer...", icon: "thinking" },
+                  }) + "\n"
                 )
               );
 
               const streamedResponse = await openaiClient.chat.completions.create({
                 model: "gpt-3.5-turbo",
-                messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: finalPrompt }],
+                messages: [
+                  { role: "system", content: "You are a helpful assistant." },
+                  { role: "user", content: finalPrompt },
+                ],
                 stream: true,
                 temperature: 0.7,
               });
@@ -149,15 +157,30 @@ export async function POST(req: NextRequest) {
               for await (const chunk of streamedResponse) {
                 responseBuffer += chunk.choices[0]?.delta.content ?? "";
                 controller.enqueue(
-                  new TextEncoder().encode(JSON.stringify({ type: "message", message: { role: "assistant", content: responseBuffer, citations: [] } }) + "\n")
+                  new TextEncoder().encode(
+                    JSON.stringify({
+                      type: "message",
+                      message: { role: "assistant", content: responseBuffer, citations: [] },
+                    }) + "\n"
+                  )
                 );
               }
 
-              controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n"));
+              // Final "done" message
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n"
+                )
+              );
               controller.close();
             } catch (error: any) {
               controller.enqueue(
-                new TextEncoder().encode(JSON.stringify({ type: "error", indicator: { status: error.message, icon: "error" } }) + "\n")
+                new TextEncoder().encode(
+                  JSON.stringify({
+                    type: "error",
+                    indicator: { status: error.message, icon: "error" },
+                  }) + "\n"
+                )
               );
               controller.close();
             }
@@ -175,12 +198,18 @@ export async function POST(req: NextRequest) {
         );
       });
 
+      // Handle busboy errors safely
       busboy.on("error", (err) => {
+        let errorMessage = "Unknown error";
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        }
         reject(
-          NextResponse.json({ error: err.message }, { status: 500 })
+          NextResponse.json({ error: errorMessage }, { status: 500 })
         );
       });
 
+      // If there's no request body, return an error
       const readable = req.body;
       if (!readable) {
         resolve(
@@ -191,6 +220,7 @@ export async function POST(req: NextRequest) {
           })
         );
       } else {
+        // Convert the ReadableStream to a Node.js stream for Busboy
         const nodeStream = ReadableStreamToNodeStream(readable);
         nodeStream.pipe(busboy);
       }
@@ -213,6 +243,7 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   const reader = readable.getReader();
   const passThrough = new PassThrough();
+
   function push() {
     reader.read().then(({ done, value }) => {
       if (done) {
@@ -223,9 +254,11 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
       push();
     });
   }
+
   push();
   return passThrough;
 }
+
 
 
 
