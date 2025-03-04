@@ -47,23 +47,12 @@ const providers: AIProviders = {
   fireworks: fireworksClient,
 };
 
-async function determineIntention(chat: Chat): Promise<Intention> {
-  return await IntentionModule.detectIntention({
-    chat: chat,
-    openai: providers.openai,
-  });
-}
-
-/**
- * We must disable the default Next.js body parsing
- * and let Busboy handle the raw body stream.
- */
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      // Convert NextRequest headers to a plain object
+      // Convert NextRequest headers to plain object
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
@@ -71,6 +60,7 @@ export async function POST(req: NextRequest) {
 
       const busboy = Busboy({ headers: busboyHeaders });
       let tmpFilePath: string | null = null;
+      let userMessage = ""; // We'll store the user input text here
 
       // Create an "uploads" directory if it doesn't exist
       const uploadsDir = path.join(process.cwd(), "uploads");
@@ -78,9 +68,16 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(uploadsDir);
       }
 
+      // Capture form fields
+      busboy.on("field", (fieldname, val) => {
+        if (fieldname === "message") {
+          userMessage = val; // store user text
+        }
+      });
+
       // When busboy finds a file...
-      busboy.on("file", (_fieldname, fileStream, info) => {
-        // Always generate a new filename; ignore any client-provided name
+      busboy.on("file", (_fieldname, fileStream, _info) => {
+        // Always generate a new filename
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
@@ -93,27 +90,34 @@ export async function POST(req: NextRequest) {
         });
       });
 
-      // When Busboy is finished parsing the form data...
+      // When busboy is finished parsing the form data...
       busboy.on("finish", async () => {
+        // If no file was uploaded, we can still return the user message
         if (!tmpFilePath) {
-          // No file was uploaded
           resolve(
-            NextResponse.json({ error: "No file uploaded" }, { status: 400 })
+            NextResponse.json({
+              pdfText: "",
+              userMessage,
+              error: "No file uploaded",
+            })
           );
           return;
         }
 
         try {
-          // Parse the PDF using pdf-parse
+          // Parse the PDF
           const dataBuffer = fs.readFileSync(tmpFilePath);
           const pdfData = await pdfParse(dataBuffer);
 
           // Cleanup: remove the temporary file
           fs.unlinkSync(tmpFilePath);
 
-          // Return the extracted text
+          // Return both the user message and extracted PDF text
           resolve(
-            NextResponse.json({ text: pdfData.text }, { status: 200 })
+            NextResponse.json({
+              pdfText: pdfData.text,
+              userMessage,
+            })
           );
         } catch (error: any) {
           reject(
@@ -134,8 +138,9 @@ export async function POST(req: NextRequest) {
       // Pipe the request's body to busboy
       const readable = req.body;
       if (!readable) {
+        // No body stream, possibly empty request
         resolve(
-          NextResponse.json({ error: "No file uploaded" }, { status: 400 })
+          NextResponse.json({ error: "No form data", pdfText: "", userMessage: "" })
         );
       } else {
         // Convert the ReadableStream to a Node.js stream
@@ -150,9 +155,6 @@ export async function POST(req: NextRequest) {
   });
 }
 
-/**
- * Helper function to convert a Web ReadableStream (from Next.js) to a Node.js stream.
- */
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   const reader = readable.getReader();
   const passThrough = new PassThrough();
@@ -170,6 +172,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
