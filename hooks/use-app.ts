@@ -55,6 +55,9 @@ export default function useApp() {
     return newAssistantMessage;
   };
 
+  /**
+   * Sends FormData with "message" and optional "file" to the streaming API endpoint.
+   */
   const fetchAssistantResponse = async (combinedInput: string, file?: File) => {
     const formData = new FormData();
     formData.append("message", combinedInput);
@@ -71,7 +74,10 @@ export default function useApp() {
     return response;
   };
 
-  // Process streamed response from the SSE endpoint.
+  /**
+   * Processes the streaming (SSE) response from the API endpoint.
+   * The server sends newline-delimited JSON messages.
+   */
   const processStreamedResponse = async (response: Response) => {
     const reader = response.body?.getReader();
     if (!reader) {
@@ -82,7 +88,7 @@ export default function useApp() {
       const { done, value } = await reader.read();
       if (done) break;
       const chunk = decoder.decode(value, { stream: true });
-      // Split the chunk on newline since our server sends "\n" after each JSON message.
+      // Split on newline since the server ends each message with "\n"
       const payloads = chunk.split("\n").filter((p) => p.trim() !== "");
       for (const payload of payloads) {
         try {
@@ -136,7 +142,8 @@ export default function useApp() {
   };
 
   const handleStreamedDone = (streamedDone: StreamedDone) => {
-    // Optionally handle finalization
+    // Optionally, finalize any state updates once the stream is complete.
+    console.log("Stream completed. Final message:", streamedDone.final_message);
   };
 
   /**
@@ -151,7 +158,6 @@ export default function useApp() {
     setIsLoading(true);
     addUserMessage(combinedInput);
 
-    // For word count check (if necessary)
     if (wordCount > WORD_CUTOFF) {
       addAssistantMessage(WORD_BREAK_MESSAGE, []);
       setIsLoading(false);
@@ -205,6 +211,7 @@ export default function useApp() {
     clearMessages,
   };
 }
+
 
 
 
