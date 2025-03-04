@@ -6,6 +6,14 @@ import {
   LoadingIndicator,
   DisplayMessage,
   Citation,
+  StreamedDone,
+  streamedDoneSchema,
+  StreamedLoading,
+  streamedLoadingSchema,
+  StreamedMessage,
+  streamedMessageSchema,
+  StreamedError,
+  streamedErrorSchema,
 } from "@/types";
 
 export default function useApp() {
@@ -33,7 +41,7 @@ export default function useApp() {
       content: userInput,
       citations: [],
     };
-    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
+    setMessages((prev) => [...prev, newUserMessage]);
     return newUserMessage;
   };
 
@@ -43,14 +51,10 @@ export default function useApp() {
       content,
       citations,
     };
-    setMessages((prevMessages) => [...prevMessages, newAssistantMessage]);
+    setMessages((prev) => [...prev, newAssistantMessage]);
     return newAssistantMessage;
   };
 
-  /**
-   * Always send FormData with "message" (the user text)
-   * and optionally "file" if one is attached.
-   */
   const fetchAssistantResponse = async (combinedInput: string, file?: File) => {
     const formData = new FormData();
     formData.append("message", combinedInput);
@@ -67,53 +71,101 @@ export default function useApp() {
     return response;
   };
 
+  // Process streamed response from the SSE endpoint.
+  const processStreamedResponse = async (response: Response) => {
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No reader available");
+    }
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      // Split the chunk on newline since our server sends "\n" after each JSON message.
+      const payloads = chunk.split("\n").filter((p) => p.trim() !== "");
+      for (const payload of payloads) {
+        try {
+          const parsed = JSON.parse(payload);
+          if (streamedMessageSchema.safeParse(parsed).success) {
+            handleStreamedMessage(parsed as StreamedMessage);
+          } else if (streamedLoadingSchema.safeParse(parsed).success) {
+            handleStreamedLoading(parsed as StreamedLoading);
+          } else if (streamedErrorSchema.safeParse(parsed).success) {
+            handleStreamedError(parsed as StreamedError);
+          } else if (streamedDoneSchema.safeParse(parsed).success) {
+            handleStreamedDone(parsed as StreamedDone);
+          } else {
+            console.error("Unknown payload type", parsed);
+          }
+        } catch (err) {
+          console.error("Failed to parse payload:", err);
+        }
+      }
+    }
+  };
+
+  const handleStreamedMessage = (streamedMessage: StreamedMessage) => {
+    setIndicatorState([]);
+    setMessages((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last && last.role === "assistant") {
+        updated[updated.length - 1] = {
+          ...last,
+          content: streamedMessage.message.content,
+          citations: streamedMessage.message.citations,
+        };
+      } else {
+        updated.push({
+          role: "assistant",
+          content: streamedMessage.message.content,
+          citations: streamedMessage.message.citations,
+        });
+      }
+      return updated;
+    });
+  };
+
+  const handleStreamedLoading = (streamedLoading: StreamedLoading) => {
+    setIndicatorState((prev) => [...prev, streamedLoading.indicator]);
+  };
+
+  const handleStreamedError = (streamedError: StreamedError) => {
+    setIndicatorState((prev) => [...prev, streamedError.indicator]);
+  };
+
+  const handleStreamedDone = (streamedDone: StreamedDone) => {
+    // Optionally handle finalization
+  };
+
   /**
    * handleSubmit:
-   * 1. Add user message to chat.
-   * 2. Show an indicator.
-   * 3. Send the message (and file) as FormData.
-   * 4. Wait for the single JSON response.
-   * 5. Update the chat with the assistant's reply.
+   * 1. Adds the user message to the chat.
+   * 2. Shows a loading indicator.
+   * 3. Sends the message (and file) as FormData.
+   * 4. Processes the SSE streaming response.
    */
   const handleSubmit = async (combinedInput: string, file?: File) => {
     setIndicatorState([]);
     setIsLoading(true);
-
-    // Add the user message to the chat.
     addUserMessage(combinedInput);
 
+    // For word count check (if necessary)
     if (wordCount > WORD_CUTOFF) {
       addAssistantMessage(WORD_BREAK_MESSAGE, []);
       setIsLoading(false);
     } else {
-      // Show a temporary indicator.
       setIndicatorState([{ status: "Understanding your message", icon: "understanding" }]);
-
       try {
         const response = await fetchAssistantResponse(combinedInput, file);
-        const data = await response.json();
-        console.log("Server returned data:", data);
-
-        let assistantReply = "";
-        if (data.error) {
-          assistantReply = `Error: ${data.error}`;
-        } else {
-          // Combine the user message and PDF text from the server response.
-          assistantReply = `User Message: ${data.userMessage}`;
-          if (data.pdfText) {
-            assistantReply += `\n\nPDF Text: ${data.pdfText}`;
-          }
-        }
-        addAssistantMessage(assistantReply, []);
+        await processStreamedResponse(response);
       } catch (error) {
         console.error("Error:", error);
-        addAssistantMessage("Something went wrong while processing your request.", []);
+        addAssistantMessage("Something went wrong processing your request.", []);
       } finally {
         setIsLoading(false);
-        // Clear the input after processing.
         setInput("");
-        // If file state is managed here, clear it as well:
-        // setFile(null);
       }
     }
   };
@@ -153,6 +205,7 @@ export default function useApp() {
     clearMessages,
   };
 }
+
 
 
 
