@@ -1,5 +1,3 @@
-
-
 {
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -24,12 +22,16 @@
     }
   },
   "include": [
-  "next-env.d.ts",
-  "**/*.ts",
-  "**/*.tsx",
-  ".next/types/**/*.ts",
-  "types/**/*.d.ts"
-],
-  "exclude": ["node_modules"]
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  // Exclude node_modules, the .next build folder, and specifically pdf-parse's test folder
+  "exclude": [
+    "node_modules",
+    ".next",
+    "node_modules/pdf-parse/test"
+  ]
 }
-
