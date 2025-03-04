@@ -56,16 +56,14 @@ async function determineIntention(chat: Chat): Promise<Intention> {
 
 /**
  * We must disable the default Next.js body parsing
- * and let busboy handle the raw body stream.
+ * and let Busboy handle the raw body stream.
  */
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  // We will parse the form data manually using Busboy
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      // busboy requires raw headers in a normal object shape
-      // NextRequest headers are in a Headers map, so we convert them:
+      // Convert NextRequest headers to a plain object for Busboy
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
@@ -80,53 +78,46 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(uploadsDir);
       }
 
-      // When busboy finds a file...
-      busboy.on("file", (_fieldname, fileStream, filename) => {
-        if (!filename) filename = `${randomUUID()}.pdf`; // fallback name
-
-        tmpFilePath = path.join(uploadsDir, filename);
+      // When Busboy finds a file, ignore the client-provided filename and generate a new one.
+      busboy.on("file", (_fieldname, fileStream, _info) => {
+        const effectiveFilename = `${randomUUID()}.pdf`;
+        tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
 
         fileStream.on("error", (err) => {
           reject(
-            NextResponse.json({ error: err.message }, { status: 500 })
+            NextResponse.json({ error: (err as Error).message }, { status: 500 })
           );
         });
       });
 
-      // When busboy is done parsing the form data...
+      // When Busboy is finished parsing the form data...
       busboy.on("finish", async () => {
         if (!tmpFilePath) {
           // No file was uploaded
           resolve(
-            NextResponse.json(
-              { error: "No file uploaded" },
-              { status: 400 }
-            )
+            NextResponse.json({ error: "No file uploaded" }, { status: 400 })
           );
           return;
         }
 
         try {
-          // Now parse the PDF using pdf-parse
+          // Read and parse the PDF file
           const dataBuffer = fs.readFileSync(tmpFilePath);
           const pdfData = await pdfParse(dataBuffer);
 
-          // Cleanup: remove the file
+          // Cleanup: remove the temporary file
           fs.unlinkSync(tmpFilePath);
 
           // Return the extracted text
           resolve(
-            NextResponse.json(
-              { text: pdfData.text },
-              { status: 200 }
-            )
+            NextResponse.json({ text: pdfData.text }, { status: 200 })
           );
         } catch (error: any) {
           reject(
             NextResponse.json(
-              { error: "Failed to parse PDF", details: error.message },
+              { error: "Failed to parse PDF", details: (error as Error).message },
               { status: 500 }
             )
           );
@@ -135,33 +126,30 @@ export async function POST(req: NextRequest) {
 
       busboy.on("error", (err) => {
         reject(
-          NextResponse.json({ error: err.message }, { status: 500 })
+          NextResponse.json({ error: (err as Error).message }, { status: 500 })
         );
       });
 
-      // Pipe the request's body to busboy
-      // `req.body` is a ReadableStream in Next.js, so we pipe it
+      // Pipe the request's body (a Web ReadableStream) to Busboy
       const readable = req.body;
       if (!readable) {
-        // No body stream, possibly an empty request
         resolve(
           NextResponse.json({ error: "No file uploaded" }, { status: 400 })
         );
       } else {
-        // Convert the ReadableStream to a node stream
         const nodeStream = ReadableStreamToNodeStream(readable);
         nodeStream.pipe(busboy);
       }
     } catch (error: any) {
       reject(
-        NextResponse.json({ error: error.message }, { status: 500 })
+        NextResponse.json({ error: (error as Error).message }, { status: 500 })
       );
     }
   });
 }
 
 /**
- * Helper function to convert a Web ReadableStream (from Next.js) to a Node.js stream
+ * Helper function to convert a Web ReadableStream (from Next.js) to a Node.js stream.
  */
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   const reader = readable.getReader();
@@ -180,6 +168,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
