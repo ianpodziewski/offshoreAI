@@ -1,19 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { INITIAL_MESSAGE, WORD_CUTOFF, WORD_BREAK_MESSAGE } from "@/configuration/chat";
+import {
+  INITIAL_MESSAGE,
+  WORD_CUTOFF,
+  WORD_BREAK_MESSAGE,
+} from "@/configuration/chat";
 import {
   LoadingIndicator,
   DisplayMessage,
   Citation,
-  StreamedDone,
-  streamedDoneSchema,
-  StreamedLoading,
-  streamedLoadingSchema,
-  StreamedMessage,
-  streamedMessageSchema,
-  StreamedError,
-  streamedErrorSchema,
 } from "@/types";
 
 export default function useApp() {
@@ -61,7 +57,7 @@ export default function useApp() {
   };
 
   /**
-   * Always send FormData with "message" (the combined user text),
+   * Always send FormData with "message" (the user text),
    * and optionally "file" if one is attached.
    */
   const fetchAssistantResponse = async (combinedInput: string, file?: File) => {
@@ -80,96 +76,55 @@ export default function useApp() {
     return response;
   };
 
-  const processStreamedResponse = async (response: Response) => {
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("No reader available");
-    }
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const payload = new TextDecoder().decode(value);
-      routeResponseToProperHandler(payload);
-    }
-  };
-
-  const routeResponseToProperHandler = (payload: string) => {
-    const payloads = payload.split("\n").filter((p) => p.trim() !== "");
-    if (payloads.length === 0) return;
-    for (const p of payloads) {
-      const parsedPayload = JSON.parse(p);
-      if (streamedMessageSchema.safeParse(parsedPayload).success) {
-        handleStreamedMessage(parsedPayload as StreamedMessage);
-      } else if (streamedLoadingSchema.safeParse(parsedPayload).success) {
-        handleStreamedLoading(parsedPayload as StreamedLoading);
-      } else if (streamedErrorSchema.safeParse(parsedPayload).success) {
-        handleStreamedError(parsedPayload as StreamedError);
-      } else if (streamedDoneSchema.safeParse(parsedPayload).success) {
-        handleStreamedDone(parsedPayload as StreamedDone);
-      } else {
-        throw new Error("Invalid payload type");
-      }
-    }
-  };
-
-  const handleStreamedMessage = (streamedMessage: StreamedMessage) => {
-    setIndicatorState([]);
-    setMessages((prevMessages) => {
-      const updatedMessages = [...prevMessages];
-      const lastMessage = updatedMessages[updatedMessages.length - 1];
-      if (lastMessage && lastMessage.role === "assistant") {
-        updatedMessages[updatedMessages.length - 1] = {
-          ...lastMessage,
-          content: streamedMessage.message.content,
-          citations: streamedMessage.message.citations,
-        };
-      } else {
-        updatedMessages.push({
-          role: "assistant",
-          content: streamedMessage.message.content,
-          citations: streamedMessage.message.citations,
-        });
-      }
-      return updatedMessages;
-    });
-  };
-
-  const handleStreamedLoading = (streamedLoading: StreamedLoading) => {
-    setIndicatorState((prev) => [...prev, streamedLoading.indicator]);
-  };
-
-  const handleStreamedError = (streamedError: StreamedError) => {
-    setIndicatorState((prev) => [...prev, streamedError.indicator]);
-  };
-
-  const handleStreamedDone = (streamedDone: StreamedDone) => {
-    // Optionally handle finalization here.
-  };
-
   /**
-   * handleSubmit now calls fetchAssistantResponse with form data
-   * containing "message" and optionally "file".
+   * handleSubmit: 
+   * 1. Add user message
+   * 2. Possibly show "understanding your message"
+   * 3. Wait for the server’s single JSON response
+   * 4. Add assistant message with the server’s data
    */
   const handleSubmit = async (combinedInput: string, file?: File) => {
     setIndicatorState([]);
     setIsLoading(true);
-    const newUserMessage = addUserMessage(combinedInput);
+
+    // Add user message to the chat
+    addUserMessage(combinedInput);
 
     if (wordCount > WORD_CUTOFF) {
       addAssistantMessage(WORD_BREAK_MESSAGE, []);
       setIsLoading(false);
     } else {
-      setTimeout(() => {
-        setIndicatorState([
-          { status: "Understanding your message", icon: "understanding" },
-        ]);
-      }, 600);
+      setIndicatorState([
+        { status: "Understanding your message", icon: "understanding" },
+      ]);
 
       try {
+        // 1. Send form data
         const response = await fetchAssistantResponse(combinedInput, file);
-        await processStreamedResponse(response);
+        // 2. Get JSON
+        const data = await response.json();
+        console.log("Server returned data:", data);
+
+        // data.pdfText (string) & data.userMessage (string)
+        // Construct the final assistant reply
+        let assistantReply = "";
+        if (data.error) {
+          assistantReply = `Error: ${data.error}`;
+        } else {
+          // For example, combine user message + PDF text
+          assistantReply = `User Message: ${data.userMessage}`;
+          if (data.pdfText) {
+            assistantReply += `\n\nPDF Text: ${data.pdfText}`;
+          }
+        }
+        // 3. Add to chat
+        addAssistantMessage(assistantReply, []);
       } catch (error) {
         console.error("Error:", error);
+        addAssistantMessage(
+          "Something went wrong while processing your request.",
+          []
+        );
       } finally {
         setIsLoading(false);
       }
@@ -182,6 +137,7 @@ export default function useApp() {
     setInput(e.target.value);
   };
 
+  // Load messages from local storage on mount
   useEffect(() => {
     const storedMessages = localStorage.getItem("chatMessages");
     if (storedMessages) {
@@ -189,6 +145,7 @@ export default function useApp() {
     }
   }, []);
 
+  // Save messages to local storage whenever they change
   useEffect(() => {
     if (messages.length > 1) {
       localStorage.setItem("chatMessages", JSON.stringify(messages));
@@ -213,6 +170,7 @@ export default function useApp() {
     clearMessages,
   };
 }
+
 
 
 
