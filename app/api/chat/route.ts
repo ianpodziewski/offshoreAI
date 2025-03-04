@@ -52,7 +52,7 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      // Convert NextRequest headers to a plain object for Busboy
+      // Convert NextRequest headers to plain object
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
@@ -62,22 +62,21 @@ export async function POST(req: NextRequest) {
       let tmpFilePath: string | null = null;
       let userMessage = "";
 
-      // Create an "uploads" directory if it doesn't exist
+      // Create an "uploads" directory if needed
       const uploadsDir = path.join(process.cwd(), "uploads");
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir);
       }
 
-      // Capture form fields (like the user's message)
+      // Capture the "message" field from form data
       busboy.on("field", (fieldname, val) => {
         if (fieldname === "message") {
           userMessage = val;
         }
       });
 
-      // Process the file if provided
+      // Capture the file if provided
       busboy.on("file", (_fieldname, fileStream, _info) => {
-        // Always generate a new filename
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
@@ -92,7 +91,7 @@ export async function POST(req: NextRequest) {
 
       busboy.on("finish", async () => {
         if (!tmpFilePath) {
-          // If no file was uploaded, return just the user message
+          // No file was uploaded, so just return the user message
           resolve(
             NextResponse.json({
               pdfText: "",
@@ -103,14 +102,14 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-          // Read and parse the PDF file
+          // Parse the PDF
           const dataBuffer = fs.readFileSync(tmpFilePath);
           const pdfData = await pdfParse(dataBuffer);
 
-          // Cleanup the temporary file
+          // Cleanup: remove the file
           fs.unlinkSync(tmpFilePath);
 
-          // Return the extracted PDF text and the user message
+          // Return the PDF text + user message
           resolve(
             NextResponse.json({
               pdfText: pdfData.text,
@@ -154,9 +153,6 @@ export async function POST(req: NextRequest) {
   });
 }
 
-/**
- * Helper function to convert a Web ReadableStream to a Node.js stream.
- */
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   const reader = readable.getReader();
   const passThrough = new PassThrough();
@@ -174,6 +170,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
