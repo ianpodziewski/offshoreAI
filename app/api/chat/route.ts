@@ -63,7 +63,7 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      // Convert NextRequest headers to a plain object for Busboy
+      // Convert NextRequest headers to a plain object
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
@@ -78,8 +78,9 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(uploadsDir);
       }
 
-      // When Busboy finds a file, ignore the client-provided filename and generate a new one.
-      busboy.on("file", (_fieldname, fileStream, _info) => {
+      // When busboy finds a file...
+      busboy.on("file", (_fieldname, fileStream, info) => {
+        // Always generate a new filename; ignore any client-provided name
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-          // Read and parse the PDF file
+          // Parse the PDF using pdf-parse
           const dataBuffer = fs.readFileSync(tmpFilePath);
           const pdfData = await pdfParse(dataBuffer);
 
@@ -130,13 +131,14 @@ export async function POST(req: NextRequest) {
         );
       });
 
-      // Pipe the request's body (a Web ReadableStream) to Busboy
+      // Pipe the request's body to busboy
       const readable = req.body;
       if (!readable) {
         resolve(
           NextResponse.json({ error: "No file uploaded" }, { status: 400 })
         );
       } else {
+        // Convert the ReadableStream to a Node.js stream
         const nodeStream = ReadableStreamToNodeStream(readable);
         nodeStream.pipe(busboy);
       }
@@ -168,6 +170,11 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
+
+
+
+
 
 
 
