@@ -52,7 +52,7 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      // Convert NextRequest headers to plain object
+      // Convert NextRequest headers to a plain object for Busboy
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
       const busboy = Busboy({ headers: busboyHeaders });
       let tmpFilePath: string | null = null;
-      let userMessage = ""; // We'll store the user input text here
+      let userMessage = "";
 
       // Create an "uploads" directory if it doesn't exist
       const uploadsDir = path.join(process.cwd(), "uploads");
@@ -68,14 +68,14 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(uploadsDir);
       }
 
-      // Capture form fields
+      // Capture form fields (like the user's message)
       busboy.on("field", (fieldname, val) => {
         if (fieldname === "message") {
-          userMessage = val; // store user text
+          userMessage = val;
         }
       });
 
-      // When busboy finds a file...
+      // Process the file if provided
       busboy.on("file", (_fieldname, fileStream, _info) => {
         // Always generate a new filename
         const effectiveFilename = `${randomUUID()}.pdf`;
@@ -90,29 +90,27 @@ export async function POST(req: NextRequest) {
         });
       });
 
-      // When busboy is finished parsing the form data...
       busboy.on("finish", async () => {
-        // If no file was uploaded, we can still return the user message
         if (!tmpFilePath) {
+          // If no file was uploaded, return just the user message
           resolve(
             NextResponse.json({
               pdfText: "",
               userMessage,
-              error: "No file uploaded",
             })
           );
           return;
         }
 
         try {
-          // Parse the PDF
+          // Read and parse the PDF file
           const dataBuffer = fs.readFileSync(tmpFilePath);
           const pdfData = await pdfParse(dataBuffer);
 
-          // Cleanup: remove the temporary file
+          // Cleanup the temporary file
           fs.unlinkSync(tmpFilePath);
 
-          // Return both the user message and extracted PDF text
+          // Return the extracted PDF text and the user message
           resolve(
             NextResponse.json({
               pdfText: pdfData.text,
@@ -135,15 +133,16 @@ export async function POST(req: NextRequest) {
         );
       });
 
-      // Pipe the request's body to busboy
       const readable = req.body;
       if (!readable) {
-        // No body stream, possibly empty request
         resolve(
-          NextResponse.json({ error: "No form data", pdfText: "", userMessage: "" })
+          NextResponse.json({
+            error: "No form data",
+            pdfText: "",
+            userMessage: "",
+          })
         );
       } else {
-        // Convert the ReadableStream to a Node.js stream
         const nodeStream = ReadableStreamToNodeStream(readable);
         nodeStream.pipe(busboy);
       }
@@ -155,6 +154,9 @@ export async function POST(req: NextRequest) {
   });
 }
 
+/**
+ * Helper function to convert a Web ReadableStream to a Node.js stream.
+ */
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   const reader = readable.getReader();
   const passThrough = new PassThrough();
@@ -172,6 +174,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
