@@ -7,43 +7,25 @@ import pdfParse from "pdf-parse";
 import { PassThrough } from "stream";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { AIProviders, Chat, Intention, CoreMessage } from "@/types";
-import { IntentionModule } from "@/modules/intention";
+import { AIProviders } from "@/types";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
-import Anthropic from "@anthropic-ai/sdk";
 
-// For streaming, we’ll use the OpenAI client directly.
+// Temporary in-memory storage for user-uploaded embeddings
+const tempUserEmbeddings: { [key: string]: number[] } = {};
+
 const pineconeApiKey = process.env.PINECONE_API_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
-const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-const fireworksApiKey = process.env.FIREWORKS_API_KEY;
 
-if (!pineconeApiKey) {
-  throw new Error("PINECONE_API_KEY is not set");
-}
-if (!openaiApiKey) {
-  throw new Error("OPENAI_API_KEY is not set");
-}
+if (!pineconeApiKey) throw new Error("PINECONE_API_KEY is not set");
+if (!openaiApiKey) throw new Error("OPENAI_API_KEY is not set");
 
 const pineconeClient = new Pinecone({ apiKey: pineconeApiKey });
 const pineconeIndex = pineconeClient.Index(PINECONE_INDEX_NAME);
-
 const openaiClient = new OpenAI({ apiKey: openaiApiKey });
-const anthropicClient = new Anthropic({ apiKey: anthropicApiKey });
-const fireworksClient = new OpenAI({
-  baseURL: "https://api.fireworks.ai/inference/v1",
-  apiKey: fireworksApiKey,
-});
-const providers: AIProviders = {
-  openai: openaiClient,
-  anthropic: anthropicClient,
-  fireworks: fireworksClient,
-};
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  // First, use Busboy to parse form data
   return new Promise<NextResponse>((resolve, reject) => {
     try {
       const busboyHeaders: Record<string, string> = {};
@@ -51,6 +33,7 @@ export async function POST(req: NextRequest) {
         busboyHeaders[key.toLowerCase()] = value;
       });
       const busboy = Busboy({ headers: busboyHeaders });
+
       let tmpFilePath: string | null = null;
       let userMessage = "";
 
@@ -73,69 +56,104 @@ export async function POST(req: NextRequest) {
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
-        fileStream.on("error", (err) => {
-          reject(
-            NextResponse.json({ error: (err as Error).message }, { status: 500 })
-          );
-        });
       });
 
       busboy.on("finish", async () => {
-        // If a file was uploaded, process it
         let pdfText = "";
+        let userFileEmbedding: number[] | null = null;
+
+        // Process uploaded file if it exists
         if (tmpFilePath) {
           try {
             const dataBuffer = fs.readFileSync(tmpFilePath);
             const pdfData = await pdfParse(dataBuffer);
             pdfText = pdfData.text;
-            fs.unlinkSync(tmpFilePath);
+            fs.unlinkSync(tmpFilePath); // Delete file after processing
+
+            // Generate embedding for extracted PDF text
+            const embeddingResponse = await openaiClient.embeddings.create({
+              model: "text-embedding-ada-002",
+              input: pdfText,
+            });
+            userFileEmbedding = embeddingResponse.data[0].embedding;
+
+            // Store embedding temporarily
+            const userSessionId = randomUUID();
+            tempUserEmbeddings[userSessionId] = userFileEmbedding;
           } catch (error: any) {
             return reject(
               NextResponse.json(
-                { error: "Failed to parse PDF", details: (error as Error).message },
+                { error: "Failed to process PDF", details: error.message },
                 { status: 500 }
               )
             );
           }
         }
 
-        // Combine user message and PDF text (if any) into a final prompt
-        const finalPrompt = pdfText
-          ? `${userMessage}\n\nExtracted PDF Text:\n${pdfText}`
-          : userMessage;
+        // Retrieve related information from Pinecone
+        const queryEmbeddingResponse = await openaiClient.embeddings.create({
+          model: "text-embedding-ada-002",
+          input: userMessage,
+        });
 
-        // Now, create a streaming response using a ReadableStream
+        const queryEmbedding = queryEmbeddingResponse.data[0].embedding;
+
+        const pineconeResults = await pineconeIndex.query({
+          vector: queryEmbedding,
+          topK: 5,
+          includeMetadata: true,
+        });
+
+        const pineconeContext = pineconeResults.matches
+          .map((match) => match.metadata?.text || "")
+          .join("\n\n");
+
+        // If user uploaded a file, compare it with the query
+        let userFileContext = "";
+        if (userFileEmbedding) {
+          const userFileSimilarity = cosineSimilarity(queryEmbedding, userFileEmbedding);
+          if (userFileSimilarity > 0.7) {
+            userFileContext = `\n\nUser-Uploaded Document Context:\n${pdfText}`;
+          }
+        }
+
+        // Construct the final prompt
+        const finalPrompt = `
+          Context from Database:
+          ${pineconeContext}
+          
+          ${userFileContext}
+
+          User Input:
+          ${userMessage}
+        `;
+
+        // Stream response to OpenAI
         const stream = new ReadableStream({
           async start(controller) {
             try {
-              // Enqueue an indicator first
               controller.enqueue(
                 new TextEncoder().encode(
                   JSON.stringify({ type: "loading", indicator: { status: "Generating answer...", icon: "thinking" } }) + "\n"
                 )
               );
-              // Call the OpenAI streaming API
-              const streamedResponse = await providers.openai.chat.completions.create({
-                model: "gpt-3.5-turbo", // or your preferred model
+
+              const streamedResponse = await openaiClient.chat.completions.create({
+                model: "gpt-3.5-turbo",
                 messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: finalPrompt }],
                 stream: true,
                 temperature: 0.7,
               });
+
               let responseBuffer = "";
-              // Iterate over the streamed chunks
               for await (const chunk of streamedResponse) {
                 responseBuffer += chunk.choices[0]?.delta.content ?? "";
-                const streamedMessage = {
-                  type: "message",
-                  message: { role: "assistant", content: responseBuffer, citations: [] },
-                };
                 controller.enqueue(
-                  new TextEncoder().encode(JSON.stringify(streamedMessage) + "\n")
+                  new TextEncoder().encode(JSON.stringify({ type: "message", message: { role: "assistant", content: responseBuffer, citations: [] } }) + "\n")
                 );
               }
-              // When done, enqueue a "done" message
-              const donePayload = { type: "done", final_message: responseBuffer };
-              controller.enqueue(new TextEncoder().encode(JSON.stringify(donePayload) + "\n"));
+
+              controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n"));
               controller.close();
             } catch (error: any) {
               controller.enqueue(
@@ -159,7 +177,7 @@ export async function POST(req: NextRequest) {
 
       busboy.on("error", (err) => {
         reject(
-          NextResponse.json({ error: (err as Error).message }, { status: 500 })
+          NextResponse.json({ error: err.message }, { status: 500 })
         );
       });
 
@@ -178,10 +196,18 @@ export async function POST(req: NextRequest) {
       }
     } catch (error: any) {
       reject(
-        NextResponse.json({ error: (error as Error).message }, { status: 500 })
+        NextResponse.json({ error: error.message }, { status: 500 })
       );
     }
   });
+}
+
+// Utility function to compute cosine similarity between two vectors
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
+  const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
+  const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
+  return dotProduct / (magnitudeA * magnitudeB);
 }
 
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
@@ -200,6 +226,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
