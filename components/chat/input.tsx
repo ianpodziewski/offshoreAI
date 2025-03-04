@@ -49,8 +49,8 @@ export default function ChatInput({
   // When the form is submitted, call the parent's handleSubmit with the text and file
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Use the current input value; any additional client-side processing can be done here if needed.
-    handleSubmit(input, file);
+    // Convert file from null to undefined if necessary
+    handleSubmit(input, file || undefined);
   };
 
   return (
@@ -125,6 +125,7 @@ export default function ChatInput({
     </div>
   );
 }
+
 
 
 
