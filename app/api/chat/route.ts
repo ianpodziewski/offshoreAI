@@ -80,9 +80,9 @@ export async function POST(req: NextRequest) {
       }
 
       // When busboy finds a file...
-      busboy.on("file", (_fieldname, fileStream, filename) => {
-        // Use effectiveFilename to avoid modifying the readonly filename parameter
-        const effectiveFilename = filename || `${randomUUID()}.pdf`;
+      busboy.on("file", (_fieldname, fileStream, info) => {
+        // Extract the filename from the info object
+        const effectiveFilename = info.filename || `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
@@ -171,6 +171,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
