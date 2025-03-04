@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
       // When busboy finds a file...
       busboy.on("file", (_fieldname, fileStream, info) => {
-        // Instead of using the client-provided filename, generate a unique filename
+        // Always generate a new filename; ignore any client-provided name
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
@@ -171,6 +171,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
