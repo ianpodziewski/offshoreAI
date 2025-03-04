@@ -81,8 +81,8 @@ export async function POST(req: NextRequest) {
 
       // When busboy finds a file...
       busboy.on("file", (_fieldname, fileStream, info) => {
-        // Extract only the base filename to avoid relative paths
-        const effectiveFilename = path.basename(info.filename || `${randomUUID()}.pdf`);
+        // Instead of using the client-provided filename, generate a unique filename
+        const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
@@ -171,6 +171,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
