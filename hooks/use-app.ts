@@ -1,18 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { INITIAL_MESSAGE } from "@/configuration/chat";
-import { WORD_CUTOFF, WORD_BREAK_MESSAGE } from "@/configuration/chat";
+import { INITIAL_MESSAGE, WORD_CUTOFF, WORD_BREAK_MESSAGE } from "@/configuration/chat";
 import {
   LoadingIndicator,
   DisplayMessage,
+  Citation,
   StreamedDone,
   streamedDoneSchema,
   StreamedLoading,
   streamedLoadingSchema,
   StreamedMessage,
   streamedMessageSchema,
-  Citation,
   StreamedError,
   streamedErrorSchema,
 } from "@/types";
@@ -61,76 +60,41 @@ export default function useApp() {
     return newAssistantMessage;
   };
 
-  const fetchAssistantResponse = async (allMessages: DisplayMessage[]) => {
+  // Updated fetchAssistantResponse to send FormData (message + optional file)
+  const fetchAssistantResponse = async (combinedInput: string, file?: File) => {
+    const formData = new FormData();
+    formData.append("message", combinedInput);
+    if (file) {
+      formData.append("file", file);
+    }
     const response = await fetch("/api/chat", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ chat: { messages: allMessages } }),
+      body: formData,
     });
-
     if (!response.ok) {
       throw new Error("Failed to send message");
     }
-
     return response;
   };
 
-  const handleStreamedMessage = (streamedMessage: StreamedMessage) => {
-    setIndicatorState([]);
-    setMessages((prevMessages) => {
-      const updatedMessages = [...prevMessages];
-      const lastMessage = updatedMessages[updatedMessages.length - 1];
-
-      if (lastMessage && lastMessage.role === "assistant") {
-        // Update the existing assistant message
-        updatedMessages[updatedMessages.length - 1] = {
-          ...lastMessage,
-          content: streamedMessage.message.content,
-          citations: streamedMessage.message.citations,
-        };
-      } else {
-        // Add a new assistant message
-        updatedMessages.push({
-          role: "assistant",
-          content: streamedMessage.message.content,
-          citations: streamedMessage.message.citations,
-        });
-      }
-
-      return updatedMessages;
-    });
-  };
-
-  const handleStreamedLoading = (streamedLoading: StreamedLoading) => {
-    setIndicatorState((prevIndicatorState) => [
-      ...prevIndicatorState,
-      streamedLoading.indicator,
-    ]);
-  };
-
-  const handleStreamedError = (streamedError: StreamedError) => {
-    setIndicatorState((prevIndicatorState) => [
-      ...prevIndicatorState,
-      streamedError.indicator,
-    ]);
-  };
-
-  const handleStreamedDone = (streamedDone: StreamedDone) => {
-    // Optional: Handle any finalization if needed.
+  const processStreamedResponse = async (response: Response) => {
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error("No reader available");
+    }
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const payload = new TextDecoder().decode(value);
+      routeResponseToProperHandler(payload);
+    }
   };
 
   const routeResponseToProperHandler = (payload: string) => {
     const payloads = payload.split("\n").filter((p) => p.trim() !== "");
-
-    if (payloads.length === 0) {
-      return; // No non-empty payloads
-    }
-
+    if (payloads.length === 0) return;
     for (const payload of payloads) {
       const parsedPayload = JSON.parse(payload);
-
       if (streamedMessageSchema.safeParse(parsedPayload).success) {
         handleStreamedMessage(parsedPayload as StreamedMessage);
       } else if (streamedLoadingSchema.safeParse(parsedPayload).success) {
@@ -145,26 +109,45 @@ export default function useApp() {
     }
   };
 
-  const processStreamedResponse = async (response: Response) => {
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error("No reader available");
-    }
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const payload = new TextDecoder().decode(value);
-      routeResponseToProperHandler(payload);
-    }
+  const handleStreamedMessage = (streamedMessage: StreamedMessage) => {
+    setIndicatorState([]);
+    setMessages((prevMessages) => {
+      const updatedMessages = [...prevMessages];
+      const lastMessage = updatedMessages[updatedMessages.length - 1];
+      if (lastMessage && lastMessage.role === "assistant") {
+        updatedMessages[updatedMessages.length - 1] = {
+          ...lastMessage,
+          content: streamedMessage.message.content,
+          citations: streamedMessage.message.citations,
+        };
+      } else {
+        updatedMessages.push({
+          role: "assistant",
+          content: streamedMessage.message.content,
+          citations: streamedMessage.message.citations,
+        });
+      }
+      return updatedMessages;
+    });
   };
 
-  // Updated handleSubmit to accept a combined input string
-  const handleSubmit = async (combinedInput: string) => {
+  const handleStreamedLoading = (streamedLoading: StreamedLoading) => {
+    setIndicatorState((prev) => [...prev, streamedLoading.indicator]);
+  };
+
+  const handleStreamedError = (streamedError: StreamedError) => {
+    setIndicatorState((prev) => [...prev, streamedError.indicator]);
+  };
+
+  const handleStreamedDone = (streamedDone: StreamedDone) => {
+    // Optionally handle finalization here.
+  };
+
+  // Updated handleSubmit now accepts combinedInput and optional file.
+  const handleSubmit = async (combinedInput: string, file?: File) => {
     setIndicatorState([]);
     setIsLoading(true);
-    // Add the user message using the combined input (chat text plus file content)
+    // Add the user message using the combined input
     const newUserMessage = addUserMessage(combinedInput);
 
     if (wordCount > WORD_CUTOFF) {
@@ -173,15 +156,12 @@ export default function useApp() {
     } else {
       setTimeout(() => {
         setIndicatorState([
-          {
-            status: "Understanding your message",
-            icon: "understanding",
-          },
+          { status: "Understanding your message", icon: "understanding" },
         ]);
       }, 600);
 
       try {
-        const response = await fetchAssistantResponse([...messages, newUserMessage]);
+        const response = await fetchAssistantResponse(combinedInput, file);
         await processStreamedResponse(response);
       } catch (error) {
         console.error("Error:", error);
@@ -198,15 +178,13 @@ export default function useApp() {
   };
 
   useEffect(() => {
-    // Load messages from local storage when component mounts
     const storedMessages = localStorage.getItem("chatMessages");
     if (storedMessages) {
       setMessages(JSON.parse(storedMessages));
     }
-  }, [setMessages]);
+  }, []);
 
   useEffect(() => {
-    // Save messages to local storage whenever they change
     if (messages.length > 1) {
       localStorage.setItem("chatMessages", JSON.stringify(messages));
     } else {
@@ -222,7 +200,7 @@ export default function useApp() {
   return {
     messages,
     handleInputChange,
-    handleSubmit, // Now accepts a string combinedInput
+    handleSubmit, // Now accepts (combinedInput, file?)
     indicatorState,
     input,
     isLoading,
@@ -230,6 +208,7 @@ export default function useApp() {
     clearMessages,
   };
 }
+
 
 
 /*
