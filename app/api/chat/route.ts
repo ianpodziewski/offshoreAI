@@ -57,9 +57,7 @@ async function determineIntention(chat: Chat): Promise<Intention> {
  * We must disable the default Next.js body parsing
  * and let busboy handle the raw body stream.
  */
-export const config = {
-  runtime: "nodejs",
-};
+export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   // We will parse the form data manually using Busboy
