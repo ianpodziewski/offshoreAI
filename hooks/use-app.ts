@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  INITIAL_MESSAGE,
-  WORD_CUTOFF,
-  WORD_BREAK_MESSAGE,
-} from "@/configuration/chat";
+import { INITIAL_MESSAGE, WORD_CUTOFF, WORD_BREAK_MESSAGE } from "@/configuration/chat";
 import {
   LoadingIndicator,
   DisplayMessage,
@@ -19,9 +15,7 @@ export default function useApp() {
     citations: [],
   };
 
-  const [messages, setMessages] = useState<DisplayMessage[]>([
-    initialAssistantMessage,
-  ]);
+  const [messages, setMessages] = useState<DisplayMessage[]>([initialAssistantMessage]);
   const [wordCount, setWordCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [indicatorState, setIndicatorState] = useState<LoadingIndicator[]>([]);
@@ -29,10 +23,7 @@ export default function useApp() {
 
   useEffect(() => {
     setWordCount(
-      messages.reduce(
-        (acc, message) => acc + message.content.split(" ").length,
-        0
-      )
+      messages.reduce((acc, message) => acc + message.content.split(" ").length, 0)
     );
   }, [messages]);
 
@@ -57,7 +48,7 @@ export default function useApp() {
   };
 
   /**
-   * Always send FormData with "message" (the user text),
+   * Always send FormData with "message" (the user text)
    * and optionally "file" if one is attached.
    */
   const fetchAssistantResponse = async (combinedInput: string, file?: File) => {
@@ -77,67 +68,60 @@ export default function useApp() {
   };
 
   /**
-   * handleSubmit: 
-   * 1. Add user message
-   * 2. Possibly show "understanding your message"
-   * 3. Wait for the server’s single JSON response
-   * 4. Add assistant message with the server’s data
+   * handleSubmit:
+   * 1. Add user message to chat.
+   * 2. Show an indicator.
+   * 3. Send the message (and file) as FormData.
+   * 4. Wait for the single JSON response.
+   * 5. Update the chat with the assistant's reply.
    */
   const handleSubmit = async (combinedInput: string, file?: File) => {
     setIndicatorState([]);
     setIsLoading(true);
 
-    // Add user message to the chat
+    // Add the user message to the chat.
     addUserMessage(combinedInput);
 
     if (wordCount > WORD_CUTOFF) {
       addAssistantMessage(WORD_BREAK_MESSAGE, []);
       setIsLoading(false);
     } else {
-      setIndicatorState([
-        { status: "Understanding your message", icon: "understanding" },
-      ]);
+      // Show a temporary indicator.
+      setIndicatorState([{ status: "Understanding your message", icon: "understanding" }]);
 
       try {
-        // 1. Send form data
         const response = await fetchAssistantResponse(combinedInput, file);
-        // 2. Get JSON
         const data = await response.json();
         console.log("Server returned data:", data);
 
-        // data.pdfText (string) & data.userMessage (string)
-        // Construct the final assistant reply
         let assistantReply = "";
         if (data.error) {
           assistantReply = `Error: ${data.error}`;
         } else {
-          // For example, combine user message + PDF text
+          // Combine the user message and PDF text from the server response.
           assistantReply = `User Message: ${data.userMessage}`;
           if (data.pdfText) {
             assistantReply += `\n\nPDF Text: ${data.pdfText}`;
           }
         }
-        // 3. Add to chat
         addAssistantMessage(assistantReply, []);
       } catch (error) {
         console.error("Error:", error);
-        addAssistantMessage(
-          "Something went wrong while processing your request.",
-          []
-        );
+        addAssistantMessage("Something went wrong while processing your request.", []);
       } finally {
         setIsLoading(false);
+        // Clear the input after processing.
+        setInput("");
+        // If file state is managed here, clear it as well:
+        // setFile(null);
       }
     }
-    // Clear the input after processing
-    setInput("");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInput(e.target.value);
   };
 
-  // Load messages from local storage on mount
   useEffect(() => {
     const storedMessages = localStorage.getItem("chatMessages");
     if (storedMessages) {
@@ -145,7 +129,6 @@ export default function useApp() {
     }
   }, []);
 
-  // Save messages to local storage whenever they change
   useEffect(() => {
     if (messages.length > 1) {
       localStorage.setItem("chatMessages", JSON.stringify(messages));
@@ -162,7 +145,7 @@ export default function useApp() {
   return {
     messages,
     handleInputChange,
-    handleSubmit,
+    handleSubmit, // Now accepts (combinedInput, file?)
     indicatorState,
     input,
     isLoading,
@@ -170,6 +153,7 @@ export default function useApp() {
     clearMessages,
   };
 }
+
 
 
 
