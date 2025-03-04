@@ -7,15 +7,12 @@ import pdfParse from "pdf-parse";
 import { PassThrough } from "stream";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { AIProviders, Chat, Intention } from "@/types";
+import { AIProviders, Chat, Intention, CoreMessage } from "@/types";
 import { IntentionModule } from "@/modules/intention";
-import { ResponseModule } from "@/modules/response";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 import Anthropic from "@anthropic-ai/sdk";
 
-export const maxDuration = 60;
-
-// API Keys
+// For streaming, we’ll use the OpenAI client directly.
 const pineconeApiKey = process.env.PINECONE_API_KEY;
 const openaiApiKey = process.env.OPENAI_API_KEY;
 const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
@@ -28,13 +25,9 @@ if (!openaiApiKey) {
   throw new Error("OPENAI_API_KEY is not set");
 }
 
-// Initialize Pinecone
-const pineconeClient = new Pinecone({
-  apiKey: pineconeApiKey,
-});
+const pineconeClient = new Pinecone({ apiKey: pineconeApiKey });
 const pineconeIndex = pineconeClient.Index(PINECONE_INDEX_NAME);
 
-// Initialize Providers
 const openaiClient = new OpenAI({ apiKey: openaiApiKey });
 const anthropicClient = new Anthropic({ apiKey: anthropicApiKey });
 const fireworksClient = new OpenAI({
@@ -50,38 +43,36 @@ const providers: AIProviders = {
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  // First, use Busboy to parse form data
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      // Convert NextRequest headers to plain object
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
       });
-
       const busboy = Busboy({ headers: busboyHeaders });
       let tmpFilePath: string | null = null;
       let userMessage = "";
 
-      // Create an "uploads" directory if needed
+      // Ensure uploads directory exists
       const uploadsDir = path.join(process.cwd(), "uploads");
       if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir);
       }
 
-      // Capture the "message" field from form data
+      // Capture form fields
       busboy.on("field", (fieldname, val) => {
         if (fieldname === "message") {
           userMessage = val;
         }
       });
 
-      // Capture the file if provided
+      // Capture file if provided
       busboy.on("file", (_fieldname, fileStream, _info) => {
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
-
         fileStream.on("error", (err) => {
           reject(
             NextResponse.json({ error: (err as Error).message }, { status: 500 })
@@ -90,40 +81,80 @@ export async function POST(req: NextRequest) {
       });
 
       busboy.on("finish", async () => {
-        if (!tmpFilePath) {
-          // No file was uploaded, so just return the user message
-          resolve(
-            NextResponse.json({
-              pdfText: "",
-              userMessage,
-            })
-          );
-          return;
+        // If a file was uploaded, process it
+        let pdfText = "";
+        if (tmpFilePath) {
+          try {
+            const dataBuffer = fs.readFileSync(tmpFilePath);
+            const pdfData = await pdfParse(dataBuffer);
+            pdfText = pdfData.text;
+            fs.unlinkSync(tmpFilePath);
+          } catch (error: any) {
+            return reject(
+              NextResponse.json(
+                { error: "Failed to parse PDF", details: (error as Error).message },
+                { status: 500 }
+              )
+            );
+          }
         }
 
-        try {
-          // Parse the PDF
-          const dataBuffer = fs.readFileSync(tmpFilePath);
-          const pdfData = await pdfParse(dataBuffer);
+        // Combine user message and PDF text (if any) into a final prompt
+        const finalPrompt = pdfText
+          ? `${userMessage}\n\nExtracted PDF Text:\n${pdfText}`
+          : userMessage;
 
-          // Cleanup: remove the file
-          fs.unlinkSync(tmpFilePath);
+        // Now, create a streaming response using a ReadableStream
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              // Enqueue an indicator first
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({ type: "loading", indicator: { status: "Generating answer...", icon: "thinking" } }) + "\n"
+                )
+              );
+              // Call the OpenAI streaming API
+              const streamedResponse = await providers.openai.chat.completions.create({
+                model: "gpt-3.5-turbo", // or your preferred model
+                messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: finalPrompt }],
+                stream: true,
+                temperature: 0.7,
+              });
+              let responseBuffer = "";
+              // Iterate over the streamed chunks
+              for await (const chunk of streamedResponse) {
+                responseBuffer += chunk.choices[0]?.delta.content ?? "";
+                const streamedMessage = {
+                  type: "message",
+                  message: { role: "assistant", content: responseBuffer, citations: [] },
+                };
+                controller.enqueue(
+                  new TextEncoder().encode(JSON.stringify(streamedMessage) + "\n")
+                );
+              }
+              // When done, enqueue a "done" message
+              const donePayload = { type: "done", final_message: responseBuffer };
+              controller.enqueue(new TextEncoder().encode(JSON.stringify(donePayload) + "\n"));
+              controller.close();
+            } catch (error: any) {
+              controller.enqueue(
+                new TextEncoder().encode(JSON.stringify({ type: "error", indicator: { status: error.message, icon: "error" } }) + "\n")
+              );
+              controller.close();
+            }
+          },
+        });
 
-          // Return the PDF text + user message
-          resolve(
-            NextResponse.json({
-              pdfText: pdfData.text,
-              userMessage,
-            })
-          );
-        } catch (error: any) {
-          reject(
-            NextResponse.json(
-              { error: "Failed to parse PDF", details: (error as Error).message },
-              { status: 500 }
-            )
-          );
-        }
+        resolve(
+          new NextResponse(stream, {
+            headers: {
+              "Content-Type": "text/event-stream",
+              "Cache-Control": "no-cache",
+              Connection: "keep-alive",
+            },
+          })
+        );
       });
 
       busboy.on("error", (err) => {
@@ -156,7 +187,6 @@ export async function POST(req: NextRequest) {
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   const reader = readable.getReader();
   const passThrough = new PassThrough();
-
   function push() {
     reader.read().then(({ done, value }) => {
       if (done) {
@@ -170,6 +200,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
