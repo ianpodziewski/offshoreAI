@@ -4,6 +4,7 @@ import fs from "fs";
 import { randomUUID } from "crypto";
 import Busboy from "busboy";
 import pdfParse from "pdf-parse";
+import { PassThrough } from "stream";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { AIProviders, Chat, Intention } from "@/types";
@@ -164,7 +165,6 @@ export async function POST(req: NextRequest) {
  */
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   const reader = readable.getReader();
-  const { PassThrough } = require("stream");
   const passThrough = new PassThrough();
 
   function push() {
@@ -180,6 +180,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
