@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import multer from "multer";
-import fs from "fs/promises";
-import pdfParse from "pdf-parse";
 import path from "path";
+import fs from "fs";
+import { randomUUID } from "crypto";
+import Busboy from "busboy";
+import pdfParse from "pdf-parse";
+import { PassThrough } from "stream";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { AIProviders, Chat, Intention } from "@/types";
@@ -45,20 +47,6 @@ const providers: AIProviders = {
   fireworks: fireworksClient,
 };
 
-// Configure Multer Storage (Uploads Folder)
-const upload = multer({ dest: "uploads/" });
-
-// Middleware to handle file uploads
-const uploadMiddleware = (req: any, res: any) => {
-  return new Promise((resolve, reject) => {
-    upload.single("file")(req, res, (err: any) => {
-      if (err) return reject(err);
-      resolve(req);
-    });
-  });
-};
-
-// Function to determine chat intention
 async function determineIntention(chat: Chat): Promise<Intention> {
   return await IntentionModule.detectIntention({
     chat: chat,
@@ -66,34 +54,134 @@ async function determineIntention(chat: Chat): Promise<Intention> {
   });
 }
 
-// **POST Handler for File Upload**
+/**
+ * We must disable the default Next.js body parsing
+ * and let busboy handle the raw body stream.
+ */
+export const runtime = "nodejs";
+
 export async function POST(req: NextRequest) {
-  try {
-    // Wait for file upload middleware
-    await uploadMiddleware(req, {} as any);
+  // We will parse the form data manually using Busboy
+  return new Promise<NextResponse>((resolve, reject) => {
+    try {
+      // busboy requires raw headers in a normal object shape
+      // NextRequest headers are in a Headers map, so we convert them:
+      const busboyHeaders: Record<string, string> = {};
+      req.headers.forEach((value, key) => {
+        busboyHeaders[key.toLowerCase()] = value;
+      });
 
-    // Ensure file is uploaded
-    if (!req.file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+      const busboy = Busboy({ headers: busboyHeaders });
+      let tmpFilePath: string | null = null;
+
+      // Create an "uploads" directory if it doesn't exist
+      const uploadsDir = path.join(process.cwd(), "uploads");
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir);
+      }
+
+      // When busboy finds a file...
+      busboy.on("file", (_fieldname, fileStream, filename) => {
+        if (!filename) filename = `${randomUUID()}.pdf`; // fallback name
+
+        tmpFilePath = path.join(uploadsDir, filename);
+        const writeStream = fs.createWriteStream(tmpFilePath);
+        fileStream.pipe(writeStream);
+
+        fileStream.on("error", (err) => {
+          reject(
+            NextResponse.json({ error: err.message }, { status: 500 })
+          );
+        });
+      });
+
+      // When busboy is done parsing the form data...
+      busboy.on("finish", async () => {
+        if (!tmpFilePath) {
+          // No file was uploaded
+          resolve(
+            NextResponse.json(
+              { error: "No file uploaded" },
+              { status: 400 }
+            )
+          );
+          return;
+        }
+
+        try {
+          // Now parse the PDF using pdf-parse
+          const dataBuffer = fs.readFileSync(tmpFilePath);
+          const pdfData = await pdfParse(dataBuffer);
+
+          // Cleanup: remove the file
+          fs.unlinkSync(tmpFilePath);
+
+          // Return the extracted text
+          resolve(
+            NextResponse.json(
+              { text: pdfData.text },
+              { status: 200 }
+            )
+          );
+        } catch (error: any) {
+          reject(
+            NextResponse.json(
+              { error: "Failed to parse PDF", details: error.message },
+              { status: 500 }
+            )
+          );
+        }
+      });
+
+      busboy.on("error", (err) => {
+        reject(
+          NextResponse.json({ error: err.message }, { status: 500 })
+        );
+      });
+
+      // Pipe the request's body to busboy
+      // `req.body` is a ReadableStream in Next.js, so we pipe it
+      const readable = req.body;
+      if (!readable) {
+        // No body stream, possibly an empty request
+        resolve(
+          NextResponse.json({ error: "No file uploaded" }, { status: 400 })
+        );
+      } else {
+        // Convert the ReadableStream to a node stream
+        const nodeStream = ReadableStreamToNodeStream(readable);
+        nodeStream.pipe(busboy);
+      }
+    } catch (error: any) {
+      reject(
+        NextResponse.json({ error: error.message }, { status: 500 })
+      );
     }
-
-    const filePath = path.join(process.cwd(), req.file.path);
-
-    // Read and parse the PDF
-    const dataBuffer = await fs.readFile(filePath);
-    const pdfData = await pdfParse(dataBuffer);
-
-    // Cleanup: Remove uploaded file after processing
-    await fs.unlink(filePath);
-
-    return NextResponse.json({ text: pdfData.text });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to process PDF", details: error.message },
-      { status: 500 }
-    );
-  }
+  });
 }
+
+/**
+ * Helper function to convert a Web ReadableStream (from Next.js) to a Node.js stream
+ */
+function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
+  const reader = readable.getReader();
+  const passThrough = new PassThrough();
+
+  function push() {
+    reader.read().then(({ done, value }) => {
+      if (done) {
+        passThrough.end();
+        return;
+      }
+      passThrough.write(value);
+      push();
+    });
+  }
+  push();
+  return passThrough;
+}
+
+
 
 
 /*
