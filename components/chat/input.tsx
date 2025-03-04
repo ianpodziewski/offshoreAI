@@ -59,6 +59,9 @@ export default function ChatInput({
       return;
     }
 
+    // ✅ Add explicit logging before calling handleSubmit
+    console.log("🚀 Calling handleSubmit with:", { message: input, file });
+
     handleSubmit(input, file || undefined);
   };
 
@@ -136,6 +139,7 @@ export default function ChatInput({
     </div>
   );
 }
+
 
 
 
