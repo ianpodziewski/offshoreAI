@@ -101,9 +101,9 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Continue with reading the file and processing the PDF...
+        // Read the file, parse it, and generate an embedding
         let pdfText = "";
-        const userFileEmbedding: number[] | null = null;
+        let userFileEmbedding: number[] | null = null;
 
         if (tmpFilePath) {
           try {
@@ -113,6 +113,15 @@ export async function POST(req: NextRequest) {
             pdfText = pdfData.text;
             fs.unlinkSync(tmpFilePath);
             console.log(`✅ PDF text extracted. Length: ${pdfText.length} characters.`);
+
+            // 🔥 Generate an embedding for the PDF text
+            console.log("🔍 Generating embedding for uploaded PDF...");
+            const embeddingResponse = await openaiClient.embeddings.create({
+              model: "text-embedding-ada-002",
+              input: pdfText,
+            });
+            userFileEmbedding = embeddingResponse.data[0].embedding;
+            console.log("✅ PDF embedding generated.");
           } catch (error: any) {
             console.error("❌ Failed to process PDF:", error.message);
             return resolve(
@@ -124,6 +133,7 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Generate an embedding for the user message
         console.log("🔍 Generating embedding for user message...");
         const queryEmbeddingResponse = await openaiClient.embeddings.create({
           model: "text-embedding-ada-002",
@@ -132,6 +142,7 @@ export async function POST(req: NextRequest) {
         const queryEmbedding = queryEmbeddingResponse.data[0].embedding;
         console.log("✅ userMessage embedding generated.");
 
+        // Query Pinecone
         console.log("🔎 Querying Pinecone for relevant context...");
         const pineconeResults = await pineconeIndex.query({
           vector: queryEmbedding,
@@ -140,10 +151,12 @@ export async function POST(req: NextRequest) {
         });
         console.log("✅ Pinecone query complete. Matches found:", pineconeResults.matches.length);
 
+        // Build Pinecone context
         const pineconeContext = pineconeResults.matches
           .map((match) => match.metadata?.text || "")
           .join("\n\n");
 
+        // Check similarity and optionally append user-uploaded PDF text
         let userFileContext = "";
         if (userFileEmbedding) {
           const userFileSimilarity = cosineSimilarity(queryEmbedding, userFileEmbedding);
@@ -258,6 +271,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
