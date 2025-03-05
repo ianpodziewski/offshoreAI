@@ -7,6 +7,7 @@ import pdfParse from "pdf-parse";
 import { PassThrough } from "stream";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
+import { AIProviders } from "@/types";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 
 // Temporary in-memory storage for user-uploaded embeddings
@@ -25,30 +26,16 @@ const openaiClient = new OpenAI({ apiKey: openaiApiKey });
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  console.log("🛠️ Incoming API Request to /api/chat");
-
   return new Promise<NextResponse>((resolve, reject) => {
     try {
-      console.log("🔍 Checking request headers:", req.headers);
-
-      if (!req.body) {
-        console.error("❌ No request body found!");
-        reject(NextResponse.json({ error: "Empty request body" }, { status: 400 }));
-        return;
-      }
-
-      console.log("📩 Processing request body...");
-
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
       });
-
       const busboy = Busboy({ headers: busboyHeaders });
 
       let tmpFilePath: string | null = null;
       let userMessage = "";
-      let fileDetected = false;
 
       // Ensure uploads directory exists
       const uploadsDir = path.join(process.cwd(), "uploads");
@@ -58,17 +45,14 @@ export async function POST(req: NextRequest) {
 
       // Capture form fields
       busboy.on("field", (fieldname, val) => {
-        console.log(`📩 Received form field: ${fieldname} = ${val}`);
         if (fieldname === "message") {
           userMessage = val;
         }
       });
 
       // Capture file if provided
-      busboy.on("file", (_fieldname, fileStream, info) => {
-        fileDetected = true;
-        console.log(`📂 File uploaded: ${info.filename} (${info.mimeType})`);
-
+      busboy.on("file", (_fieldname, fileStream, _info) => {
+        // Fix interpolation for filename
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
         const writeStream = fs.createWriteStream(tmpFilePath);
@@ -76,57 +60,45 @@ export async function POST(req: NextRequest) {
       });
 
       busboy.on("finish", async () => {
-        console.log("✅ Finished processing request");
-
-        if (!userMessage && !fileDetected) {
-          console.error("❌ No message or file provided!");
-          reject(NextResponse.json({ error: "No input provided" }, { status: 400 }));
-          return;
-        }
-
         let pdfText = "";
         let userFileEmbedding: number[] | null = null;
 
         // Process uploaded file if it exists
         if (tmpFilePath) {
           try {
-            console.log("📖 Processing uploaded file for text extraction...");
             const dataBuffer = fs.readFileSync(tmpFilePath);
             const pdfData = await pdfParse(dataBuffer);
             pdfText = pdfData.text;
             fs.unlinkSync(tmpFilePath); // Delete file after processing
-            console.log("✅ Extracted text from PDF");
 
             // Generate embedding for extracted PDF text
             const embeddingResponse = await openaiClient.embeddings.create({
               model: "text-embedding-ada-002",
               input: pdfText,
             });
-
             userFileEmbedding = embeddingResponse.data[0].embedding;
-            console.log("✅ Generated embedding for uploaded document");
 
             // Store embedding temporarily
             const userSessionId = randomUUID();
             tempUserEmbeddings[userSessionId] = userFileEmbedding;
           } catch (error: any) {
-            console.error("❌ Failed to process PDF:", error.message);
-            reject(NextResponse.json({ error: "Failed to process PDF", details: error.message }, { status: 500 }));
-            return;
+            return reject(
+              NextResponse.json(
+                { error: "Failed to process PDF", details: error.message },
+                { status: 500 }
+              )
+            );
           }
         }
 
         // Retrieve related information from Pinecone
-        console.log("🔍 Generating embedding for user message...");
         const queryEmbeddingResponse = await openaiClient.embeddings.create({
           model: "text-embedding-ada-002",
           input: userMessage,
         });
 
         const queryEmbedding = queryEmbeddingResponse.data[0].embedding;
-        console.log("✅ Generated embedding for user query");
 
-        console.log("🔍 Querying Pinecone for related information...");
         const pineconeResults = await pineconeIndex.query({
           vector: queryEmbedding,
           topK: 5,
@@ -137,23 +109,39 @@ export async function POST(req: NextRequest) {
           .map((match) => match.metadata?.text || "")
           .join("\n\n");
 
-        console.log("✅ Retrieved relevant context from Pinecone");
+        // If user uploaded a file, compare it with the query
+        let userFileContext = "";
+        if (userFileEmbedding) {
+          const userFileSimilarity = cosineSimilarity(queryEmbedding, userFileEmbedding);
+          if (userFileSimilarity > 0.7) {
+            userFileContext = `\n\nUser-Uploaded Document Context:\n${pdfText}`;
+          }
+        }
 
-        // Construct the final prompt
+        // Construct the final prompt (backticks needed for multiline)
         const finalPrompt = `
 Context from Database:
 ${pineconeContext}
 
+${userFileContext}
+
 User Input:
 ${userMessage}
         `;
-        console.log("📝 Final prompt constructed");
 
         // Stream response to OpenAI
         const stream = new ReadableStream({
           async start(controller) {
             try {
-              console.log("⏳ Sending request to OpenAI...");
+              // Let the UI know we're loading
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({
+                    type: "loading",
+                    indicator: { status: "Generating answer...", icon: "thinking" },
+                  }) + "\n"
+                )
+              );
 
               const streamedResponse = await openaiClient.chat.completions.create({
                 model: "gpt-3.5-turbo",
@@ -178,7 +166,7 @@ ${userMessage}
                 );
               }
 
-              console.log("✅ Response generated from OpenAI");
+              // Final "done" message
               controller.enqueue(
                 new TextEncoder().encode(
                   JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n"
@@ -186,10 +174,12 @@ ${userMessage}
               );
               controller.close();
             } catch (error: any) {
-              console.error("🚨 OpenAI request failed:", error.message);
               controller.enqueue(
                 new TextEncoder().encode(
-                  JSON.stringify({ type: "error", indicator: { status: error.message, icon: "error" } }) + "\n"
+                  JSON.stringify({
+                    type: "error",
+                    indicator: { status: error.message, icon: "error" },
+                  }) + "\n"
                 )
               );
               controller.close();
@@ -208,27 +198,39 @@ ${userMessage}
         );
       });
 
-      // Handle Busboy errors safely
+      // Handle busboy errors safely
       busboy.on("error", (err) => {
-        console.error("🚨 Busboy Error:", err);
-        reject(NextResponse.json({ error: err.message }, { status: 500 }));
+        let errorMessage = "Unknown error";
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        reject(
+          NextResponse.json({ error: errorMessage }, { status: 500 })
+        );
       });
 
-      // Pipe request stream into Busboy
+      // If there's no request body, return an error
       const readable = req.body;
       if (!readable) {
-        reject(NextResponse.json({ error: "Empty request body" }, { status: 400 }));
+        resolve(
+          NextResponse.json({
+            error: "No form data",
+            pdfText: "",
+            userMessage: "",
+          })
+        );
       } else {
+        // Convert the ReadableStream to a Node.js stream for Busboy
         const nodeStream = ReadableStreamToNodeStream(readable);
         nodeStream.pipe(busboy);
       }
     } catch (error: any) {
-      console.error("🚨 Fatal Server Error:", error.message);
-      reject(NextResponse.json({ error: error.message }, { status: 500 }));
+      reject(
+        NextResponse.json({ error: error.message }, { status: 500 })
+      );
     }
   });
 }
-
 
 // Utility function to compute cosine similarity between two vectors
 function cosineSimilarity(vecA: number[], vecB: number[]): number {
