@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
 
         // Continue with reading the file and processing the PDF...
         let pdfText = "";
-        let userFileEmbedding: number[] | null = null;
+        const userFileEmbedding: number[] | null = null;
 
         if (tmpFilePath) {
           try {
