@@ -25,6 +25,10 @@ const openaiClient = new OpenAI({ apiKey: openaiApiKey });
 
 export const runtime = "nodejs";
 
+export async function GET(req: NextRequest) {
+  return NextResponse.json({ message: "GET requests are not supported on this endpoint" }, { status: 405 });
+}
+
 export async function POST(req: NextRequest) {
   return new Promise<NextResponse>((resolve, reject) => {
     try {
