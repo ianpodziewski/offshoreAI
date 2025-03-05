@@ -28,6 +28,17 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   return new Promise<NextResponse>((resolve, reject) => {
     try {
+      // 2️⃣ Check if req.body exists
+      if (!req.body) {
+        console.error("❌ No request body found.");
+        reject(
+          NextResponse.json({ error: "Empty request body" }, { status: 400 })
+        );
+        return;
+      }
+      
+      // 3️⃣ Prepare Busboy
+      console.log("🔍 Setting up Busboy to parse form data...");
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
@@ -43,45 +54,62 @@ export async function POST(req: NextRequest) {
         fs.mkdirSync(uploadsDir);
       }
 
-      // Capture form fields
+      // 4️⃣ Capture Form Fields
       busboy.on("field", (fieldname, val) => {
+        console.log(`📩 Received form field: ${fieldname} = ${val}`);
         if (fieldname === "message") {
           userMessage = val;
         }
       });
 
-      // Capture file if provided
-      busboy.on("file", (_fieldname, fileStream, _info) => {
-        // Fix interpolation for filename
+      // 5️⃣ Capture File if provided
+      busboy.on("file", (_fieldname, fileStream, info) => {
         const effectiveFilename = `${randomUUID()}.pdf`;
         tmpFilePath = path.join(uploadsDir, effectiveFilename);
+
+        console.log(
+          `📂 Uploading file: '${info.filename}' as '${effectiveFilename}'`
+        );
+
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
       });
 
+      // 6️⃣ Busboy Finish Event
       busboy.on("finish", async () => {
+        console.log("✅ Busboy finished parsing form data.");
+        console.log("📝 userMessage:", userMessage);
+        console.log("🔗 tmpFilePath:", tmpFilePath || "No file uploaded.");
+
         let pdfText = "";
         let userFileEmbedding: number[] | null = null;
 
-        // Process uploaded file if it exists
+        // 6A. Process uploaded file
         if (tmpFilePath) {
           try {
+            console.log("📖 Reading uploaded PDF...");
             const dataBuffer = fs.readFileSync(tmpFilePath);
             const pdfData = await pdfParse(dataBuffer);
             pdfText = pdfData.text;
             fs.unlinkSync(tmpFilePath); // Delete file after processing
+            console.log(
+              `✅ PDF text extracted. Length: ${pdfText.length} characters.`
+            );
 
-            // Generate embedding for extracted PDF text
+            console.log("🔍 Generating embedding for uploaded PDF...");
             const embeddingResponse = await openaiClient.embeddings.create({
               model: "text-embedding-ada-002",
               input: pdfText,
             });
             userFileEmbedding = embeddingResponse.data[0].embedding;
+            console.log("✅ PDF embedding generated.");
 
-            // Store embedding temporarily
+            // Store embedding temporarily (not for permanent knowledge base)
             const userSessionId = randomUUID();
             tempUserEmbeddings[userSessionId] = userFileEmbedding;
+            console.log("🔐 Stored userFileEmbedding in temp memory.");
           } catch (error: any) {
+            console.error("❌ Failed to process PDF:", error.message);
             return reject(
               NextResponse.json(
                 { error: "Failed to process PDF", details: error.message },
@@ -91,34 +119,40 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Retrieve related information from Pinecone
+        // 6B. Generate embedding for userMessage
+        console.log("🔍 Generating embedding for user message...");
         const queryEmbeddingResponse = await openaiClient.embeddings.create({
           model: "text-embedding-ada-002",
           input: userMessage,
         });
-
         const queryEmbedding = queryEmbeddingResponse.data[0].embedding;
+        console.log("✅ userMessage embedding generated.");
 
+        // 6C. Query Pinecone
+        console.log("🔎 Querying Pinecone for relevant context...");
         const pineconeResults = await pineconeIndex.query({
           vector: queryEmbedding,
           topK: 5,
           includeMetadata: true,
         });
+        console.log("✅ Pinecone query complete. Matches found:", pineconeResults.matches.length);
 
         const pineconeContext = pineconeResults.matches
           .map((match) => match.metadata?.text || "")
           .join("\n\n");
 
-        // If user uploaded a file, compare it with the query
+        // 6D. Compare file embedding with user message if file exists
         let userFileContext = "";
         if (userFileEmbedding) {
           const userFileSimilarity = cosineSimilarity(queryEmbedding, userFileEmbedding);
+          console.log(`🔎 File similarity score: ${userFileSimilarity.toFixed(3)}`);
+
           if (userFileSimilarity > 0.7) {
             userFileContext = `\n\nUser-Uploaded Document Context:\n${pdfText}`;
           }
         }
 
-        // Construct the final prompt (backticks needed for multiline)
+        // 6E. Construct final prompt
         const finalPrompt = `
 Context from Database:
 ${pineconeContext}
@@ -128,12 +162,13 @@ ${userFileContext}
 User Input:
 ${userMessage}
         `;
+        console.log("📝 Final prompt constructed. Sending to OpenAI...");
 
-        // Stream response to OpenAI
+        // 6F. Stream response from OpenAI
         const stream = new ReadableStream({
           async start(controller) {
             try {
-              // Let the UI know we're loading
+              // Let UI know generation started
               controller.enqueue(
                 new TextEncoder().encode(
                   JSON.stringify({
@@ -166,6 +201,7 @@ ${userMessage}
                 );
               }
 
+             console.log("✅ OpenAI response streamed successfully.");
               // Final "done" message
               controller.enqueue(
                 new TextEncoder().encode(
@@ -174,6 +210,7 @@ ${userMessage}
               );
               controller.close();
             } catch (error: any) {
+              console.error("🚨 Error during OpenAI streaming:", error.message);
               controller.enqueue(
                 new TextEncoder().encode(
                   JSON.stringify({
@@ -198,20 +235,20 @@ ${userMessage}
         );
       });
 
-      // Handle busboy errors safely
+      // 8️⃣ Busboy Error Handling
       busboy.on("error", (err) => {
+        console.error("🚨 Busboy encountered an error:", err);
         let errorMessage = "Unknown error";
         if (err instanceof Error) {
           errorMessage = err.message;
         }
-        reject(
-          NextResponse.json({ error: errorMessage }, { status: 500 })
-        );
+        reject(NextResponse.json({ error: errorMessage }, { status: 500 }));
       });
 
-      // If there's no request body, return an error
+      // 9️⃣ Pipe the request body to Busboy
       const readable = req.body;
       if (!readable) {
+        console.warn("⚠️ No readable body found. Resolving with error message.");
         resolve(
           NextResponse.json({
             error: "No form data",
@@ -220,14 +257,12 @@ ${userMessage}
           })
         );
       } else {
-        // Convert the ReadableStream to a Node.js stream for Busboy
         const nodeStream = ReadableStreamToNodeStream(readable);
         nodeStream.pipe(busboy);
       }
     } catch (error: any) {
-      reject(
-        NextResponse.json({ error: error.message }, { status: 500 })
-      );
+      console.error("🚨 Fatal server error:", error.message);
+      reject(NextResponse.json({ error: error.message }, { status: 500 }));
     }
   });
 }
