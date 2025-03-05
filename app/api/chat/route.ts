@@ -205,12 +205,18 @@ ${userMessage}
   }
 });
 
-// ✅ Now resolve correctly
-resolve(new NextResponse(stream, { 
-  headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } 
-}));
+// ✅ Properly closes the resolve call before catch
+resolve(
+  new NextResponse(stream, { 
+    headers: { 
+      "Content-Type": "text/event-stream", 
+      "Cache-Control": "no-cache", 
+      Connection: "keep-alive" 
+    } 
+  })
+);  // ✅ This closing parenthesis was missing
 
-} catch (error: any) {  // ✅ This is now correctly positioned
+} catch (error: any) {  // ✅ Now correctly positioned
   console.error("🚨 Error during Pinecone or OpenAI processing:", error.message);
   reject(NextResponse.json({ error: error.message }, { status: 500 }));
 }
