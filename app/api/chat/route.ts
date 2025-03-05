@@ -61,51 +61,76 @@ export async function POST(req: NextRequest) {
       });
 
       busboy.on("file", (_fieldname, fileStream, info) => {
-        const effectiveFilename = `${randomUUID()}.pdf`;
-        tmpFilePath = path.join("/tmp", effectiveFilename);
-        console.log(`📂 Uploading file: '${info.filename}' as '${effectiveFilename}'`);
-        const writeStream = fs.createWriteStream(tmpFilePath);
-        fileStream.pipe(writeStream);
+      const effectiveFilename = `${randomUUID()}.pdf`;
+      tmpFilePath = path.join("/tmp", effectiveFilename);
+      console.log(`📂 Uploading file: '${info.filename}' as '${effectiveFilename}'`);
+      const writeStream = fs.createWriteStream(tmpFilePath);
+  
+      // Create a promise that resolves when writing is complete
+      const fileWritePromise = new Promise<void>((resolve, reject) => {
+        writeStream.on("finish", resolve);
+        writeStream.on("error", reject);
       });
 
-      busboy.on("finish", async () => {
-        console.log("✅ Form processing complete.");
-        console.log("📝 userMessage:", userMessage);
-        console.log("🔗 tmpFilePath:", tmpFilePath || "No file uploaded.");
+      fileStream.pipe(writeStream);
+  
+     // Attach the promise to the fileStream event so we can await later.
+    fileStream.on("end", () => {
+      console.log("✅ File stream ended.");
+    });
 
-        let pdfText = "";
-        let userFileEmbedding: number[] | null = null;
+    // Store the promise so that it can be awaited in the "finish" event of Busboy.
+    (req as any).fileWritePromise = fileWritePromise;
+    });
 
-        if (tmpFilePath) {
-          try {
-            console.log("📖 Reading uploaded PDF...");
-            const dataBuffer = fs.readFileSync(tmpFilePath);
-            const pdfData = await pdfParse(dataBuffer);
-            pdfText = pdfData.text;
-            fs.unlinkSync(tmpFilePath);
-            console.log(`✅ PDF text extracted. Length: ${pdfText.length} characters.`);
 
-            console.log("🔍 Generating embedding for uploaded PDF...");
-            const embeddingResponse = await openaiClient.embeddings.create({
-              model: "text-embedding-ada-002",
-              input: pdfText,
-            });
-            userFileEmbedding = embeddingResponse.data[0].embedding;
-            console.log("✅ PDF embedding generated.");
+busboy.on("finish", async () => {
+  console.log("✅ Form processing complete.");
+  console.log("📝 userMessage:", userMessage);
+  console.log("🔗 tmpFilePath:", tmpFilePath || "No file uploaded.");
 
-            const userSessionId = randomUUID();
-            tempUserEmbeddings[userSessionId] = userFileEmbedding;
-            console.log("🔐 Stored userFileEmbedding in temp memory.");
-          } catch (error: any) {
-            console.error("❌ Failed to process PDF:", error.message);
-            return resolve(
-              NextResponse.json(
-                { error: "Failed to process PDF", details: error.message },
-                { status: 500 }
-              )
-            );
-          }
-        }
+  // If a file was uploaded, wait for the write to finish
+  if (tmpFilePath && (req as any).fileWritePromise) {
+    try {
+      await (req as any).fileWritePromise;
+      console.log("✅ File writing completed.");
+    } catch (error) {
+      console.error("❌ File write error:", error);
+      return resolve(
+        NextResponse.json({ error: "Failed to write PDF file", details: error }, { status: 500 })
+      );
+    }
+  }
+
+  // Continue with reading the file and processing the PDF...
+  let pdfText = "";
+  let userFileEmbedding: number[] | null = null;
+
+  if (tmpFilePath) {
+    try {
+      console.log("📖 Reading uploaded PDF...");
+      const dataBuffer = fs.readFileSync(tmpFilePath);
+      const pdfData = await pdfParse(dataBuffer);
+      pdfText = pdfData.text;
+      fs.unlinkSync(tmpFilePath);
+      console.log(`✅ PDF text extracted. Length: ${pdfText.length} characters.`);
+
+      // Continue with generating the embedding...
+      // ...
+    } catch (error: any) {
+      console.error("❌ Failed to process PDF:", error.message);
+      return resolve(
+        NextResponse.json(
+          { error: "Failed to process PDF", details: error.message },
+          { status: 500 }
+        )
+      );
+    }
+  }
+
+  // Continue with the rest of your processing...
+});
+
 
         console.log("🔍 Generating embedding for user message...");
         const queryEmbeddingResponse = await openaiClient.embeddings.create({
