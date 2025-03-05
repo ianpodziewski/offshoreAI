@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
       busboy.on("file", (_fieldname, fileStream, info) => {
         const effectiveFilename = `${randomUUID()}.pdf`;
-        tmpFilePath = path.join(process.cwd(), "uploads", effectiveFilename);
+        tmpFilePath = path.join("/tmp", effectiveFilename);
         console.log(`📂 Uploading file: '${info.filename}' as '${effectiveFilename}'`);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
