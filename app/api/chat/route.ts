@@ -7,7 +7,6 @@ import pdfParse from "pdf-parse";
 import { PassThrough } from "stream";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { AIProviders } from "@/types";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 
 // Temporary in-memory storage for user-uploaded embeddings
@@ -26,32 +25,22 @@ const openaiClient = new OpenAI({ apiKey: openaiApiKey });
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  return NextResponse.json({ message: "GET requests are not supported on this endpoint" }, { status: 405 });
+  return NextResponse.json(
+    { message: "GET requests are not supported on this endpoint" },
+    { status: 405 }
+  );
 }
 
 export async function POST(req: NextRequest) {
   console.log("📩 Incoming request with headers:", req.headers);
 
-  // Handle JSON Requests
-  if (req.headers.get("content-type")?.includes("application/json")) {
-    try {
-      const jsonData = await req.json();
-      console.log("📝 Received JSON Data:", jsonData);
-
-      // Process JSON data...
-      return resolve(NextResponse.json({ message: "JSON processed successfully" }));
-    } catch (error) {
-      console.error("🚨 Failed to process JSON:", error);
-      return resolve(NextResponse.json({ error: "Invalid JSON request" }, { status: 400 }));
-    }
-  }
-
-  // Handle FormData Requests (Current Logic)
-  return new Promise<NextResponse>((resolve, reject) => {
+  return new Promise<NextResponse>(async (resolve, reject) => {
     try {
       if (!req.body) {
         console.error("❌ No request body found.");
-        return resolve(NextResponse.json({ error: "Empty request body" }, { status: 400 }));
+        return resolve(
+          NextResponse.json({ error: "Empty request body" }, { status: 400 })
+        );
       }
 
       console.log("🔍 Parsing form data with Busboy...");
@@ -81,18 +70,8 @@ export async function POST(req: NextRequest) {
 
       busboy.on("finish", async () => {
         console.log("✅ Form processing complete.");
-        resolve(NextResponse.json({ message: "Form data received" }));
-      });
-
-      const nodeStream = ReadableStreamToNodeStream(req.body);
-      nodeStream.pipe(busboy);
-    } catch (error: any) {
-      console.error("🚨 Server error:", error.message);
-      reject(NextResponse.json({ error: error.message }, { status: 500 }));
-    }
-  });
-}
-
+        console.log("📝 userMessage:", userMessage);
+        console.log("🔗 tmpFilePath:", tmpFilePath || "No file uploaded.");
 
         let pdfText = "";
         let userFileEmbedding: number[] | null = null;
@@ -119,7 +98,12 @@ export async function POST(req: NextRequest) {
             console.log("🔐 Stored userFileEmbedding in temp memory.");
           } catch (error: any) {
             console.error("❌ Failed to process PDF:", error.message);
-            return resolve(NextResponse.json({ error: "Failed to process PDF", details: error.message }, { status: 500 }));
+            return resolve(
+              NextResponse.json(
+                { error: "Failed to process PDF", details: error.message },
+                { status: 500 }
+              )
+            );
           }
         }
 
@@ -139,7 +123,9 @@ export async function POST(req: NextRequest) {
         });
         console.log("✅ Pinecone query complete. Matches found:", pineconeResults.matches.length);
 
-        const pineconeContext = pineconeResults.matches.map((match) => match.metadata?.text || "").join("\n\n");
+        const pineconeContext = pineconeResults.matches
+          .map((match) => match.metadata?.text || "")
+          .join("\n\n");
 
         let userFileContext = "";
         if (userFileEmbedding) {
@@ -164,10 +150,17 @@ ${userMessage}
         const stream = new ReadableStream({
           async start(controller) {
             try {
-              controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "loading", indicator: { status: "Generating answer...", icon: "thinking" } }) + "\n"));
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({ type: "loading", indicator: { status: "Generating answer...", icon: "thinking" } }) + "\n"
+                )
+              );
               const streamedResponse = await openaiClient.chat.completions.create({
                 model: "gpt-3.5-turbo",
-                messages: [{ role: "system", content: "You are a helpful assistant." }, { role: "user", content: finalPrompt }],
+                messages: [
+                  { role: "system", content: "You are a helpful assistant." },
+                  { role: "user", content: finalPrompt },
+                ],
                 stream: true,
                 temperature: 0.7,
               });
@@ -175,30 +168,36 @@ ${userMessage}
               let responseBuffer = "";
               for await (const chunk of streamedResponse) {
                 responseBuffer += chunk.choices[0]?.delta.content ?? "";
-                controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "message", message: { role: "assistant", content: responseBuffer, citations: [] } }) + "\n"));
+                controller.enqueue(
+                  new TextEncoder().encode(
+                    JSON.stringify({ type: "message", message: { role: "assistant", content: responseBuffer, citations: [] } }) + "\n"
+                  )
+                );
               }
 
               console.log("✅ OpenAI response streamed successfully.");
-              controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n"));
+              controller.enqueue(
+                new TextEncoder().encode(JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n")
+              );
               controller.close();
             } catch (error: any) {
               console.error("🚨 OpenAI API error:", error.message);
-              controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "error", indicator: { status: error.message, icon: "error" } }) + "\n"));
+              controller.enqueue(
+                new TextEncoder().encode(
+                  JSON.stringify({ type: "error", indicator: { status: error.message, icon: "error" } }) + "\n"
+                )
+              );
               controller.close();
             }
           },
         });
 
-        resolve(new NextResponse(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } }));
+        resolve(new NextResponse(stream, {
+          headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" }
+        }));
       });
 
-      const readable = req.body;
-      if (!readable) {
-        console.warn("⚠️ No readable body found.");
-        return resolve(NextResponse.json({ error: "No form data", pdfText: "", userMessage: "" }));
-      }
-
-      const nodeStream = ReadableStreamToNodeStream(readable);
+      const nodeStream = ReadableStreamToNodeStream(req.body);
       nodeStream.pipe(busboy);
     } catch (error: any) {
       console.error("🚨 Fatal server error:", error.message);
@@ -206,6 +205,7 @@ ${userMessage}
     }
   });
 }
+
 
 
 // Utility function to compute cosine similarity between two vectors
