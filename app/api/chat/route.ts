@@ -30,6 +30,23 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  console.log("📩 Incoming request with headers:", req.headers);
+
+  // Handle JSON Requests
+  if (req.headers.get("content-type")?.includes("application/json")) {
+    try {
+      const jsonData = await req.json();
+      console.log("📝 Received JSON Data:", jsonData);
+
+      // Process JSON data...
+      return resolve(NextResponse.json({ message: "JSON processed successfully" }));
+    } catch (error) {
+      console.error("🚨 Failed to process JSON:", error);
+      return resolve(NextResponse.json({ error: "Invalid JSON request" }, { status: 400 }));
+    }
+  }
+
+  // Handle FormData Requests (Current Logic)
   return new Promise<NextResponse>((resolve, reject) => {
     try {
       if (!req.body) {
@@ -37,23 +54,18 @@ export async function POST(req: NextRequest) {
         return resolve(NextResponse.json({ error: "Empty request body" }, { status: 400 }));
       }
 
-      console.log("🔍 Setting up Busboy to parse form data...");
+      console.log("🔍 Parsing form data with Busboy...");
       const busboyHeaders: Record<string, string> = {};
       req.headers.forEach((value, key) => {
         busboyHeaders[key.toLowerCase()] = value;
       });
 
       const busboy = Busboy({ headers: busboyHeaders });
-      let tmpFilePath: string | null = null;
       let userMessage = "";
-
-      const uploadsDir = path.join(process.cwd(), "uploads");
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir);
-      }
+      let tmpFilePath: string | null = null;
 
       busboy.on("field", (fieldname, val) => {
-        console.log(`📩 Received form field: ${fieldname} = ${val}`);
+        console.log(`📩 Received field: ${fieldname} = ${val}`);
         if (fieldname === "message") {
           userMessage = val;
         }
@@ -61,16 +73,26 @@ export async function POST(req: NextRequest) {
 
       busboy.on("file", (_fieldname, fileStream, info) => {
         const effectiveFilename = `${randomUUID()}.pdf`;
-        tmpFilePath = path.join(uploadsDir, effectiveFilename);
+        tmpFilePath = path.join(process.cwd(), "uploads", effectiveFilename);
         console.log(`📂 Uploading file: '${info.filename}' as '${effectiveFilename}'`);
         const writeStream = fs.createWriteStream(tmpFilePath);
         fileStream.pipe(writeStream);
       });
 
       busboy.on("finish", async () => {
-        console.log("✅ Busboy finished parsing form data.");
-        console.log("📝 userMessage:", userMessage);
-        console.log("🔗 tmpFilePath:", tmpFilePath || "No file uploaded.");
+        console.log("✅ Form processing complete.");
+        resolve(NextResponse.json({ message: "Form data received" }));
+      });
+
+      const nodeStream = ReadableStreamToNodeStream(req.body);
+      nodeStream.pipe(busboy);
+    } catch (error: any) {
+      console.error("🚨 Server error:", error.message);
+      reject(NextResponse.json({ error: error.message }, { status: 500 }));
+    }
+  });
+}
+
 
         let pdfText = "";
         let userFileEmbedding: number[] | null = null;
@@ -195,15 +217,18 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 }
 
 function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
+  console.log("🔄 Converting ReadableStream to Node Stream...");
   const reader = readable.getReader();
   const passThrough = new PassThrough();
 
   function push() {
     reader.read().then(({ done, value }) => {
       if (done) {
+        console.log("✅ Stream reading complete.");
         passThrough.end();
         return;
       }
+      console.log(`📦 Read ${value.length} bytes`);
       passThrough.write(value);
       push();
     });
@@ -212,6 +237,7 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
   push();
   return passThrough;
 }
+
 
 
 
