@@ -188,28 +188,32 @@ ${userMessage}
                 temperature: 0.7,
               });
 
-                let responseBuffer = "";
-                for await (const chunk of streamedResponse) {
-                  responseBuffer += chunk.choices[0]?.delta.content ?? "";
-                  controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "message", message: { role: "assistant", content: responseBuffer, citations: [] } }) + "\n"));
-                }
+      let responseBuffer = "";
+      for await (const chunk of streamedResponse) {
+        responseBuffer += chunk.choices[0]?.delta.content ?? "";
+        controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "message", message: { role: "assistant", content: responseBuffer, citations: [] } }) + "\n"));
+      }
 
-                console.log("✅ OpenAI response streamed successfully.");
-                controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n"));
-                controller.close();
-              } catch (error: any) {
-                console.error("🚨 OpenAI API error:", error.message);
-                controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "error", indicator: { status: error.message, icon: "error" } }) + "\n"));
-                controller.close();
-              }
-            },
-          });
+      console.log("✅ OpenAI response streamed successfully.");
+      controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "done", final_message: responseBuffer }) + "\n"));
+      controller.close();
+    } catch (error: any) {
+      console.error("🚨 OpenAI API error:", error.message);
+      controller.enqueue(new TextEncoder().encode(JSON.stringify({ type: "error", indicator: { status: error.message, icon: "error" } }) + "\n"));
+      controller.close();
+    }  // ✅ Properly closes `try` inside ReadableStream
+  }
+});
 
-          resolve(new NextResponse(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } }));
-        } catch (error: any) {
-          console.error("🚨 Error during Pinecone or OpenAI processing:", error.message);
-          reject(NextResponse.json({ error: error.message }, { status: 500 }));
-        }
+// ✅ Now resolve correctly
+resolve(new NextResponse(stream, { 
+  headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" } 
+}));
+
+} catch (error: any) {  // ✅ This is now correctly positioned
+  console.error("🚨 Error during Pinecone or OpenAI processing:", error.message);
+  reject(NextResponse.json({ error: error.message }, { status: 500 }));
+}
       });
 
       // 8️⃣ Busboy Error Handling
