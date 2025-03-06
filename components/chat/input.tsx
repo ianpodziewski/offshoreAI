@@ -59,7 +59,6 @@ export default function ChatInput({
       return;
     }
 
-    // ✅ Add explicit logging before calling handleSubmit
     console.log("🚀 Calling handleSubmit with:", { message: input, file });
 
     if (typeof handleSubmit !== "function") {
@@ -67,7 +66,21 @@ export default function ChatInput({
       return;
     }
 
+    // Send data up to the parent
     handleSubmit(input, file || undefined);
+
+    // Clear out file state and the text input in both:
+    // 1) The local form (react-hook-form)
+    // 2) The parent component’s `input` prop
+    setFile(null);
+    form.reset({ message: "" });
+
+    // Create a mock event to reset the parent’s controlled input
+    const mockEvent = {
+      target: { value: "" },
+      currentTarget: { value: "" },
+    } as React.ChangeEvent<HTMLInputElement>;
+    handleInputChange(mockEvent);
   };
 
   return (
@@ -80,9 +93,9 @@ export default function ChatInput({
               isFocused ? "ring-2 ring-ring ring-offset-2" : ""
             }`}
           >
-            {/* File Input (Visible but styled) */}
+            {/* File Input (Hidden) */}
             <FileInput
-              ref={fileInputRef} // ✅ Use FileInput Component
+              ref={fileInputRef}
               accept=".pdf,.docx,.txt"
               onChange={handleFileChange}
               className="hidden"
@@ -133,7 +146,7 @@ export default function ChatInput({
           </form>
         </Form>
 
-        {/* Show Selected File Name */}
+        {/* Show Selected File Name (only until user sends the message) */}
         {file && (
           <p className="mt-2 text-sm text-gray-500">
             Selected file: {file.name}
