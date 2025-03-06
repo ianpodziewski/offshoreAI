@@ -14,68 +14,67 @@ class handler(BaseHTTPRequestHandler):
                 f.write(pdf_data)
 
             doc = fitz.open(upload_path)
-            os.makedirs('/tmp/split_docs', exist_ok=True)
+            split_folder = '/tmp/split_docs'
+            os.makedirs(split_folder, exist_ok=True)
 
-            # Ordered list of document headers to detect clearly
             document_headers = {
-                "Lender's Closing Instructions": "lenders_closing_instructions",
-                "Promissory Note": "promissory_note",
-                "Deed of Trust": "deed_of_trust",
-                "Adjustable Rate Note": "adjustable_rate_note",
-                "Adjustable Rate Mortgage": "adjustable_rate_mortgage",
-                "HUD-1 Settlement Statement": "hud1_settlement_statement",
-                "Home Equity Conversion Loan Agreement": "home_equity_conversion_loan_agreement",
-                "Flood Insurance": "flood_insurance_certificate_notice",
-                "Name Affidavit": "name_affidavit",
-                "Signature Affidavit": "signature_affidavit",
-                "Mailing Address Affidavit": "mailing_address_affidavit",
-                "Compliance Agreement": "compliance_agreement",
-                "Notice of Right to Cancel": "notice_of_right_to_cancel",
-                "Closing Disclosure": "closing_disclosure",
-                "Truth in Lending Disclosure": "truth_in_lending_disclosure",
-                "Errors & Omissions": "errors_and_omissions_agreement",
-                "Settlement Statement": "settlement_statement"
+                "lender's closing instructions": "lenders_closing_instructions",
+                "promissory note": "promissory_note",
+                "deed of trust": "deed_of_trust",
+                "hud-1 settlement statement": "hud1_settlement_statement",
+                "adjustable rate note": "adjustable_rate_note",
+                "adjustable rate mortgage": "adjustable_rate_mortgage",
+                "flood insurance": "flood_insurance_certificate_notice",
+                "name affidavit": "name_affidavit",
+                "signature affidavit": "signature_affidavit",
+                "mailing address affidavit": "mailing_address_affidavit",
+                "compliance agreement": "compliance_agreement",
+                "right to cancel": "notice_of_right_to_cancel",
+                "truth in lending disclosure": "truth_in_lending_disclosure"
             }
 
             current_doc_name = "unclassified"
-            doc_page_buffers = {}
-            doc_counts = {}
+            current_doc_pages = []
+            saved_files = []
+            current_doc_count = {}
 
-            # Iterate clearly to group pages
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 text = page.get_text().lower()
 
-                # Check clearly if page matches any document header
                 found_new_doc = False
                 for header, doc_name in document_headers.items():
-                    if header.lower() in text:
-                        current_doc_name = doc_name
-                        doc_counts[current_doc_name] = doc_counts.get(current_doc_name, 0) + 1
-                        current_doc_fullname = f"{current_doc_name}_{doc_counts[current_doc_name]}"
-                        doc_page_buffers[current_doc_fullname] = []
+                    if header in text:
                         found_new_doc = True
+                        if doc_name in saved_files:
+                            saved_files[doc_name] += 1
+                            current_doc_name = f"{doc_name}_{saved_files[doc_name]}"
+                        else:
+                            saved_files[doc_name] = 1
+
+                        current_doc_fullname = f"{doc_name}_{saved_files[doc_name]}"
+                        current_doc_path = f"{split_folder}/{current_doc_fullname}.pdf"
+                        new_doc = fitz.open()
+                        new_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
+                        new_doc.save(new_doc_path)
                         break  # found new document clearly
 
-                if not found_new_doc and current_doc_name == "unclassified":
-                    current_doc_fullname = f"{current_doc_name}_{page_num+1}"
-                    doc_page_buffers[current_doc_fullname] = []
+                if not found_new_doc and saved_files:
+                    last_doc_name = list(saved_files.keys())[-1]
+                    doc_index = saved_files[last_doc_name]
+                    existing_doc_path = f"{split_folder}/{last_doc_name}_{doc_counts[last_doc_name]}.pdf"
+                    existing_doc = fitz.open(existing_path)
+                    existing_pages = fitz.open(new_doc_path)
+                    existing_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
+                    existing_doc_path = f"/tmp/split_docs/{last_doc_name}_{saved_files[last_doc_name]}.pdf"
+                    existing_doc.save(existing_doc_path)
 
-                # Append current page explicitly to buffer
-                doc_page_buffers[current_doc_fullname].append(page_num)
-
-            # Save clearly grouped PDFs
-            saved_files = []
-            for doc_fullname, pages in doc_page_buffers.items():
-                new_doc = fitz.open()
-                new_doc.insert_pdf(doc, from_page=pages[0], to_page=pages[-1])
-                filename = f"/tmp/split_docs/{doc_fullname}.pdf"
-                new_doc.save(filename)
-                saved_files.append(f"{doc_fullname}.pdf")
+            # List filenames clearly in the response
+            final_filenames = [f"{name}_{count}.pdf" if count > 1 else f"{name}.pdf" for name, count in saved_files.items() for count in range(1, saved_files[name]+1)]
 
             response = {
                 'message': 'PDF split successfully.',
-                'files': saved_files
+                'files': final_filenames
             }
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
@@ -88,4 +87,3 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(response).encode())
-
