@@ -19,7 +19,7 @@ class handler(BaseHTTPRequestHandler):
             split_folder = '/tmp/split_docs'
             os.makedirs(split_folder, exist_ok=True)
 
-            # Known headings dictionary
+            # Known headings dictionary (lowercase -> doc name)
             document_keywords = {
                 "lender's closing instructions": "lenders_closing_instructions",
                 "promissory note": "promissory_note",
@@ -39,77 +39,67 @@ class handler(BaseHTTPRequestHandler):
                 "settlement statement": "settlement_statement"
             }
 
+            # We only check the top portion of each page for a heading
+            TOP_PORTION = 0.3
+
             current_doc_name = "unclassified"
             current_group_pages = []
-            groups = []
+            groups = []  # Each element: {"doc_name": <name>, "pages": [list_of_pages]}
             doc_counts = {}
 
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 page_height = page.rect.height
+                blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, block_no)
 
-                # Get text blocks for debug
-                blocks = page.get_text("blocks")  # Each block => (x0, y0, x1, y1, "text", block_no)
-
-                # DEBUG: Gather the text in top 30% of the page
-                top_blocks_text = []
+                # Gather text in the top 30% of the page
+                top_text = []
                 for block in blocks:
-                    if block[1] < page_height * 0.3:
-                        top_blocks_text.append(block[4].strip())
+                    if block[1] < page_height * TOP_PORTION:
+                        top_text.append(block[4].strip().lower())
+                combined_top_text = "\n".join(top_text)
 
-                # Combine them into one debug string
-                combined_top_text = "\n".join(top_blocks_text).lower()
-
-                # DEBUG: Print out what we see in top 30% for this page
-                print(f"\n=== DEBUG Page {page_num} ===")
-                print(f"Top 30% text:\n{combined_top_text}")
-
-                # Attempt to find a known header
+                # Check for heading
                 header_found = None
                 for keyword, base_name in document_keywords.items():
                     if keyword in combined_top_text:
+                        # Found a match
                         header_found = base_name
-                        print(f"--> MATCH FOUND: '{keyword}' => doc type: {base_name}")
                         break
 
                 if header_found:
-                    # If there's a current group in progress, close it
-                    if current_group_pages:
-                        groups.append({
-                            "doc_name": current_doc_name,
-                            "pages": current_group_pages
-                        })
-                        print(f"[DEBUG] Closed out doc '{current_doc_name}' with pages {current_group_pages}")
-                        current_group_pages = []
-                    current_doc_name = header_found
+                    # Only switch docs if the new heading differs from the current doc
+                    if header_found != current_doc_name:
+                        # Close out current doc if pages exist
+                        if current_group_pages:
+                            groups.append({
+                                "doc_name": current_doc_name,
+                                "pages": current_group_pages
+                            })
+                            current_group_pages = []
+                        # Start new doc
+                        current_doc_name = header_found
 
-                # Add this page to the current group
+                # Add page to current doc
                 current_group_pages.append(page_num)
-                print(f"[DEBUG] Current doc: {current_doc_name}, pages => {current_group_pages}")
 
-            # After the loop, flush the last group
+            # Flush last doc
             if current_group_pages:
                 groups.append({
                     "doc_name": current_doc_name,
                     "pages": current_group_pages
                 })
-                print(f"[DEBUG] Final close out doc '{current_doc_name}' with pages {current_group_pages}")
 
-            # DEBUG: Summarize all groups
-            print("\n=== DEBUG Groups Summary ===")
-            for g in groups:
-                print(f"Doc '{g['doc_name']}' => pages {g['pages']}")
-
-            # Save each group as PDF
+            # Now save each group
             saved_files = []
-            for group in groups:
-                base_name = group["doc_name"]
+            for g in groups:
+                base_name = g["doc_name"]
                 doc_counts[base_name] = doc_counts.get(base_name, 0) + 1
                 suffix = f"_{doc_counts[base_name]}" if doc_counts[base_name] > 1 else ""
                 filename = f"{base_name}{suffix}.pdf"
 
                 new_doc = fitz.open()
-                new_doc.insert_pdf(doc, from_page=group["pages"][0], to_page=group["pages"][-1])
+                new_doc.insert_pdf(doc, from_page=g["pages"][0], to_page=g["pages"][-1])
                 new_doc.save(os.path.join(split_folder, filename))
                 saved_files.append(filename)
 
