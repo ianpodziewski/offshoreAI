@@ -17,6 +17,20 @@ class handler(BaseHTTPRequestHandler):
 
             split_folder = '/tmp/split_docs'
             os.makedirs(split_folder, exist_ok=True)
+            
+            document_keywords = {
+                "Promissory Note": "promissory_note.pdf",
+                "Deed of Trust": "deed_of_trust.pdf",
+                "Adjustable Rate Note": "adjustable_rate_note.pdf",
+                "HUD-1 Settlement Statement": "hud1_settlement_statement.pdf",
+                "Home Equity Conversion Loan Agreement": "home_equity_conversion_loan_agreement.pdf",
+                "Flood Insurance Certificate Notice": "flood_insurance_certificate_notice.pdf",
+                "Name Affidavit": "name_affidavit.pdf",
+                "Signature Affidavit": "signature_affidavit.pdf",
+                "Mailing Address Affidavit": "mailing_address_affidavit.pdf",
+                "Compliance Agreement": "compliance_agreement.pdf",
+                "Notice of Right to Cancel": "notice_of_right_to_cancel.pdf"
+                }
 
             # Keep track of generated filenames clearly
             saved_files = []
@@ -25,18 +39,19 @@ class handler(BaseHTTPRequestHandler):
                 page = doc.load_page(page_num)
                 text = page.get_text()
 
-                if "Promissory Note" in text:
-                    doc_name = "promissory_note.pdf"
-                elif "Deed of Trust" in text:
-                    doc_name = "deed_of_trust.pdf"
-                else:
-                    doc_name = f"page_{page_num+1}.pdf"
-
+                doc_name = None
+                for keyword, filename in document_keywords.items():
+                     if keyword in text:
+                          doc_name = filename
+                          break  # found a match clearly
+                     
+                if not doc_name:  # no match found
+                     doc_name = f"page_{page_num+1}.pdf"
+                    
                 new_doc = fitz.open()
                 new_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
                 new_doc.save(f"/tmp/{doc_name}")
                 
-                # Collect each document name clearly
                 saved_files.append(doc_name)
 
             # Return filenames clearly in response
