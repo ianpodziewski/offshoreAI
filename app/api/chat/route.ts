@@ -158,22 +158,31 @@ export async function POST(req: NextRequest) {
         });
         console.log("✅ Pinecone query complete. Matches found:", pineconeResults.matches.length);
 
-        // Build Pinecone context
-        const pineconeContext = pineconeResults.matches
+        // Build Pinecone context and trim if needed.
+        let pineconeContext = pineconeResults.matches
           .map((match) => match.metadata?.text || "")
           .join("\n\n");
+        const maxPineconeContextLength = 3000;
+        if (pineconeContext.length > maxPineconeContextLength) {
+          pineconeContext = pineconeContext.substring(0, maxPineconeContextLength) + "\n... (truncated)";
+        }
 
-        // Check similarity and optionally append user-uploaded PDF text
+        // Check similarity and optionally append user-uploaded PDF text (trimmed)
         let userFileContext = "";
         if (userFileEmbedding) {
           const userFileSimilarity = cosineSimilarity(queryEmbedding, userFileEmbedding);
           console.log(`🔎 File similarity score: ${userFileSimilarity.toFixed(3)}`);
           if (userFileSimilarity > 0.7) {
-            userFileContext = `\n\nUser-Uploaded Document Context:\n${pdfText}`;
+            const maxUserFileContextLength = 2000;
+            let trimmedPdfText = pdfText;
+            if (pdfText.length > maxUserFileContextLength) {
+              trimmedPdfText = pdfText.substring(0, maxUserFileContextLength) + "\n... (truncated)";
+            }
+            userFileContext = `\n\nUser-Uploaded Document Context:\n${trimmedPdfText}`;
           }
         }
 
-        const finalPrompt = `
+        let finalPrompt = `
 Context from Database:
 ${pineconeContext}
 
@@ -182,6 +191,12 @@ ${userFileContext}
 User Input:
 ${userMessage}
         `;
+        // Final safety trim for the prompt
+        const maxFinalPromptLength = 15000;
+        if (finalPrompt.length > maxFinalPromptLength) {
+          console.log("⚠️ Final prompt is too long, trimming further.");
+          finalPrompt = finalPrompt.substring(0, maxFinalPromptLength) + "\n... (truncated)";
+        }
         console.log("📝 Final prompt constructed. Sending to OpenAI...");
 
         const stream = new ReadableStream({
@@ -420,14 +435,21 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
 //             fs.unlinkSync(tmpFilePath);
 //             console.log(`✅ PDF text extracted. Length: ${pdfText.length} characters.`);
 
-//             // 🔥 Generate an embedding for the PDF text
-//             console.log("🔍 Generating embedding for uploaded PDF...");
+//             // Chunk the PDF text to avoid exceeding token limits.
+//             const chunkSize = 2000; // adjust as needed; this is a character limit per chunk.
+//             const chunks = chunkText(pdfText, chunkSize);
+//             console.log(`🔍 Splitting PDF text into ${chunks.length} chunks.`);
+
+//             // Generate embeddings for each chunk.
+//             console.log("🔍 Generating embeddings for uploaded PDF chunks...");
 //             const embeddingResponse = await openaiClient.embeddings.create({
 //               model: "text-embedding-ada-002",
-//               input: pdfText,
+//               input: chunks,
 //             });
-//             userFileEmbedding = embeddingResponse.data[0].embedding;
-//             console.log("✅ PDF embedding generated.");
+//             const embeddings = embeddingResponse.data.map((d: any) => d.embedding);
+//             // Average the embeddings to obtain a single embedding vector for the file.
+//             userFileEmbedding = averageEmbeddings(embeddings);
+//             console.log("✅ PDF embedding generated (averaged across chunks).");
 //           } catch (error: any) {
 //             console.error("❌ Failed to process PDF:", error.message);
 //             return resolve(
@@ -554,6 +576,30 @@ function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
 //   const magnitudeA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
 //   const magnitudeB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
 //   return dotProduct / (magnitudeA * magnitudeB);
+// }
+
+// // Helper function to split text into chunks of a specified size (by characters)
+// function chunkText(text: string, chunkSize: number): string[] {
+//   const chunks: string[] = [];
+//   let start = 0;
+//   while (start < text.length) {
+//     chunks.push(text.substring(start, start + chunkSize));
+//     start += chunkSize;
+//   }
+//   return chunks;
+// }
+
+// // Helper function to average an array of embedding vectors
+// function averageEmbeddings(embeddings: number[][]): number[] {
+//   if (embeddings.length === 0) return [];
+//   const numDimensions = embeddings[0].length;
+//   const avg = new Array(numDimensions).fill(0);
+//   embeddings.forEach(embed => {
+//     for (let i = 0; i < numDimensions; i++) {
+//       avg[i] += embed[i];
+//     }
+//   });
+//   return avg.map(x => x / embeddings.length);
 // }
 
 // function ReadableStreamToNodeStream(readable: ReadableStream<Uint8Array>) {
