@@ -122,7 +122,9 @@ export default function ChatInput({
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
                       placeholder="Type your message here..."
-                      className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                      // Added `text-left` for typed text alignment
+                      // and `placeholder:text-left` to ensure the placeholder also aligns left
+                      className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-left placeholder:text-left"
                     />
                   </FormControl>
                 </FormItem>
@@ -168,6 +170,7 @@ export default function ChatInput({
     </div>
   );
 }
+
 
 
 
