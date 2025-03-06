@@ -8,7 +8,9 @@ export default function UploadPage() {
   const [message, setMessage] = useState('');
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) setFile(e.target.files[0]);
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
   };
 
   const handleUpload = async () => {
@@ -28,6 +30,7 @@ export default function UploadPage() {
         method: 'POST',
         body: formData,
       });
+
       const data = await res.json();
       setMessage(data.message);
     } catch {
@@ -38,9 +41,9 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-semibold mb-4">Upload Executed Document Package</h1>
-      <input type="file" accept=".pdf" onChange={handleFileChange} className="mb-4" />
+    <div className="p-8">
+      <h1 className="text-2xl font-semibold mb-4">Upload Executed Document Package</h1>
+      <input type="file" accept=".pdf" onChange={handleFileChange} className="mb-4 block" />
       <button
         onClick={handleUpload}
         disabled={uploading}
@@ -52,3 +55,4 @@ export default function UploadPage() {
     </div>
   );
 }
+
