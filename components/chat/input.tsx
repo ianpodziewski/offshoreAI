@@ -9,7 +9,7 @@ import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import ChatFooter from "@/components/chat/footer";
 import { cn } from "@/lib/utils";
 
-// Define a type that extends HTMLInputElement with a clear method.
+// Extend HTMLInputElement to include `clear()` from our custom FileInput
 interface FileInputRef extends HTMLInputElement {
   clear: () => void;
 }
@@ -29,7 +29,6 @@ export default function ChatInput({
 }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  // Updated ref type to include clear() method.
   const fileInputRef = useRef<FileInputRef | null>(null);
 
   const form = useForm({
@@ -38,11 +37,9 @@ export default function ChatInput({
     },
   });
 
-  // Open the file dialog when the Plus (+) button is clicked
+  // Open file dialog
   const openFileDialog = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    fileInputRef.current?.click();
   };
 
   // Handle file selection
@@ -55,10 +52,9 @@ export default function ChatInput({
     }
   };
 
-  // Handle form submission
+  // Handle submit
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!input.trim() && !file) {
       console.warn("⚠️ No input or file provided.");
       return;
@@ -74,6 +70,7 @@ export default function ChatInput({
     setFile(null);
     form.reset({ message: "" });
 
+    // Reset parent's controlled input
     const mockEvent = {
       target: { value: "" },
       currentTarget: { value: "" },
@@ -81,9 +78,10 @@ export default function ChatInput({
     handleInputChange(mockEvent);
   };
 
+  // Remove selected file
   const removeFile = () => {
     setFile(null);
-    fileInputRef.current?.clear(); // Now recognized by TypeScript
+    fileInputRef.current?.clear();
   };
 
   return (
@@ -92,6 +90,7 @@ export default function ChatInput({
         <Form {...form}>
           <form
             onSubmit={onSubmit}
+            // Container for the input + buttons
             className={cn(
               "flex items-center w-full p-2 border rounded-full shadow-sm",
               isFocused ? "ring-2 ring-ring ring-offset-2" : ""
@@ -110,8 +109,16 @@ export default function ChatInput({
               control={form.control}
               name="message"
               render={({ field }) => (
-                <FormItem className="flex-grow">
+                {/* 
+                  We make this parent container 'flex-1 min-w-0' so it can grow 
+                  and shrink properly within the flex row. 
+                */}
+                <FormItem className="flex-1 min-w-0">
                   <FormControl>
+                    {/* 
+                      The Input is set to 'w-full' so it occupies all space 
+                      inside the FormItem, ensuring left-click is possible. 
+                    */}
                     <Input
                       {...field}
                       onChange={(e) => {
@@ -122,9 +129,7 @@ export default function ChatInput({
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
                       placeholder="Type your message here..."
-                      // Added `text-left` for typed text alignment
-                      // and `placeholder:text-left` to ensure the placeholder also aligns left
-                      className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-left placeholder:text-left"
+                      className="w-full border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-left placeholder:text-left"
                     />
                   </FormControl>
                 </FormItem>
@@ -152,6 +157,7 @@ export default function ChatInput({
           </form>
         </Form>
 
+        {/* Attachment Bubble */}
         {file && (
           <div className="mt-2 inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
             <Paperclip className="w-5 h-5 text-gray-500 mr-2" />
@@ -170,6 +176,7 @@ export default function ChatInput({
     </div>
   );
 }
+
 
 
 
