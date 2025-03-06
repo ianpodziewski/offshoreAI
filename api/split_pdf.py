@@ -14,49 +14,65 @@ class handler(BaseHTTPRequestHandler):
                 f.write(pdf_data)
 
             doc = fitz.open(upload_path)
+            os.makedirs('/tmp/split_docs', exist_ok=True)
 
-            split_folder = '/tmp/split_docs'
-            os.makedirs(split_folder, exist_ok=True)
-            
-            document_keywords = {
-                "Promissory Note": "promissory_note.pdf",
-                "Deed of Trust": "deed_of_trust.pdf",
-                "Adjustable Rate Note": "adjustable_rate_note.pdf",
-                "HUD-1 Settlement Statement": "hud1_settlement_statement.pdf",
-                "Home Equity Conversion Loan Agreement": "home_equity_conversion_loan_agreement.pdf",
-                "Flood Insurance Certificate Notice": "flood_insurance_certificate_notice.pdf",
-                "Name Affidavit": "name_affidavit.pdf",
-                "Signature Affidavit": "signature_affidavit.pdf",
-                "Mailing Address Affidavit": "mailing_address_affidavit.pdf",
-                "Compliance Agreement": "compliance_agreement.pdf",
-                "Notice of Right to Cancel": "notice_of_right_to_cancel.pdf"
-                }
+            # Ordered list of document headers to detect clearly
+            document_headers = {
+                "Lender's Closing Instructions": "lenders_closing_instructions",
+                "Promissory Note": "promissory_note",
+                "Deed of Trust": "deed_of_trust",
+                "Adjustable Rate Note": "adjustable_rate_note",
+                "Adjustable Rate Mortgage": "adjustable_rate_mortgage",
+                "HUD-1 Settlement Statement": "hud1_settlement_statement",
+                "Home Equity Conversion Loan Agreement": "home_equity_conversion_loan_agreement",
+                "Flood Insurance": "flood_insurance_certificate_notice",
+                "Name Affidavit": "name_affidavit",
+                "Signature Affidavit": "signature_affidavit",
+                "Mailing Address Affidavit": "mailing_address_affidavit",
+                "Compliance Agreement": "compliance_agreement",
+                "Notice of Right to Cancel": "notice_of_right_to_cancel",
+                "Closing Disclosure": "closing_disclosure",
+                "Truth in Lending Disclosure": "truth_in_lending_disclosure",
+                "Errors & Omissions": "errors_and_omissions_agreement",
+                "Settlement Statement": "settlement_statement"
+            }
 
-            # Keep track of generated filenames clearly
-            saved_files = []
+            current_doc_name = "unclassified"
+            doc_page_buffers = {}
+            doc_counts = {}
 
+            # Iterate clearly to group pages
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
-                text = page.get_text()
+                text = page.get_text().lower()
 
-                print(f"Page {page_num + 1} text content clearly:\n{text}\n---End Page---\n")  # clearly logging
+                # Check clearly if page matches any document header
+                found_new_doc = False
+                for header, doc_name in document_headers.items():
+                    if header.lower() in text:
+                        current_doc_name = doc_name
+                        doc_counts[current_doc_name] = doc_counts.get(current_doc_name, 0) + 1
+                        current_doc_fullname = f"{current_doc_name}_{doc_counts[current_doc_name]}"
+                        doc_page_buffers[current_doc_fullname] = []
+                        found_new_doc = True
+                        break  # found new document clearly
 
-                doc_name = None
-                for keyword, filename in document_keywords.items():
-                     if keyword.lower() in text.lower():
-                          doc_name = filename
-                          break  # found a match clearly
-                     
-                if not doc_name:  # no match found
-                     doc_name = f"page_{page_num+1}.pdf"
-                    
+                if not found_new_doc and current_doc_name == "unclassified":
+                    current_doc_fullname = f"{current_doc_name}_{page_num+1}"
+                    doc_page_buffers[current_doc_fullname] = []
+
+                # Append current page explicitly to buffer
+                doc_page_buffers[current_doc_fullname].append(page_num)
+
+            # Save clearly grouped PDFs
+            saved_files = []
+            for doc_fullname, pages in doc_page_buffers.items():
                 new_doc = fitz.open()
-                new_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
-                new_doc.save(f"/tmp/{doc_name}")
-                
-                saved_files.append(doc_name)
+                new_doc.insert_pdf(doc, from_page=pages[0], to_page=pages[-1])
+                filename = f"/tmp/split_docs/{doc_fullname}.pdf"
+                new_doc.save(filename)
+                saved_files.append(f"{doc_fullname}.pdf")
 
-            # Return filenames clearly in response
             response = {
                 'message': 'PDF split successfully.',
                 'files': saved_files
@@ -72,3 +88,4 @@ class handler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(response).encode())
+
