@@ -18,27 +18,31 @@ export default function UploadPage() {
       setMessage('Please select a file first.');
       return;
     }
-
+  
     setUploading(true);
     setMessage('');
-
+  
     const formData = new FormData();
     formData.append('file', file);
-
+  
     try {
-      const res = await fetch('/api/upload', {
+      // Upload file to initial API route
+      await fetch('/api/upload', { method: 'POST', body: formData });
+  
+      // Call Python API to split PDF
+      const splitResponse = await fetch('/api/split_pdf', {
         method: 'POST',
-        body: formData,
+        body: file, // send the raw file directly
       });
-
-      const data = await res.json();
-      setMessage(data.message);
+  
+      const splitData = await splitResponse.json();
+      setMessage(splitData.message);
     } catch {
-      setMessage('Upload failed.');
+      setMessage('Error during upload or splitting.');
     } finally {
       setUploading(false);
     }
-  };
+  };  
 
   return (
     <div className="p-8">
