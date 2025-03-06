@@ -6,6 +6,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
+  const [files, setFiles] = useState<string[]>([]); // clearly store filenames returned from backend
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -13,54 +14,62 @@ export default function UploadPage() {
     }
   };
 
-  const [files, setFiles] = useState<string[]>([]);
-
   const handleUpload = async () => {
     if (!file) {
       setMessage('Please select a file first.');
       return;
     }
-  
+
     setUploading(true);
     setMessage('');
-  
+    setFiles([]); // clear previous filenames
+
     const formData = new FormData();
     formData.append('file', file);
-  
+
     try {
+      // Step 1: Upload to Blob storage
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
-  
+
       if (!res.ok) {
         setMessage('Blob upload failed.');
         return;
       }
-  
+
+      // Step 2: Send file directly to Python backend for splitting
       const fileBuffer = await file.arrayBuffer();
       const splitResponse = await fetch('/api/split_pdf', {
         method: 'POST',
         body: fileBuffer,
       });
-  
+
       const splitData = await splitResponse.json();
-  
-      if (splitResponse.ok) {
-        setFiles(splitData.files); // Save filenames to state
+
+      if (splitResponse.ok && splitData.files) {
+        setFiles(splitData.files); // explicitly set filenames here
         setMessage(`${data.message} & ${splitData.message}`);
       } else {
-        setMessage(splitData.message);
+        setMessage(splitData.message || 'PDF splitting failed.');
       }
     } catch (error) {
       setMessage(`Error: ${error}`);
     } finally {
       setUploading(false);
     }
-  };     
+  };
 
   return (
     <div className="p-8">
       <h1 className="text-2xl font-semibold mb-4">Upload Executed Document Package</h1>
-      <input type="file" accept=".pdf" onChange={handleFileChange} className="mb-4 block" />
+
+      <input
+        type="file"
+        accept=".pdf"
+        onChange={handleFileChange}
+        className="mb-4 block"
+      />
+
       <button
         onClick={handleUpload}
         disabled={uploading}
@@ -68,8 +77,20 @@ export default function UploadPage() {
       >
         {uploading ? 'Uploading...' : 'Upload'}
       </button>
+
       {message && <p className="mt-4">{message}</p>}
+
+      {/* Clearly display filenames */}
+      {files.length > 0 && (
+        <div className="mt-4">
+          <h2 className="text-xl font-semibold">Split Documents:</h2>
+          <ul className="list-disc ml-6">
+            {files.map((filename, idx) => (
+              <li key={idx}>{filename}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
-
