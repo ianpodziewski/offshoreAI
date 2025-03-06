@@ -39,6 +39,8 @@ class handler(BaseHTTPRequestHandler):
                 page = doc.load_page(page_num)
                 text = page.get_text()
 
+                print(f"Page {page_num + 1} text content clearly:\n{text}\n---End Page---\n")  # clearly logging
+
                 doc_name = None
                 for keyword, filename in document_keywords.items():
                      if keyword.lower() in text.lower():
