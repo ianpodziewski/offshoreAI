@@ -3,11 +3,16 @@
 import { useState, useRef } from "react";
 import { Input, FileInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus } from "lucide-react";
+import { ArrowUp, Plus, Paperclip } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import ChatFooter from "@/components/chat/footer";
 import { cn } from "@/lib/utils";
+
+// Extend HTMLInputElement to include `clear()` from our custom FileInput
+interface FileInputRef extends HTMLInputElement {
+  clear: () => void;
+}
 
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -24,7 +29,7 @@ export default function ChatInput({
 }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileInputRef = useRef<FileInputRef | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -32,11 +37,9 @@ export default function ChatInput({
     },
   });
 
-  // Open the file dialog when the Plus (+) button is clicked
+  // Open file dialog
   const openFileDialog = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    fileInputRef.current?.click();
   };
 
   // Handle file selection
@@ -49,11 +52,9 @@ export default function ChatInput({
     }
   };
 
-  // Handle form submission
+  // Handle submit
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    // If neither text nor file is provided, do nothing
     if (!input.trim() && !file) {
       console.warn("⚠️ No input or file provided.");
       return;
@@ -65,19 +66,22 @@ export default function ChatInput({
       return;
     }
 
-    // Pass the text + file up to the parent
     handleSubmit(input, file || undefined);
-
-    // Clear out the file state and the text input
     setFile(null);
     form.reset({ message: "" });
 
-    // Create a mock event to reset the parent's controlled input
+    // Reset parent's controlled input
     const mockEvent = {
       target: { value: "" },
       currentTarget: { value: "" },
     } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(mockEvent);
+  };
+
+  // Remove selected file
+  const removeFile = () => {
+    setFile(null);
+    fileInputRef.current?.clear();
   };
 
   return (
@@ -86,12 +90,12 @@ export default function ChatInput({
         <Form {...form}>
           <form
             onSubmit={onSubmit}
+            // Container for the input + buttons
             className={cn(
               "flex items-center w-full p-2 border rounded-full shadow-sm",
               isFocused ? "ring-2 ring-ring ring-offset-2" : ""
             )}
           >
-            {/* Hidden File Input */}
             <FileInput
               ref={fileInputRef}
               accept=".pdf,.docx,.txt"
@@ -99,12 +103,11 @@ export default function ChatInput({
               className="hidden"
             />
 
-            {/* Text Input */}
             <FormField
               control={form.control}
               name="message"
               render={({ field }) => (
-                <FormItem className="flex-grow">
+                <FormItem className="flex-1 min-w-0">
                   <FormControl>
                     <Input
                       {...field}
@@ -116,7 +119,7 @@ export default function ChatInput({
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
                       placeholder="Type your message here..."
-                      className="border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                      className="w-full border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-left placeholder:text-left"
                     />
                   </FormControl>
                 </FormItem>
@@ -144,17 +147,26 @@ export default function ChatInput({
           </form>
         </Form>
 
-        {/* Show Selected File Name (until user sends the message) */}
+        {/* Attachment Bubble */}
         {file && (
-          <p className="mt-2 text-sm text-gray-500">
-            Selected file: {file.name}
-          </p>
+          <div className="mt-2 inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
+            <Paperclip className="w-5 h-5 text-gray-500 mr-2" />
+            <span className="text-sm text-gray-800">{file.name}</span>
+            <button
+              type="button"
+              onClick={removeFile}
+              className="ml-4 text-sm text-red-500 hover:underline"
+            >
+              Remove
+            </button>
+          </div>
         )}
       </div>
       <ChatFooter />
     </div>
   );
 }
+
 
 // "use client";
 
