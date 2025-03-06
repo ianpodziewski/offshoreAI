@@ -41,7 +41,7 @@ class handler(BaseHTTPRequestHandler):
 
                 doc_name = None
                 for keyword, filename in document_keywords.items():
-                     if keyword in text:
+                     if keyword.lower() in text.lower():
                           doc_name = filename
                           break  # found a match clearly
                      
