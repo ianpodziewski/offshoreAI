@@ -90,12 +90,18 @@ export default function ChatInput({
         <Form {...form}>
           <form
             onSubmit={onSubmit}
-            // Container for the input + buttons
+            // The big pill shape container
             className={cn(
               "flex items-center w-full p-2 border rounded-full shadow-sm",
               isFocused ? "ring-2 ring-ring ring-offset-2" : ""
             )}
+            // Make the entire pill clickable by focusing on the input when clicked
+            onClick={() => {
+              // If the user clicks anywhere on the pill, focus the text input
+              document.getElementById("chat-text-input")?.focus();
+            }}
           >
+            {/* Hidden File Input */}
             <FileInput
               ref={fileInputRef}
               accept=".pdf,.docx,.txt"
@@ -103,13 +109,15 @@ export default function ChatInput({
               className="hidden"
             />
 
+            {/* Text Input */}
             <FormField
               control={form.control}
               name="message"
               render={({ field }) => (
-                <FormItem className="flex-1 min-w-0">
+                <FormItem className="flex-1 min-w-0 mr-2">
                   <FormControl>
                     <Input
+                      id="chat-text-input"
                       {...field}
                       onChange={(e) => {
                         handleInputChange(e);
@@ -119,7 +127,8 @@ export default function ChatInput({
                       onFocus={() => setIsFocused(true)}
                       onBlur={() => setIsFocused(false)}
                       placeholder="Type your message here..."
-                      className="w-full border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-left placeholder:text-left"
+                      // Expand fully, left-align text, show placeholder from the left
+                      className="w-full text-left placeholder:text-left border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                     />
                   </FormControl>
                 </FormItem>
@@ -131,7 +140,10 @@ export default function ChatInput({
               type="button"
               variant="ghost"
               className="rounded-full w-10 h-10 p-0 flex items-center justify-center mr-2"
-              onClick={openFileDialog}
+              onClick={(e) => {
+                e.stopPropagation(); // So clicking the plus doesn't also focus the text
+                openFileDialog();
+              }}
             >
               <Plus className="w-5 h-5" />
             </Button>
@@ -166,6 +178,7 @@ export default function ChatInput({
     </div>
   );
 }
+
 
 
 
