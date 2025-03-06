@@ -96,7 +96,6 @@ export default function ChatInput({
               isFocused ? "ring-2 ring-ring ring-offset-2" : ""
             )}
           >
-            {/* Hidden File Input */}
             <FileInput
               ref={fileInputRef}
               accept=".pdf,.docx,.txt"
@@ -104,21 +103,12 @@ export default function ChatInput({
               className="hidden"
             />
 
-            {/* Text Input */}
             <FormField
               control={form.control}
               name="message"
               render={({ field }) => (
-                {/* 
-                  We make this parent container 'flex-1 min-w-0' so it can grow 
-                  and shrink properly within the flex row. 
-                */}
                 <FormItem className="flex-1 min-w-0">
                   <FormControl>
-                    {/* 
-                      The Input is set to 'w-full' so it occupies all space 
-                      inside the FormItem, ensuring left-click is possible. 
-                    */}
                     <Input
                       {...field}
                       onChange={(e) => {
