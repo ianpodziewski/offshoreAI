@@ -6,11 +6,11 @@ from http.server import BaseHTTPRequestHandler
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
-            # Read the uploaded PDF data.
+            # Read PDF data
             content_length = int(self.headers['Content-Length'])
             pdf_data = self.rfile.read(content_length)
 
-            # Save the uploaded PDF temporarily.
+            # Save uploaded PDF temporarily
             upload_path = '/tmp/uploaded_package.pdf'
             with open(upload_path, 'wb') as f:
                 f.write(pdf_data)
@@ -19,7 +19,7 @@ class handler(BaseHTTPRequestHandler):
             split_folder = '/tmp/split_docs'
             os.makedirs(split_folder, exist_ok=True)
 
-            # Define keywords to look for (all lowercased)
+            # Known headings dictionary
             document_keywords = {
                 "lender's closing instructions": "lenders_closing_instructions",
                 "promissory note": "promissory_note",
@@ -39,57 +39,75 @@ class handler(BaseHTTPRequestHandler):
                 "settlement statement": "settlement_statement"
             }
 
-            # Initialize grouping variables.
             current_doc_name = "unclassified"
             current_group_pages = []
-            groups = []  # Each group: {"doc_name": <name>, "pages": [list of page numbers]}
+            groups = []
             doc_counts = {}
 
-            # Iterate through each page.
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
                 page_height = page.rect.height
-                # Get all text blocks on this page.
-                blocks = page.get_text("blocks")  # Each block: (x0, y0, x1, y1, "text", block_no)
-                header_found = None
 
-                # Check blocks in the top 30% of the page.
+                # Get text blocks for debug
+                blocks = page.get_text("blocks")  # Each block => (x0, y0, x1, y1, "text", block_no)
+
+                # DEBUG: Gather the text in top 30% of the page
+                top_blocks_text = []
                 for block in blocks:
                     if block[1] < page_height * 0.3:
-                        block_text = block[4].lower()
-                        for keyword, base_name in document_keywords.items():
-                            if keyword in block_text:
-                                header_found = base_name
-                                break
-                    if header_found:
+                        top_blocks_text.append(block[4].strip())
+
+                # Combine them into one debug string
+                combined_top_text = "\n".join(top_blocks_text).lower()
+
+                # DEBUG: Print out what we see in top 30% for this page
+                print(f"\n=== DEBUG Page {page_num} ===")
+                print(f"Top 30% text:\n{combined_top_text}")
+
+                # Attempt to find a known header
+                header_found = None
+                for keyword, base_name in document_keywords.items():
+                    if keyword in combined_top_text:
+                        header_found = base_name
+                        print(f"--> MATCH FOUND: '{keyword}' => doc type: {base_name}")
                         break
 
                 if header_found:
-                    # If we already have pages collected, finish the current group.
+                    # If there's a current group in progress, close it
                     if current_group_pages:
                         groups.append({
                             "doc_name": current_doc_name,
                             "pages": current_group_pages
                         })
+                        print(f"[DEBUG] Closed out doc '{current_doc_name}' with pages {current_group_pages}")
                         current_group_pages = []
                     current_doc_name = header_found
-                # Always add the current page to the current group.
-                current_group_pages.append(page_num)
 
-            # After the loop, flush the last group.
+                # Add this page to the current group
+                current_group_pages.append(page_num)
+                print(f"[DEBUG] Current doc: {current_doc_name}, pages => {current_group_pages}")
+
+            # After the loop, flush the last group
             if current_group_pages:
                 groups.append({
                     "doc_name": current_doc_name,
                     "pages": current_group_pages
                 })
+                print(f"[DEBUG] Final close out doc '{current_doc_name}' with pages {current_group_pages}")
 
-            # Save each group as a PDF file.
+            # DEBUG: Summarize all groups
+            print("\n=== DEBUG Groups Summary ===")
+            for g in groups:
+                print(f"Doc '{g['doc_name']}' => pages {g['pages']}")
+
+            # Save each group as PDF
             saved_files = []
             for group in groups:
                 base_name = group["doc_name"]
                 doc_counts[base_name] = doc_counts.get(base_name, 0) + 1
                 suffix = f"_{doc_counts[base_name]}" if doc_counts[base_name] > 1 else ""
                 filename = f"{base_name}{suffix}.pdf"
+
                 new_doc = fitz.open()
                 new_doc.insert_pdf(doc, from_page=group["pages"][0], to_page=group["pages"][-1])
                 new_doc.save(os.path.join(split_folder, filename))
