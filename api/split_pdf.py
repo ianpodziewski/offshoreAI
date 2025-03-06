@@ -6,11 +6,11 @@ from http.server import BaseHTTPRequestHandler
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
-            # Read PDF data from request body
+            # Read the uploaded PDF data.
             content_length = int(self.headers['Content-Length'])
             pdf_data = self.rfile.read(content_length)
 
-            # Save the uploaded PDF temporarily
+            # Save the uploaded PDF temporarily.
             upload_path = '/tmp/uploaded_package.pdf'
             with open(upload_path, 'wb') as f:
                 f.write(pdf_data)
@@ -19,7 +19,7 @@ class handler(BaseHTTPRequestHandler):
             split_folder = '/tmp/split_docs'
             os.makedirs(split_folder, exist_ok=True)
 
-            # Dictionary of document keywords (all in lower case)
+            # Define keywords to look for (all lowercased)
             document_keywords = {
                 "lender's closing instructions": "lenders_closing_instructions",
                 "promissory note": "promissory_note",
@@ -39,57 +39,59 @@ class handler(BaseHTTPRequestHandler):
                 "settlement statement": "settlement_statement"
             }
 
-            # Initialize grouping
+            # Initialize grouping variables.
             current_doc_name = "unclassified"
             current_group_pages = []
-            groups = []  # Each group is a dict: {"doc_name": ..., "pages": [...]}
+            groups = []  # Each group: {"doc_name": <name>, "pages": [list of page numbers]}
+            doc_counts = {}
 
+            # Iterate through each page.
             for page_num in range(len(doc)):
                 page = doc.load_page(page_num)
-                text = page.get_text().lower()
-
-                # Check if any known header is present on this page
+                page_height = page.rect.height
+                # Get all text blocks on this page.
+                blocks = page.get_text("blocks")  # Each block: (x0, y0, x1, y1, "text", block_no)
                 header_found = None
-                for keyword, base_name in document_keywords.items():
-                    if keyword in text:
-                        header_found = base_name
+
+                # Check blocks in the top 30% of the page.
+                for block in blocks:
+                    if block[1] < page_height * 0.3:
+                        block_text = block[4].lower()
+                        for keyword, base_name in document_keywords.items():
+                            if keyword in block_text:
+                                header_found = base_name
+                                break
+                    if header_found:
                         break
 
                 if header_found:
-                    # If current group already has pages, flush it as one document group.
+                    # If we already have pages collected, finish the current group.
                     if current_group_pages:
                         groups.append({
                             "doc_name": current_doc_name,
                             "pages": current_group_pages
                         })
-                    # Start a new group with the new header (even if the header appears on the same page,
-                    # we treat that page as the first page of the new document).
+                        current_group_pages = []
                     current_doc_name = header_found
-                    current_group_pages = [page_num]
-                else:
-                    # No header on this page; add to current group
-                    current_group_pages.append(page_num)
-            
-            # Flush the final group if any pages remain
+                # Always add the current page to the current group.
+                current_group_pages.append(page_num)
+
+            # After the loop, flush the last group.
             if current_group_pages:
                 groups.append({
                     "doc_name": current_doc_name,
                     "pages": current_group_pages
                 })
 
-            # Now, save each group as a PDF.
+            # Save each group as a PDF file.
             saved_files = []
-            doc_counts = {}  # To number multiple occurrences of the same doc type
             for group in groups:
                 base_name = group["doc_name"]
                 doc_counts[base_name] = doc_counts.get(base_name, 0) + 1
-                # Append a suffix if there is more than one document of this type.
-                filename = f"{base_name}_{doc_counts[base_name]}.pdf" if doc_counts[base_name] > 1 else f"{base_name}.pdf"
+                suffix = f"_{doc_counts[base_name]}" if doc_counts[base_name] > 1 else ""
+                filename = f"{base_name}{suffix}.pdf"
                 new_doc = fitz.open()
-                # We assume pages in the group are sequential.
-                first_page = group["pages"][0]
-                last_page = group["pages"][-1]
-                new_doc.insert_pdf(doc, from_page=first_page, to_page=last_page)
+                new_doc.insert_pdf(doc, from_page=group["pages"][0], to_page=group["pages"][-1])
                 new_doc.save(os.path.join(split_folder, filename))
                 saved_files.append(filename)
 
