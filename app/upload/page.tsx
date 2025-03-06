@@ -26,7 +26,7 @@ export default function UploadPage() {
     formData.append('file', file);
   
     try {
-      // Upload to Blob storage (working already)
+      // Upload to Blob storage (working)
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
   
@@ -35,25 +35,23 @@ export default function UploadPage() {
         return;
       }
   
-      // Call the Python API correctly at root-level `/api`
-      const fileData = await file.arrayBuffer();
+      // Important: Send file directly to Python handler
+      const fileBuffer = await file.arrayBuffer();
       const splitResponse = await fetch('/api/split_pdf', {
         method: 'POST',
-        body: fileData, // Directly sending PDF file binary
+        body: fileBuffer,
+        headers: { 'Content-Type': 'application/pdf' },
       });
   
       const splitData = await splitResponse.json();
-      if (splitResponse.ok) {
-        setMessage(`${data.message} & ${splitData.message}`);
-      } else {
-        setMessage(splitData.message);
-      }
-    } catch {
-      setMessage('Error during upload or splitting.');
+      setMessage(`${data.message} & ${splitData.message}`);
+  
+    } catch (error) {
+      setMessage(`Error during upload or splitting: ${error}`);
     } finally {
       setUploading(false);
     }
-  };    
+  };     
 
   return (
     <div className="p-8">
