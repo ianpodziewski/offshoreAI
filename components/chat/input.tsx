@@ -67,17 +67,20 @@ export default function ChatInput({
       return;
     }
 
-    console.log("🚀 Calling handleSubmit with:", { message: input, file });
+    // Capture the current file in a local variable
+    const fileToSubmit = file;
+
+    console.log("🚀 Calling handleSubmit with:", { message: input, file: fileToSubmit });
 
     if (typeof handleSubmit !== "function") {
       console.error("❌ handleSubmit is not a function!", handleSubmit);
       return;
     }
 
-    // Send data up to the parent
-    handleSubmit(input, file || undefined);
+    // Send data up to the parent with the captured file value
+    handleSubmit(input, fileToSubmit || undefined);
 
-    // Clear out file state and the text input in both:
+    // Clear out file state and the text input:
     // 1) The local form (react-hook-form)
     // 2) The parent component’s `input` prop
     setFile(null);
@@ -162,7 +165,7 @@ export default function ChatInput({
             <Button
               type="submit"
               className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
-              disabled={input.trim() === "" || isLoading}
+              disabled={(input.trim() === "" && !file) || isLoading}
             >
               <ArrowUp className="w-5 h-5" />
             </Button>
@@ -180,7 +183,7 @@ export default function ChatInput({
 // import { useState, useRef } from "react";
 // import { Input, FileInput } from "@/components/ui/input"; // ✅ Import FileInput
 // import { Button } from "@/components/ui/button";
-// import { ArrowUp, Plus } from "lucide-react";
+// import { ArrowUp, Plus, Paperclip } from "lucide-react";  // <-- Added Paperclip import
 // import { useForm } from "react-hook-form";
 // import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 // import ChatFooter from "@/components/chat/footer";
@@ -225,6 +228,14 @@ export default function ChatInput({
 //     }
 //   };
 
+//   // Remove selected file (new functionality)
+//   const removeFile = () => {
+//     setFile(null);
+//     if (fileInputRef.current) {
+//       fileInputRef.current.value = "";
+//     }
+//   };
+
 //   // Handle form submission
 //   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
 //     e.preventDefault();
@@ -263,6 +274,21 @@ export default function ChatInput({
 //   return (
 //     <div className="z-10 flex flex-col justify-center items-center fixed bottom-0 w-full p-5 bg-white shadow-[0_-10px_15px_-2px_rgba(255,255,255,1)] text-base">
 //       <div className="max-w-screen-lg w-full">
+//         {/* Moved Selected File Bubble ABOVE the form */}
+//         {file && (
+//           <div className="mb-2 inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
+//             <Paperclip className="w-5 h-5 text-gray-500 mr-2" />
+//             <span className="text-sm text-gray-800">{file.name}</span>
+//             <button
+//               type="button"
+//               onClick={removeFile}
+//               className="ml-4 text-sm text-red-500 hover:underline"
+//             >
+//               Remove
+//             </button>
+//           </div>
+//         )}
+
 //         <Form {...form}>
 //           <form
 //             onSubmit={onSubmit}
@@ -322,13 +348,6 @@ export default function ChatInput({
 //             </Button>
 //           </form>
 //         </Form>
-
-//         {/* Show Selected File Name (only until user sends the message) */}
-//         {file && (
-//           <p className="mt-2 text-sm text-gray-500">
-//             Selected file: {file.name}
-//           </p>
-//         )}
 //       </div>
 //       <ChatFooter />
 //     </div>
