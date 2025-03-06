@@ -35,3 +35,6 @@
 **/*.tsbuildinfo
 **/next-env.d.ts
 .env
+
+# test files
+public/uploads/*
