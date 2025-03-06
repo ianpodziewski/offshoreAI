@@ -13,6 +13,8 @@ export default function UploadPage() {
     }
   };
 
+  const [files, setFiles] = useState<string[]>([]);
+
   const handleUpload = async () => {
     if (!file) {
       setMessage('Please select a file first.');
@@ -26,7 +28,6 @@ export default function UploadPage() {
     formData.append('file', file);
   
     try {
-      // Upload to Blob storage (working)
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = await res.json();
   
@@ -35,19 +36,22 @@ export default function UploadPage() {
         return;
       }
   
-      // Important: Send file directly to Python handler
       const fileBuffer = await file.arrayBuffer();
       const splitResponse = await fetch('/api/split_pdf', {
         method: 'POST',
         body: fileBuffer,
-        headers: { 'Content-Type': 'application/pdf' },
       });
   
       const splitData = await splitResponse.json();
-      setMessage(`${data.message} & ${splitData.message}`);
   
+      if (splitResponse.ok) {
+        setFiles(splitData.files); // Save filenames to state
+        setMessage(`${data.message} & ${splitData.message}`);
+      } else {
+        setMessage(splitData.message);
+      }
     } catch (error) {
-      setMessage(`Error during upload or splitting: ${error}`);
+      setMessage(`Error: ${error}`);
     } finally {
       setUploading(false);
     }
