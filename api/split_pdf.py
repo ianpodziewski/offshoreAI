@@ -5,7 +5,7 @@ import spacy
 from http.server import BaseHTTPRequestHandler
 
 # Load NLP model
-nlp = spacy.load("en_core_web_sm")
+nlp = spacy.load("en_core_web_sm", disable=["parser", "ner", "tagger"])
 
 # Section classification dictionary
 document_keywords = {
