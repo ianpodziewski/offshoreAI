@@ -2,12 +2,10 @@ import fitz  # PyMuPDF
 import json
 import os
 import spacy
-from sentence_transformers import SentenceTransformer
 from http.server import BaseHTTPRequestHandler
 
-# Load NLP models
+# Load NLP model
 nlp = spacy.load("en_core_web_sm")
-embedder = SentenceTransformer("all-MiniLM-L6-v2")  # Efficient embedding model
 
 # Section classification dictionary
 document_keywords = {
@@ -28,9 +26,6 @@ document_keywords = {
     "settlement statement": "settlement_statement",
 }
 
-# Convert keywords into embeddings for better matching
-keyword_embeddings = {k: embedder.encode(k) for k in document_keywords.keys()}
-
 # Define a function to check if a given text is a header
 def is_header(text):
     """
@@ -44,14 +39,15 @@ def is_header(text):
 
 def classify_section(text):
     """
-    Classifies text using semantic similarity to known section headers.
+    Classifies text using Spacy's built-in word vectors for similarity matching.
     """
-    text_embedding = embedder.encode(text)
+    doc = nlp(text)
     best_match = None
     best_score = -1  # Track highest similarity
 
-    for keyword, keyword_emb in keyword_embeddings.items():
-        score = text_embedding @ keyword_emb  # Compute cosine similarity
+    for keyword in document_keywords.keys():
+        keyword_doc = nlp(keyword)
+        score = doc.similarity(keyword_doc)  # Spacy similarity comparison
         if score > best_score:
             best_score = score
             best_match = document_keywords[keyword]
@@ -102,7 +98,7 @@ class handler(BaseHTTPRequestHandler):
                 detected_header = None
                 for line in combined_top_text.split("\n"):
                     if is_header(line):  # Use NLP to check structure
-                        detected_header = classify_section(line)  # Classify header using embeddings
+                        detected_header = classify_section(line)  # Classify header using similarity
                         if detected_header:
                             break  # Stop checking if a match is found
 
@@ -158,4 +154,3 @@ class handler(BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(response).encode())
-
