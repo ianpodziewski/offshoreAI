@@ -4,7 +4,10 @@ import os
 from PyPDF2 import PdfReader, PdfWriter
 from http.server import BaseHTTPRequestHandler
 
-# Section classification dictionary (unchanged)
+# Define a writable temp directory
+TEMP_DIR = "/tmp/"
+
+# Section classification dictionary
 document_keywords = {
     "lender's closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
@@ -43,14 +46,14 @@ class handler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             pdf_data = self.rfile.read(content_length)
 
-            # Save uploaded PDF temporarily
-            upload_path = os.path.join(os.getcwd(), "uploaded_package.pdf")
+            # Save uploaded PDF to Vercel's writable /tmp/ directory
+            upload_path = os.path.join(TEMP_DIR, "uploaded_package.pdf")
             with open(upload_path, "wb") as f:
                 f.write(pdf_data)
 
             # Read PDF
             pdf_reader = PdfReader(upload_path)
-            split_folder = os.path.join(os.getcwd(), "split_docs")
+            split_folder = os.path.join(TEMP_DIR, "split_docs")
             os.makedirs(split_folder, exist_ok=True)
 
             current_doc_name = "unclassified"
