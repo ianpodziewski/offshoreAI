@@ -1,13 +1,10 @@
-import fitz  # PyMuPDF
+import pdfplumber
 import json
 import os
-import spacy
+from PyPDF2 import PdfReader, PdfWriter
 from http.server import BaseHTTPRequestHandler
 
-# Load NLP model
-nlp = spacy.load("en_core_web_sm", disable=["parser", "ner", "tagger"])
-
-# Section classification dictionary
+# Section classification dictionary (unchanged)
 document_keywords = {
     "lender's closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
@@ -26,38 +23,23 @@ document_keywords = {
     "settlement statement": "settlement_statement",
 }
 
-# Define a function to check if a given text is a header
-def is_header(text):
-    """
-    Determines if the given text is a section header.
-    Uses NLP to check structure (short, capitalized, meaningful).
-    """
-    doc = nlp(text)
-    is_short = len(text) < 60  # Headers are usually short
-    is_title_case = text.istitle() or text.isupper()  # Headers often in title case
-    return is_short and is_title_case
+def extract_text_from_page(page):
+    """Extracts text from a PDF page using pdfplumber."""
+    with pdfplumber.open(page) as pdf:
+        return pdf.pages[0].extract_text() if pdf.pages else ""
 
 def classify_section(text):
-    """
-    Classifies text using Spacy's built-in word vectors for similarity matching.
-    """
-    doc = nlp(text)
-    best_match = None
-    best_score = -1  # Track highest similarity
-
+    """Classifies text based on simple keyword matching."""
+    text_lower = text.lower()
     for keyword in document_keywords.keys():
-        keyword_doc = nlp(keyword)
-        score = doc.similarity(keyword_doc)  # Spacy similarity comparison
-        if score > best_score:
-            best_score = score
-            best_match = document_keywords[keyword]
-
-    return best_match if best_score > 0.75 else None  # Only return if above threshold
+        if keyword in text_lower:
+            return document_keywords[keyword]
+    return "unclassified"
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
-            # Read PDF data
+            # Read PDF data from request
             content_length = int(self.headers['Content-Length'])
             pdf_data = self.rfile.read(content_length)
 
@@ -66,63 +48,31 @@ class handler(BaseHTTPRequestHandler):
             with open(upload_path, "wb") as f:
                 f.write(pdf_data)
 
-            doc = fitz.open(upload_path)
+            # Read PDF
+            pdf_reader = PdfReader(upload_path)
             split_folder = os.path.join(os.getcwd(), "split_docs")
             os.makedirs(split_folder, exist_ok=True)
 
-            # We only check the top portion of each page for a heading
-            TOP_PORTION = 0.3
-
             current_doc_name = "unclassified"
             current_group_pages = []
-            groups = []  # Each element: {"doc_name": <name>, "pages": [list_of_pages]}
+            groups = []
             doc_counts = {}
 
-            for page_num in range(len(doc)):
-                page = doc.load_page(page_num)
-                page_height = page.rect.height
-                blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, block_no)
+            for i, page in enumerate(pdf_reader.pages):
+                extracted_text = extract_text_from_page(upload_path)
+                detected_header = classify_section(extracted_text)
 
-                # Gather text in the top 30% of the page
-                top_text = []
-                for block in blocks:
-                    if block[1] < page_height * TOP_PORTION:
-                        top_text.append(block[4].strip())
+                if detected_header != current_doc_name:
+                    if current_group_pages:
+                        groups.append({"doc_name": current_doc_name, "pages": current_group_pages})
+                        current_group_pages = []
+                    current_doc_name = detected_header
 
-                combined_top_text = "\n".join(top_text)
+                current_group_pages.append(i)
 
-                if not combined_top_text.strip():
-                    continue  # Skip empty pages
-
-                # Check for NLP-based heading detection
-                detected_header = None
-                for line in combined_top_text.split("\n"):
-                    if is_header(line):  # Use NLP to check structure
-                        detected_header = classify_section(line)  # Classify header using similarity
-                        if detected_header:
-                            break  # Stop checking if a match is found
-
-                if detected_header:
-                    if detected_header != current_doc_name:
-                        if current_group_pages:
-                            groups.append({
-                                "doc_name": current_doc_name,
-                                "pages": current_group_pages
-                            })
-                            current_group_pages = []
-                        current_doc_name = detected_header
-
-                # Add page to current doc
-                current_group_pages.append(page_num)
-
-            # Flush last doc
             if current_group_pages:
-                groups.append({
-                    "doc_name": current_doc_name,
-                    "pages": current_group_pages
-                })
+                groups.append({"doc_name": current_doc_name, "pages": current_group_pages})
 
-            # Now save each group
             saved_files = []
             for g in groups:
                 base_name = g["doc_name"]
@@ -130,12 +80,13 @@ class handler(BaseHTTPRequestHandler):
                 suffix = f"_{doc_counts[base_name]}" if doc_counts[base_name] > 1 else ""
                 filename = f"{base_name}{suffix}.pdf"
 
-                new_doc = fitz.open()
-                for page in g["pages"]:
-                    new_doc.insert_pdf(doc, from_page=page, to_page=page)
-                
+                pdf_writer = PdfWriter()
+                for page_num in g["pages"]:
+                    pdf_writer.add_page(pdf_reader.pages[page_num])
+
                 new_doc_path = os.path.join(split_folder, filename)
-                new_doc.save(new_doc_path)
+                with open(new_doc_path, "wb") as f:
+                    pdf_writer.write(f)
                 saved_files.append(new_doc_path)
 
             response = {
