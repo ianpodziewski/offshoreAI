@@ -4,12 +4,12 @@ import os
 from PyPDF2 import PdfReader, PdfWriter
 from http.server import BaseHTTPRequestHandler
 
-# Define a writable temp directory
+# Define a writable temp directory for Vercel
 TEMP_DIR = "/tmp/"
 
-# Section classification dictionary
+# Document classification keywords
 document_keywords = {
-    "lender's closing instructions": "lenders_closing_instructions",
+    "closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
     "deed of trust": "deed_of_trust",
     "hud-1 settlement statement": "hud1_settlement_statement",
@@ -26,17 +26,17 @@ document_keywords = {
     "settlement statement": "settlement_statement",
 }
 
-def extract_text_from_page(page):
-    """Extracts text from a PDF page using pdfplumber."""
-    with pdfplumber.open(page) as pdf:
-        return pdf.pages[0].extract_text() if pdf.pages else ""
+def extract_text_from_page(pdf_path, page_num):
+    """Extracts text from a single page using pdfplumber."""
+    with pdfplumber.open(pdf_path) as pdf:
+        return pdf.pages[page_num].extract_text() if page_num < len(pdf.pages) else ""
 
 def classify_section(text):
-    """Classifies text based on simple keyword matching."""
+    """Classifies text based on keyword matching."""
     text_lower = text.lower()
-    for keyword in document_keywords.keys():
+    for keyword, doc_type in document_keywords.items():
         if keyword in text_lower:
-            return document_keywords[keyword]
+            return doc_type
     return "unclassified"
 
 class handler(BaseHTTPRequestHandler):
@@ -46,12 +46,12 @@ class handler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             pdf_data = self.rfile.read(content_length)
 
-            # Save uploaded PDF to Vercel's writable /tmp/ directory
+            # Save uploaded PDF to a writable directory
             upload_path = os.path.join(TEMP_DIR, "uploaded_package.pdf")
             with open(upload_path, "wb") as f:
                 f.write(pdf_data)
 
-            # Read PDF
+            # Read the PDF
             pdf_reader = PdfReader(upload_path)
             split_folder = os.path.join(TEMP_DIR, "split_docs")
             os.makedirs(split_folder, exist_ok=True)
@@ -61,10 +61,12 @@ class handler(BaseHTTPRequestHandler):
             groups = []
             doc_counts = {}
 
+            # Iterate through pages and classify sections
             for i, page in enumerate(pdf_reader.pages):
-                extracted_text = extract_text_from_page(upload_path)
+                extracted_text = extract_text_from_page(upload_path, i)
                 detected_header = classify_section(extracted_text)
 
+                # Start new document if section changes
                 if detected_header != current_doc_name:
                     if current_group_pages:
                         groups.append({"doc_name": current_doc_name, "pages": current_group_pages})
@@ -73,6 +75,7 @@ class handler(BaseHTTPRequestHandler):
 
                 current_group_pages.append(i)
 
+            # Save last document section
             if current_group_pages:
                 groups.append({"doc_name": current_doc_name, "pages": current_group_pages})
 
