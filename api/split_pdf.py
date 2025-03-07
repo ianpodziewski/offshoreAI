@@ -22,6 +22,16 @@ def get_category(doc_type):
             return category
     return "uncategorized"
 
+def classify_section(text):
+    """Classifies text based on keyword matching."""
+    text_lower = text.lower()
+
+    for category, doc_types in FILE_SOCKETS.items():
+        for doc_type in doc_types:
+            if doc_type.replace("_", " ") in text_lower:  # Match flexible naming
+                return doc_type
+    return "unclassified"
+
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
@@ -38,17 +48,15 @@ class handler(BaseHTTPRequestHandler):
 
             doc_counts = {}
             groups = []
+            current_doc_name = "unclassified"
 
             # Process and classify sections
             for i, page in enumerate(pdf_reader.pages):
                 extracted_text = page.extract_text() or ""
-                detected_header = extracted_text.split("\n")[0].strip().lower()  # Assume first line is the header
+                detected_doc_type = classify_section(extracted_text)
 
-                current_doc_name = "unclassified"
-                for keyword, doc_type in FILE_SOCKETS.items():
-                    if keyword in detected_header:
-                        current_doc_name = doc_type
-                        break
+                if detected_doc_type != current_doc_name:
+                    current_doc_name = detected_doc_type
 
                 groups.append({"doc_name": current_doc_name, "page": i})
 
