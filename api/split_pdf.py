@@ -81,6 +81,18 @@ class handler(BaseHTTPRequestHandler):
 
                 saved_files.append(new_doc_path)
 
+            # ✅ Debugging: Log the saved files
+            if os.path.exists(split_folder):
+                print("✅ /tmp/split_docs/ directory exists.")
+                print("📂 Saved Categories:", os.listdir(split_folder))
+
+                for category in os.listdir(split_folder):
+                    category_path = os.path.join(split_folder, category)
+                    if os.path.isdir(category_path):
+                        print(f"📁 {category} contains:", os.listdir(category_path))
+            else:
+                print("❌ ERROR: /tmp/split_docs/ directory does not exist!")
+
             response = {
                 "message": "PDF split and categorized successfully.",
                 "files": saved_files
@@ -92,6 +104,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(response).encode())
 
         except Exception as e:
+            print("❌ ERROR in split_pdf:", str(e))  # Log the exact error
             response = {"message": f"Server Error: {str(e)}"}
             self.send_response(500)
             self.send_header("Content-type", "application/json")
