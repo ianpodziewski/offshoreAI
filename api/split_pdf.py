@@ -1,7 +1,62 @@
-import fitz
+import fitz  # PyMuPDF
 import json
 import os
+import spacy
+from sentence_transformers import SentenceTransformer
 from http.server import BaseHTTPRequestHandler
+
+# Load NLP models
+nlp = spacy.load("en_core_web_sm")
+embedder = SentenceTransformer("all-MiniLM-L6-v2")  # Efficient embedding model
+
+# Section classification dictionary
+document_keywords = {
+    "lender's closing instructions": "lenders_closing_instructions",
+    "promissory note": "promissory_note",
+    "deed of trust": "deed_of_trust",
+    "hud-1 settlement statement": "hud1_settlement_statement",
+    "adjustable rate note": "adjustable_rate_note",
+    "home equity conversion loan agreement": "home_equity_conversion_loan_agreement",
+    "flood insurance": "flood_insurance_certificate_notice",
+    "name affidavit": "name_affidavit",
+    "signature affidavit": "signature_affidavit",
+    "mailing address affidavit": "mailing_address_affidavit",
+    "compliance agreement": "compliance_agreement",
+    "notice of right to cancel": "notice_of_right_to_cancel",
+    "truth in lending": "truth_in_lending_disclosure",
+    "closing disclosure": "closing_disclosure",
+    "settlement statement": "settlement_statement",
+}
+
+# Convert keywords into embeddings for better matching
+keyword_embeddings = {k: embedder.encode(k) for k in document_keywords.keys()}
+
+# Define a function to check if a given text is a header
+def is_header(text):
+    """
+    Determines if the given text is a section header.
+    Uses NLP to check structure (short, capitalized, meaningful).
+    """
+    doc = nlp(text)
+    is_short = len(text) < 60  # Headers are usually short
+    is_title_case = text.istitle() or text.isupper()  # Headers often in title case
+    return is_short and is_title_case
+
+def classify_section(text):
+    """
+    Classifies text using semantic similarity to known section headers.
+    """
+    text_embedding = embedder.encode(text)
+    best_match = None
+    best_score = -1  # Track highest similarity
+
+    for keyword, keyword_emb in keyword_embeddings.items():
+        score = text_embedding @ keyword_emb  # Compute cosine similarity
+        if score > best_score:
+            best_score = score
+            best_match = document_keywords[keyword]
+
+    return best_match if best_score > 0.75 else None  # Only return if above threshold
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -11,33 +66,13 @@ class handler(BaseHTTPRequestHandler):
             pdf_data = self.rfile.read(content_length)
 
             # Save uploaded PDF temporarily
-            upload_path = '/tmp/uploaded_package.pdf'
-            with open(upload_path, 'wb') as f:
+            upload_path = os.path.join(os.getcwd(), "uploaded_package.pdf")
+            with open(upload_path, "wb") as f:
                 f.write(pdf_data)
 
             doc = fitz.open(upload_path)
-            split_folder = '/tmp/split_docs'
+            split_folder = os.path.join(os.getcwd(), "split_docs")
             os.makedirs(split_folder, exist_ok=True)
-
-            # Known headings dictionary (lowercase -> doc name)
-            document_keywords = {
-                "lender's closing instructions": "lenders_closing_instructions",
-                "promissory note": "promissory_note",
-                "deed of trust": "deed_of_trust",
-                "hud-1 settlement statement": "hud1_settlement_statement",
-                "adjustable rate note": "adjustable_rate_note",
-                "home equity conversion loan agreement": "home_equity_conversion_loan_agreement",
-                "home equity conversion loan agreements": "home_equity_conversion_loan_agreement",
-                "flood insurance": "flood_insurance_certificate_notice",
-                "name affidavit": "name_affidavit",
-                "signature affidavit": "signature_affidavit",
-                "mailing address affidavit": "mailing_address_affidavit",
-                "compliance agreement": "compliance_agreement",
-                "notice of right to cancel": "notice_of_right_to_cancel",
-                "truth in lending": "truth_in_lending_disclosure",
-                "closing disclosure": "closing_disclosure",
-                "settlement statement": "settlement_statement"
-            }
 
             # We only check the top portion of each page for a heading
             TOP_PORTION = 0.3
@@ -56,29 +91,30 @@ class handler(BaseHTTPRequestHandler):
                 top_text = []
                 for block in blocks:
                     if block[1] < page_height * TOP_PORTION:
-                        top_text.append(block[4].strip().lower())
+                        top_text.append(block[4].strip())
+
                 combined_top_text = "\n".join(top_text)
 
-                # Check for heading
-                header_found = None
-                for keyword, base_name in document_keywords.items():
-                    if keyword in combined_top_text:
-                        # Found a match
-                        header_found = base_name
-                        break
+                if not combined_top_text.strip():
+                    continue  # Skip empty pages
 
-                if header_found:
-                    # Only switch docs if the new heading differs from the current doc
-                    if header_found != current_doc_name:
-                        # Close out current doc if pages exist
+                # Check for NLP-based heading detection
+                detected_header = None
+                for line in combined_top_text.split("\n"):
+                    if is_header(line):  # Use NLP to check structure
+                        detected_header = classify_section(line)  # Classify header using embeddings
+                        if detected_header:
+                            break  # Stop checking if a match is found
+
+                if detected_header:
+                    if detected_header != current_doc_name:
                         if current_group_pages:
                             groups.append({
                                 "doc_name": current_doc_name,
                                 "pages": current_group_pages
                             })
                             current_group_pages = []
-                        # Start new doc
-                        current_doc_name = header_found
+                        current_doc_name = detected_header
 
                 # Add page to current doc
                 current_group_pages.append(page_num)
@@ -99,9 +135,12 @@ class handler(BaseHTTPRequestHandler):
                 filename = f"{base_name}{suffix}.pdf"
 
                 new_doc = fitz.open()
-                new_doc.insert_pdf(doc, from_page=g["pages"][0], to_page=g["pages"][-1])
-                new_doc.save(os.path.join(split_folder, filename))
-                saved_files.append(filename)
+                for page in g["pages"]:
+                    new_doc.insert_pdf(doc, from_page=page, to_page=page)
+                
+                new_doc_path = os.path.join(split_folder, filename)
+                new_doc.save(new_doc_path)
+                saved_files.append(new_doc_path)
 
             response = {
                 "message": "PDF split successfully.",
@@ -119,3 +158,4 @@ class handler(BaseHTTPRequestHandler):
             self.send_header("Content-type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps(response).encode())
+
