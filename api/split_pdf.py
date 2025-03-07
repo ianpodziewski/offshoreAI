@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler
 # Define a writable temp directory for Vercel
 TEMP_DIR = "/tmp/"
 
-# Document classification keywords
+# Document classification dictionary with more flexible matching
 document_keywords = {
     "closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
@@ -29,15 +29,29 @@ document_keywords = {
 def extract_text_from_page(pdf_path, page_num):
     """Extracts text from a single page using pdfplumber."""
     with pdfplumber.open(pdf_path) as pdf:
-        return pdf.pages[page_num].extract_text() if page_num < len(pdf.pages) else ""
+        if page_num >= len(pdf.pages):
+            return ""
+        page = pdf.pages[page_num]
+        return page.extract_text()
+
+def is_section_header(text):
+    """Determines if text is a likely section header."""
+    if not text:
+        return False
+    lines = text.split("\n")
+    for line in lines[:3]:  # Only check the first few lines
+        line = line.strip()
+        if len(line) < 100 and (line.isupper() or line.istitle()):  # Likely a header
+            return line
+    return None
 
 def classify_section(text):
-    """Classifies text based on keyword matching."""
+    """Classifies text based on keyword matching, allowing for variations."""
     text_lower = text.lower()
     for keyword, doc_type in document_keywords.items():
         if keyword in text_lower:
             return doc_type
-    return "unclassified"
+    return None
 
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -56,7 +70,7 @@ class handler(BaseHTTPRequestHandler):
             split_folder = os.path.join(TEMP_DIR, "split_docs")
             os.makedirs(split_folder, exist_ok=True)
 
-            current_doc_name = "unclassified"
+            current_doc_name = None  # Track the last known section
             current_group_pages = []
             groups = []
             doc_counts = {}
@@ -64,14 +78,17 @@ class handler(BaseHTTPRequestHandler):
             # Iterate through pages and classify sections
             for i, page in enumerate(pdf_reader.pages):
                 extracted_text = extract_text_from_page(upload_path, i)
-                detected_header = classify_section(extracted_text)
+                section_header = is_section_header(extracted_text)
+                detected_header = classify_section(section_header) if section_header else None
 
-                # Start new document if section changes
-                if detected_header != current_doc_name:
-                    if current_group_pages:
+                if detected_header:
+                    # Start a new document if a new section is detected
+                    if current_doc_name and current_group_pages:
                         groups.append({"doc_name": current_doc_name, "pages": current_group_pages})
                         current_group_pages = []
                     current_doc_name = detected_header
+                elif not current_doc_name:
+                    current_doc_name = "unclassified"  # Set a default if no section is detected
 
                 current_group_pages.append(i)
 
