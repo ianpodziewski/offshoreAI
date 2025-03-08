@@ -13,7 +13,7 @@ TEMP_DIR = "/tmp/"
 VERCEL_BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
-# Expanded document keyword dictionary
+# Updated dictionary: new keywords for HUD/VA Addendum & HECM-FNMA Submission
 DOCUMENT_KEYWORDS = {
     "lender's closing instructions": "lenders_closing_instructions",
     "closing instructions": "lenders_closing_instructions",
@@ -24,10 +24,16 @@ DOCUMENT_KEYWORDS = {
     "truth in lending": "truth_in_lending_disclosure",
     "compliance agreement": "compliance_agreement",
     "notice of right to cancel": "notice_of_right_to_cancel",
-    "invoice": "invoice"
+    "invoice": "invoice",
+
+    # Newly added:
+    "hud/va addendum to uniform residential loan application": "hud_va_addendum",
+    "hud va addendum": "hud_va_addendum",
+    "hecm-fnma submission": "hecm_fnma_sub",
+    "hecm fnma submission": "hecm_fnma_sub"
 }
 
-# Categorization mapping
+# Expanded categorization mapping
 FILE_SOCKETS = {
     "legal": [
         "lenders_closing_instructions",
@@ -37,10 +43,12 @@ FILE_SOCKETS = {
     "financial": [
         "settlement_statement",
         "closing_disclosure",
-        "truth_in_lending_disclosure"
+        "truth_in_lending_disclosure",
+        "hud_va_addendum"
     ],
     "loan": [
-        "promissory_note"
+        "promissory_note",
+        "hecm_fnma_sub"
     ],
     "misc": [
         "invoice"
@@ -54,25 +62,22 @@ def normalize_text(text):
 def get_bold_header(page):
     """
     Attempt to extract any bold text near the top of the page.
-    This is optional logic that can improve classification if pages
+    Optional logic that can improve classification if pages
     have bold headings.
     """
     words = page.extract_words() or []
-    # Limit to top 25% of the page
     page_top_cutoff = page.height * 0.25
     bold_candidates = []
     for w in words:
-        # 'fontname' can vary, so "bold" or "black" might be an indicator
         if w.get("top", 9999) < page_top_cutoff and "bold" in w.get("fontname", "").lower():
             bold_candidates.append(w["text"])
     if not bold_candidates:
         return None
-    # Join all bold words to form a header line
     return " ".join(bold_candidates)
 
 def classify_header(header_line):
     """
-    Use token_set_ratio to better handle reordering of words or extra words.
+    Use token_set_ratio for more flexible matching on headers.
     """
     if not header_line:
         return None
@@ -91,7 +96,6 @@ def full_text_classification(full_text):
     best_match = None
     best_score = 0
     for keyword, doc_type in DOCUMENT_KEYWORDS.items():
-        # Using token_set_ratio for slightly more robust matching
         score = fuzz.token_set_ratio(norm_text, normalize_text(keyword))
         if score > best_score and score > 80:
             best_score = score
@@ -101,14 +105,14 @@ def full_text_classification(full_text):
 def get_embedding_classification(text):
     """
     Optional fallback classification using OpenAI embeddings.
-    Currently returns just the embedding, but you could compare
+    Currently returns just "unclassified", but you could compare
     embeddings with known doc_type embeddings if you store them.
     """
     try:
         client = OpenAI(api_key=OPENAI_API_KEY)
         response = client.embeddings.create(input=text, model="text-embedding-ada-002")
         embedding = response['data'][0]['embedding']
-        # For actual classification, you could implement a similarity check vs known doc_type embeddings.
+        # Real embedding classification would require comparison logic here
         return "unclassified"  # Placeholder
     except Exception as e:
         print(f"❌ OpenAI Embedding Error: {e}")
@@ -134,7 +138,7 @@ def classify_page(page):
         return doc_type
     
     # Optional final fallback: embedding approach
-    # embed_type = get_embedding_classification(full_text[:1000])  # limiting text length
+    # embed_type = get_embedding_classification(full_text[:1000])
     # if embed_type:
     #     return embed_type
     
@@ -142,18 +146,15 @@ def classify_page(page):
 
 def smooth_classifications(classifications):
     """
-    After classifying each page, we do a second pass:
+    After classifying each page, do a second pass:
     1. If a page is 'unclassified' but both neighbors have the same doc_type,
-       assign this doc_type to the page.
-    2. (Optional) If doc_type differs from neighbors but is very similar,
-       we could unify them as well.
+       assign that doc_type to the page.
     """
     smoothed = classifications.copy()
     for i in range(1, len(classifications) - 1):
         prev = classifications[i - 1]["doc_name"]
         curr = classifications[i]["doc_name"]
         nxt = classifications[i + 1]["doc_name"]
-        # Merge unclassified
         if curr == "unclassified" and prev == nxt and prev != "unclassified":
             smoothed[i]["doc_name"] = prev
     return smoothed
@@ -174,7 +175,7 @@ def upload_to_vercel_blob(filepath):
 class handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers["Content-Length"])
             pdf_data = self.rfile.read(content_length)
             upload_path = os.path.join(TEMP_DIR, "uploaded_package.pdf")
             with open(upload_path, "wb") as f:
@@ -242,7 +243,7 @@ class handler(BaseHTTPRequestHandler):
                 if file_url:
                     public_urls.append(file_url)
 
-            # Return final response with public URLs
+            # Return final response with public URLs & classification results
             response = {
                 "message": "PDF split and categorized successfully.",
                 "classification": page_classifications,
