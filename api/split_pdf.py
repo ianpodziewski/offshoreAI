@@ -13,7 +13,7 @@ DOCUMENT_KEYWORDS = {
     "lender's closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
     "deed of trust": "deed_of_trust",
-    "hud-1 settlement statement": "hud1_settlement_statement",
+    "hud-1 settlement statement": "addendum_hud1_settlement_statement",
     "adjustable rate note": "adjustable_rate_note",
     "home equity conversion loan agreement": "home_equity_conversion_loan_agreement",
     "flood insurance": "flood_insurance_certificate_notice",
@@ -25,6 +25,10 @@ DOCUMENT_KEYWORDS = {
     "truth in lending": "truth_in_lending_disclosure",
     "closing disclosure": "closing_disclosure",
     "settlement statement": "settlement_statement",
+    "hud/va addendum to uniform residential loan application": "hud_va_addendum",
+    "direct endoremsent approval": "endorsement_approval",
+    "tax and insurance disclosure": "tax_insurance_disclosure",
+    "hecm-fnma submission": "hecm_fnma_sub",
 }
 
 def upload_to_vercel_blob(filepath):
