@@ -136,11 +136,11 @@ def get_embedding_classification(text):
         print(f"❌ OpenAI Embedding Error: {e}")
         return None
 
-def classify_page(page, page_index, previous_classification=None):
+def classify_page(page, page_index, current_document_type=None):
     """
-    Improved classification to prevent false keyword-based misclassification.
-    - Checks if the page is part of a continuing document.
-    - Only reclassifies if a strong heading is detected.
+    Implements structured document tracking to prevent misclassification.
+    - Uses section continuity rules.
+    - Ensures multi-page documents like Lender's Closing Instructions are not split incorrectly.
     """
     print(f"\nDEBUG: classify_page -> Page {page_index + 1}")
 
@@ -149,26 +149,20 @@ def classify_page(page, page_index, previous_classification=None):
     if header_text:
         print(f"DEBUG: extracted bold header text: {header_text}")
 
-        # Step 2: If title contains "Exhibit", inherit previous classification
-        if "exhibit" in header_text.lower():
-            print(f"DEBUG: 'Exhibit' detected in title, inheriting classification '{previous_classification}'")
-            return previous_classification
-
-        # Step 3: If a strong new header is detected, classify based on header
+        # Step 2: If a new section starts, update current document type
         doc_type = classify_header(header_text)
         if doc_type:
-            print(f"DEBUG: returning doc_type from header -> {doc_type}")
-            return doc_type
+            print(f"DEBUG: NEW DOCUMENT DETECTED -> '{doc_type}'")
+            return doc_type  # This marks the start of a new section
 
-    # Step 4: Check for continuation if no header is found
+    # Step 3: Detect continuation if no clear heading is found
     full_text = page.extract_text() or ""
+    if current_document_type:
+        print(f"DEBUG: No new header found, ASSUMING CONTINUATION of '{current_document_type}'")
+        return current_document_type
 
-    if previous_classification and not header_text:
-        print(f"DEBUG: No header found, assuming continuation of '{previous_classification}'")
-        return previous_classification
-
-    # Step 5: Prevent keyword-based misclassification
-    doc_type = weighted_text_classification(full_text, previous_classification)
+    # Step 4: Default to text-based classification as a last resort
+    doc_type = weighted_text_classification(full_text)
     if doc_type:
         print(f"DEBUG: returning doc_type from full_text -> {doc_type}")
         return doc_type
@@ -256,6 +250,27 @@ def smooth_classifications(classifications):
 
     print("DEBUG: smoothing complete\n")
     return smoothed
+
+def classify_pdf(pdf_pages):
+    """
+    Processes an entire PDF while maintaining structured document tracking.
+    """
+    classifications = []
+    current_document_type = None
+
+    for i, page in enumerate(pdf_pages):
+        doc_type = classify_page(page, i, current_document_type)
+
+        # Step 1: If this is a new classification, update the tracker
+        if doc_type and doc_type != "unclassified":
+            current_document_type = doc_type
+
+        classifications.append({
+            "page_index": i,
+            "doc_name": doc_type
+        })
+
+    return classifications
 
 def upload_to_vercel_blob(filepath):
     if not VERCEL_BLOB_TOKEN:
