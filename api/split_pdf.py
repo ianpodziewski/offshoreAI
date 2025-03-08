@@ -142,17 +142,18 @@ class handler(BaseHTTPRequestHandler):
 
             doc_counts = {}
             groups = []
-            # Start with a default valid type (you might choose a default if desired)
+            # Start with a default type; could be "unclassified" or a preset default if desired.
             current_doc_name = "unclassified"
 
-            # Loop over each page to detect a header
+            # Loop over each page to detect headers and assign document types.
             for i, page in enumerate(pdf_plumber.pages):
-                # Try bold header extraction first
+                # Attempt to extract a header using bold detection.
                 header_line = get_bold_header(page)
                 detected_doc_type = None
                 if header_line:
                     detected_doc_type = classify_header(header_line)
-                # Fallback: scan first 5 lines if no bold header found
+                    print(f"DEBUG: Page {i+1}: Bold header found: '{header_line}' -> Classified as: {detected_doc_type}")
+                # Fallback: if no bold header, scan the first 5 lines.
                 if not detected_doc_type:
                     full_text = page.extract_text() or ""
                     lines = full_text.split("\n")
@@ -160,11 +161,14 @@ class handler(BaseHTTPRequestHandler):
                         if is_header_line(line):
                             detected_doc_type = classify_header(line)
                             if detected_doc_type:
+                                print(f"DEBUG: Page {i+1}: Fallback header line: '{line}' -> Classified as: {detected_doc_type}")
                                 break
-                # If a new valid doc type is detected, update current_doc_name;
-                # Otherwise, if unclassified, keep the previous valid type.
+                # If a new valid doc type is detected, update current_doc_name.
                 if detected_doc_type and detected_doc_type != "unclassified":
                     current_doc_name = detected_doc_type
+                else:
+                    # If no new header, keep the previous valid classification.
+                    print(f"DEBUG: Page {i+1}: No valid header found; keeping previous type: {current_doc_name}")
                 groups.append({"doc_name": current_doc_name, "page_index": i})
             pdf_plumber.close()
 
@@ -177,9 +181,8 @@ class handler(BaseHTTPRequestHandler):
             for g in groups:
                 doc_name = g["doc_name"]
                 page_idx = g["page_index"]
-                # If the doc type changes (even to unclassified), but we want to retain previous grouping if unclassified:
                 if doc_name != last_doc_name:
-                    # If the new doc type is "unclassified", continue using the last valid doc type
+                    # If new group and the new type is "unclassified", retain last valid type.
                     if doc_name == "unclassified" and last_doc_name is not None:
                         doc_name = last_doc_name
                     if current_pages:
@@ -190,6 +193,11 @@ class handler(BaseHTTPRequestHandler):
                     current_pages.append(page_idx)
             if current_pages:
                 final_groups.append({"doc_name": last_doc_name, "pages": current_pages})
+
+            # Debug: Print the final grouping of pages.
+            print("DEBUG: Final Groupings:")
+            for group in final_groups:
+                print(f"  Document type '{group['doc_name']}' covers pages: {[p+1 for p in group['pages']]}")
 
             # 4. For each group, save the PDF and upload to Vercel Blob.
             public_urls = []
