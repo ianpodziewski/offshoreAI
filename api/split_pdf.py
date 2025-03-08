@@ -9,13 +9,16 @@ from http.server import BaseHTTPRequestHandler
 TEMP_DIR = "/tmp/"
 VERCEL_BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 
-# Updated dictionary for known document keywords (loosened matching)
+# Expanded dictionary for known document keywords (loosened matching)
 DOCUMENT_KEYWORDS = {
     "lender's closing instructions": "lenders_closing_instructions",
+    "lender s closing instructions": "lenders_closing_instructions",  # extra variation
     "promissory note": "promissory_note",
     "deed of trust": "deed_of_trust",
-    "hud-1 settlement statement": "addendum_hud1_settlement_statement",
+    "second deed of trust": "second_deed_of_trust",
+    "hud-1 settlement statement": "settlement_statement",
     "adjustable rate note": "adjustable_rate_note",
+    "adjustable rate second note": "adjustable_rate_second_note",
     "home equity conversion loan agreement": "home_equity_conversion_loan_agreement",
     "flood insurance": "flood_insurance_certificate_notice",
     "name affidavit": "name_affidavit",
@@ -25,30 +28,55 @@ DOCUMENT_KEYWORDS = {
     "notice of right to cancel": "notice_of_right_to_cancel",
     "truth in lending": "truth_in_lending_disclosure",
     "closing disclosure": "closing_disclosure",
-    "settlement statement": "settlement_statement",
     "hud/va addendum to uniform residential loan application": "hud_va_addendum",
-    "direct endoremsent approval": "endorsement_approval",
+    "direct endorsement approval": "endorsement_approval",
     "tax and insurance disclosure": "tax_insurance_disclosure",
-    "hecm-fnma submission": "hecm_fnma_sub"
+    "hecm-fnma submission": "hecm_fnma_sub",
+    "allonge": "allonge",
+    "hold harmless agreement": "hold_harmless_agreement",
+    "home equity conversion mortgage disclosure": "hecm_third_party_fees",
+    "borrower certification regarding third party fees": "hecm_third_party_fees",
+    "electronic fund transfer request": "electronic_fund_transfer_request",
+    "equal credit opportunity act": "equal_credit_opportunity_notice",
+    "choice of insurance option": "choice_of_insurance_option",
+    "notice to the borrower": "notice_to_borrower",
+    "lender certificate": "lender_certificate",
+    "confirmation": "confirmation",
+    "notice of assignment": "notice_of_assignment_servicing_rights",
+    "servicing rights": "notice_of_assignment_servicing_rights",
+    "hotel and transient": "borrowers_hotel_transient_contract",
+    "invoice": "invoice"
 }
 
-# Categorization mapping remains the same
+# Updated categorization mapping
 FILE_SOCKETS = {
     "legal": [
         "lenders_closing_instructions",
         "deed_of_trust",
-        "adjustable_rate_note",
-        "compliance_agreement"
+        "second_deed_of_trust",
+        "allonge",
+        "adjustable_rate_note",  # original note remains legal
+        "compliance_agreement",
+        "hold_harmless_agreement",
+        "borrowers_hotel_transient_contract"
     ],
     "financial": [
-        "addendum_hud1_settlement_statement",
-        "closing_disclosure",
         "settlement_statement",
+        "closing_disclosure",
         "truth_in_lending_disclosure",
         "tax_insurance_disclosure",
         "hecm_fnma_sub",
         "hud_va_addendum",
-        "endorsement_approval"
+        "endorsement_approval",
+        "electronic_fund_transfer_request",
+        "equal_credit_opportunity_notice",
+        "choice_of_insurance_option",
+        "notice_to_borrower",
+        "lender_certificate",
+        "confirmation",
+        "notice_of_assignment_servicing_rights",
+        "invoice",
+        "hecm_third_party_fees"
     ],
     "identity": [
         "name_affidavit",
@@ -60,7 +88,8 @@ FILE_SOCKETS = {
     ],
     "loan": [
         "promissory_note",
-        "home_equity_conversion_loan_agreement"
+        "home_equity_conversion_loan_agreement",
+        "adjustable_rate_second_note"
     ]
 }
 
@@ -141,19 +170,17 @@ class handler(BaseHTTPRequestHandler):
             os.makedirs(split_folder, exist_ok=True)
 
             doc_counts = {}
-            groups = []
-            # Start with a default type; could be "unclassified" or a preset default if desired.
-            current_doc_name = "unclassified"
+            page_classifications = []  # List of {"doc_name": ..., "page_index": ...}
 
-            # Loop over each page to detect headers and assign document types.
+            # Loop over each page to detect a header
             for i, page in enumerate(pdf_plumber.pages):
-                # Attempt to extract a header using bold detection.
-                header_line = get_bold_header(page)
                 detected_doc_type = None
+                # Try bold header extraction first
+                header_line = get_bold_header(page)
                 if header_line:
                     detected_doc_type = classify_header(header_line)
-                    print(f"DEBUG: Page {i+1}: Bold header found: '{header_line}' -> Classified as: {detected_doc_type}")
-                # Fallback: if no bold header, scan the first 5 lines.
+                    print(f"DEBUG: Page {i+1}: Bold header line: '{header_line}' -> Classified as: {detected_doc_type}")
+                # Fallback: scan first 5 lines if no bold header found
                 if not detected_doc_type:
                     full_text = page.extract_text() or ""
                     lines = full_text.split("\n")
@@ -163,43 +190,34 @@ class handler(BaseHTTPRequestHandler):
                             if detected_doc_type:
                                 print(f"DEBUG: Page {i+1}: Fallback header line: '{line}' -> Classified as: {detected_doc_type}")
                                 break
-                # If a new valid doc type is detected, update current_doc_name.
-                if detected_doc_type and detected_doc_type != "unclassified":
-                    current_doc_name = detected_doc_type
-                else:
-                    # If no new header, keep the previous valid classification.
-                    print(f"DEBUG: Page {i+1}: No valid header found; keeping previous type: {current_doc_name}")
-                groups.append({"doc_name": current_doc_name, "page_index": i})
+                if not detected_doc_type:
+                    print(f"DEBUG: Page {i+1}: No valid header found; defaulting to 'unclassified'")
+                    detected_doc_type = "unclassified"
+                page_classifications.append({"doc_name": detected_doc_type, "page_index": i})
             pdf_plumber.close()
 
-            # 3. Group consecutive pages with the same doc type.
-            from PyPDF2 import PdfReader, PdfWriter
-            local_reader = PdfReader(upload_path)
+            # 3. Group only contiguous pages with the same classification.
             final_groups = []
-            last_doc_name = None
-            current_pages = []
-            for g in groups:
-                doc_name = g["doc_name"]
-                page_idx = g["page_index"]
-                if doc_name != last_doc_name:
-                    # If new group and the new type is "unclassified", retain last valid type.
-                    if doc_name == "unclassified" and last_doc_name is not None:
-                        doc_name = last_doc_name
-                    if current_pages:
-                        final_groups.append({"doc_name": last_doc_name, "pages": current_pages})
-                    current_pages = [page_idx]
-                    last_doc_name = doc_name
-                else:
-                    current_pages.append(page_idx)
-            if current_pages:
-                final_groups.append({"doc_name": last_doc_name, "pages": current_pages})
+            if page_classifications:
+                current_group = [page_classifications[0]["page_index"]]
+                current_doc_type = page_classifications[0]["doc_name"]
+                for prev, current in zip(page_classifications, page_classifications[1:]):
+                    # Only group if the same doc type AND pages are consecutive
+                    if current["doc_name"] == current_doc_type and current["page_index"] == prev["page_index"] + 1:
+                        current_group.append(current["page_index"])
+                    else:
+                        final_groups.append({"doc_name": current_doc_type, "pages": current_group})
+                        current_group = [current["page_index"]]
+                        current_doc_type = current["doc_name"]
+                # Append the last group
+                final_groups.append({"doc_name": current_doc_type, "pages": current_group})
 
-            # Debug: Print the final grouping of pages.
             print("DEBUG: Final Groupings:")
             for group in final_groups:
-                print(f"  Document type '{group['doc_name']}' covers pages: {[p+1 for p in group['pages']]}")
+                print(f"Document type '{group['doc_name']}' covers pages: {group['pages']}")
 
             # 4. For each group, save the PDF and upload to Vercel Blob.
+            local_reader = PdfReader(upload_path)
             public_urls = []
             for group in final_groups:
                 base_name = group["doc_name"]
@@ -221,10 +239,8 @@ class handler(BaseHTTPRequestHandler):
             # 5. Debug: Log the local split_docs structure.
             if os.path.exists(split_folder):
                 print("✅ /tmp/split_docs/ directory exists.")
-                for cat in os.listdir(split_folder):
-                    cat_path = os.path.join(split_folder, cat)
-                    if os.path.isdir(cat_path):
-                        print(f"📁 {cat} contains:", os.listdir(cat_path))
+                for item in os.listdir(split_folder):
+                    print(f"📄 {item}")
 
             # 6. Return the public URLs.
             response = {
