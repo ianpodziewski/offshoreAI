@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, ChangeEvent } from "react";
+import React, { useState, ChangeEvent } from "react";
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
-  const [fileSockets, setFileSockets] = useState<{ [key: string]: string[] }>({});
+  const [files, setFiles] = useState<string[]>([]); // Array of public Blob URLs
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -36,7 +36,8 @@ export default function UploadPage() {
         return;
       }
 
-      // Step 2: Send file directly to Python backend for splitting
+      // Step 2: Send file directly to Python backend for splitting.
+      // The split_pdf endpoint now uploads split PDFs to Vercel Blob and returns their public URLs.
       const fileBuffer = await file.arrayBuffer();
       const splitResponse = await fetch("/api/split_pdf", {
         method: "POST",
@@ -45,9 +46,9 @@ export default function UploadPage() {
 
       const splitData = await splitResponse.json();
 
-      if (splitResponse.ok) {
+      if (splitResponse.ok && splitData.files) {
+        setFiles(splitData.files); // Set the array of public Blob URLs
         setMessage(`${data.message} & ${splitData.message}`);
-        fetchFileSockets(); // Fetch categorized files after processing
       } else {
         setMessage(splitData.message || "PDF splitting failed.");
       }
@@ -57,23 +58,6 @@ export default function UploadPage() {
       setUploading(false);
     }
   };
-
-  // Fetch categorized files after processing
-  const fetchFileSockets = async () => {
-    try {
-      const res = await fetch("/api/get-file-sockets");
-      const data = await res.json();
-      if (res.ok) {
-        setFileSockets(data.files);
-      }
-    } catch (error) {
-      console.error("Error fetching file sockets:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchFileSockets(); // Load categorized files on page load
-  }, []);
 
   return (
     <div className="p-8">
@@ -91,24 +75,18 @@ export default function UploadPage() {
 
       {message && <p className="mt-4">{message}</p>}
 
-      {/* File Sockets UI */}
-      {Object.keys(fileSockets).length > 0 && (
+      {files.length > 0 && (
         <div className="mt-6">
-          <h2 className="text-xl font-semibold mb-3">Categorized Documents:</h2>
-          {Object.keys(fileSockets).map((category) => (
-            <div key={category} className="mb-6 p-4 border border-gray-300 rounded-lg shadow-md">
-              <h3 className="text-lg font-semibold mb-2">{category.toUpperCase()}</h3>
-              <ul className="list-disc pl-5">
-                {fileSockets[category].map((file, idx) => (
-                  <li key={idx}>
-                    <a href={`/api/download?file=${file}`} target="_blank" className="text-blue-600 hover:underline">
-                      {file.split("/").pop()}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <h2 className="text-xl font-semibold mb-3">Split Documents (Public URLs):</h2>
+          <ul className="list-disc ml-6">
+            {files.map((url, idx) => (
+              <li key={idx}>
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                  {url.split("/").pop()}
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
