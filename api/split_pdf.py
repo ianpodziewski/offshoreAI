@@ -138,10 +138,9 @@ def get_embedding_classification(text):
 
 def classify_page(page, page_index, previous_classification=None):
     """
-    Improved classification:
-    - Checks for headers.
-    - If title contains "Exhibit", assigns the previous classification.
-    - Uses weighted keyword matching.
+    Improved classification to prevent false keyword-based misclassification.
+    - Checks if the page is part of a continuing document.
+    - Only reclassifies if a strong heading is detected.
     """
     print(f"\nDEBUG: classify_page -> Page {page_index + 1}")
 
@@ -150,25 +149,26 @@ def classify_page(page, page_index, previous_classification=None):
     if header_text:
         print(f"DEBUG: extracted bold header text: {header_text}")
 
-        # Step 2: If header contains "Exhibit", assume it belongs to the previous document
+        # Step 2: If title contains "Exhibit", inherit previous classification
         if "exhibit" in header_text.lower():
             print(f"DEBUG: 'Exhibit' detected in title, inheriting classification '{previous_classification}'")
             return previous_classification
 
-        # Step 3: Classify based on header if no "Exhibit"
+        # Step 3: If a strong new header is detected, classify based on header
         doc_type = classify_header(header_text)
         if doc_type:
             print(f"DEBUG: returning doc_type from header -> {doc_type}")
             return doc_type
 
-    # Step 4: Detect continuation if no header is present
+    # Step 4: Check for continuation if no header is found
     full_text = page.extract_text() or ""
+
     if previous_classification and not header_text:
         print(f"DEBUG: No header found, assuming continuation of '{previous_classification}'")
         return previous_classification
 
-    # Step 5: Use full-text classification as fallback
-    doc_type = weighted_text_classification(full_text)
+    # Step 5: Prevent keyword-based misclassification
+    doc_type = weighted_text_classification(full_text, previous_classification)
     if doc_type:
         print(f"DEBUG: returning doc_type from full_text -> {doc_type}")
         return doc_type
@@ -185,29 +185,28 @@ def classify_page(page, page_index, previous_classification=None):
     print(f"DEBUG: no doc_type found, defaulting -> unclassified")
     return "unclassified"
 
-def weighted_text_classification(full_text):
+def weighted_text_classification(full_text, previous_classification=None):
     """
-    Uses weighted keyword matching:
-    - Higher weight for keywords found in the first few lines (header area).
-    - Ignores scattered occurrences in the middle of paragraphs.
+    Improves classification by reducing mid-page keyword influence.
+    - Prioritizes the first few lines as headings.
+    - Prefers previous classification if no strong indicator is found.
     """
     norm_text = normalize_text(full_text)
     best_match = None
     best_score = 0
 
-    # Check only the first few lines for header importance
+    # Focus more on the first few lines (header area)
     lines = norm_text.split("\n")
     header_section = " ".join(lines[:5])  # First 5 lines as "header"
 
     print(f"DEBUG: weighted_text_classification -> analyzing text length {len(norm_text)}")
 
     for keyword, doc_type in DOCUMENT_KEYWORDS.items():
-        # Weigh higher if the keyword is in the header
         header_score = fuzz.token_set_ratio(header_section, normalize_text(keyword))
         body_score = fuzz.token_set_ratio(norm_text, normalize_text(keyword))
 
-        # Prioritize header matches
-        final_score = max(header_score * 1.5, body_score)
+        # Reduce mid-page keyword influence by weighting body scores lower
+        final_score = max(header_score * 1.5, body_score * 0.7)
 
         if final_score > best_score and final_score > 80:
             best_score = final_score
@@ -216,6 +215,11 @@ def weighted_text_classification(full_text):
         # Debugging logs
         if final_score > 50:
             print(f"  => Checking text vs keyword '{keyword}': header={header_score}, body={body_score}, weighted={final_score}")
+
+    # If no strong classification is found but a previous classification exists, assume continuation
+    if not best_match and previous_classification:
+        print(f"DEBUG: No strong match found, inheriting '{previous_classification}'")
+        return previous_classification
 
     print(f"DEBUG: final full_text doc_type: {best_match}, best_score={best_score}")
     return best_match
