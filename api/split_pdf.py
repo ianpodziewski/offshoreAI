@@ -138,14 +138,13 @@ def get_embedding_classification(text):
 
 def classify_page(page, page_index, previous_classification=None):
     """
-    Improved classification logic:
-    - Uses bold/large font headers if available.
-    - If no header is found, assumes continuation from the previous page.
-    - Falls back to full-text classification if necessary.
+    Improved classification:
+    - Prioritizes headers over full-text matches.
+    - Detects continuation pages based on structural analysis.
     """
     print(f"\nDEBUG: classify_page -> Page {page_index + 1}")
 
-    # Step 1: Extract heading (if available)
+    # Step 1: Try to extract a bold/large header
     header_text = get_bold_header(page)
     if header_text:
         print(f"DEBUG: extracted bold header text: {header_text}")
@@ -154,20 +153,21 @@ def classify_page(page, page_index, previous_classification=None):
             print(f"DEBUG: returning doc_type from header -> {doc_type}")
             return doc_type
 
-    # Step 2: Check if this page is a continuation of the previous one
-    if previous_classification:
+    # Step 2: Detect if this is a continuation of the previous page
+    full_text = page.extract_text() or ""
+    if previous_classification and not header_text:
         print(f"DEBUG: No header found, assuming continuation of '{previous_classification}'")
         return previous_classification
 
-    # Step 3: Use full-text classification as fallback
-    full_text = page.extract_text() or ""
-    doc_type = full_text_classification(full_text)
+    # Step 3: Use full-text classification, but weigh keywords based on position
+    doc_type = weighted_text_classification(full_text)
     if doc_type:
         print(f"DEBUG: returning doc_type from full_text -> {doc_type}")
         return doc_type
 
     print(f"DEBUG: no doc_type found, defaulting -> unclassified")
     return "unclassified"
+
     
     # Optional final fallback: embedding approach
     # embed_type = get_embedding_classification(full_text[:1000])
@@ -178,11 +178,46 @@ def classify_page(page, page_index, previous_classification=None):
     print(f"DEBUG: no doc_type found, defaulting -> unclassified")
     return "unclassified"
 
+def weighted_text_classification(full_text):
+    """
+    Uses weighted keyword matching:
+    - Higher weight for keywords found in the first few lines (header area).
+    - Ignores scattered occurrences in the middle of paragraphs.
+    """
+    norm_text = normalize_text(full_text)
+    best_match = None
+    best_score = 0
+
+    # Check only the first few lines for header importance
+    lines = norm_text.split("\n")
+    header_section = " ".join(lines[:5])  # First 5 lines as "header"
+
+    print(f"DEBUG: weighted_text_classification -> analyzing text length {len(norm_text)}")
+
+    for keyword, doc_type in DOCUMENT_KEYWORDS.items():
+        # Weigh higher if the keyword is in the header
+        header_score = fuzz.token_set_ratio(header_section, normalize_text(keyword))
+        body_score = fuzz.token_set_ratio(norm_text, normalize_text(keyword))
+
+        # Prioritize header matches
+        final_score = max(header_score * 1.5, body_score)
+
+        if final_score > best_score and final_score > 80:
+            best_score = final_score
+            best_match = doc_type
+
+        # Debugging logs
+        if final_score > 50:
+            print(f"  => Checking text vs keyword '{keyword}': header={header_score}, body={body_score}, weighted={final_score}")
+
+    print(f"DEBUG: final full_text doc_type: {best_match}, best_score={best_score}")
+    return best_match
+
 def smooth_classifications(classifications):
     """
-    Post-process classifications to:
-    - Assign unclassified pages based on surrounding pages.
-    - If a page is unclassified but follows a classified page, assume continuation.
+    Post-processing:
+    - Assigns unclassified pages based on previous/next context.
+    - Detects abrupt document breaks and assigns independent classifications where needed.
     """
     print("\nDEBUG: smooth_classifications -> starting smoothing process")
 
@@ -192,15 +227,25 @@ def smooth_classifications(classifications):
         curr = classifications[i]["doc_name"]
         nxt = classifications[i + 1]["doc_name"]
 
-        # Rule 1: If a page is 'unclassified' but both neighbors match, assign that type
+        # Rule 1: If unclassified but neighbors match, inherit classification
         if curr == "unclassified" and prev == nxt and prev != "unclassified":
             print(f"  => Smoothing: Page {classifications[i]['page_index']+1} from 'unclassified' to '{prev}'")
             smoothed[i]["doc_name"] = prev
 
-        # Rule 2: If a page is unclassified and follows a classified page, assume continuation
+        # Rule 2: If unclassified but follows a document, assume continuation
         elif curr == "unclassified" and prev != "unclassified":
             print(f"  => Smoothing: Page {classifications[i]['page_index']+1} assuming continuation of '{prev}'")
             smoothed[i]["doc_name"] = prev
+
+        # Rule 3: If sudden classification change, check for a heading
+        elif prev != curr and nxt != curr:
+            print(f"  => Sudden classification change detected on Page {classifications[i]['page_index']+1}")
+            # Require a strong heading or indicator to accept change
+            if classifications[i].get("header_detected", False):
+                print(f"  => Confirmed: Heading detected, keeping classification '{curr}'")
+            else:
+                print(f"  => Reverting: No strong heading found, inheriting '{prev}'")
+                smoothed[i]["doc_name"] = prev
 
     print("DEBUG: smoothing complete\n")
     return smoothed
