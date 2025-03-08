@@ -1,6 +1,6 @@
-export const OWNER_NAME: string = `[OWNER NAME]`;
-export const OWNER_DESCRIPTION: string = `[OWNER DESCRIPTION]`;
+export const OWNER_NAME: string = `Ian Podziewski`;
+export const OWNER_DESCRIPTION: string = `a Kenan-Flagler Business School student`;
 
-export const AI_NAME: string = `[AI NAME]`;
-export const AI_TONE: string = `[AI TONE]`;
-export const AI_ROLE: string = `[AI ROLE]`;
+export const AI_NAME: string = `Steve`;
+export const AI_TONE: string = `Reliable`;
+export const AI_ROLE: string = `Offshore Support`;
