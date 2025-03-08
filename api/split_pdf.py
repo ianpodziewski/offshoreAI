@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler
 TEMP_DIR = "/tmp/"
 VERCEL_BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 
-# Example dictionary for known doc types
+# Updated dictionary for known document keywords
 DOCUMENT_KEYWORDS = {
     "lender's closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
@@ -28,7 +28,39 @@ DOCUMENT_KEYWORDS = {
     "hud/va addendum to uniform residential loan application": "hud_va_addendum",
     "direct endoremsent approval": "endorsement_approval",
     "tax and insurance disclosure": "tax_insurance_disclosure",
-    "hecm-fnma submission": "hecm_fnma_sub",
+    "hecm-fnma submission": "hecm_fnma_sub"
+}
+
+# Updated FILE_SOCKETS categorization
+FILE_SOCKETS = {
+    "legal": [
+        "lenders_closing_instructions",
+        "deed_of_trust",
+        "adjustable_rate_note",
+        "compliance_agreement"
+    ],
+    "financial": [
+        "addendum_hud1_settlement_statement",
+        "closing_disclosure",
+        "settlement_statement",
+        "truth_in_lending_disclosure",
+        "tax_insurance_disclosure",
+        "hecm_fnma_sub",
+        "hud_va_addendum",
+        "endorsement_approval"
+    ],
+    "identity": [
+        "name_affidavit",
+        "signature_affidavit",
+        "mailing_address_affidavit"
+    ],
+    "insurance": [
+        "flood_insurance_certificate_notice"
+    ],
+    "loan": [
+        "promissory_note",
+        "home_equity_conversion_loan_agreement"
+    ]
 }
 
 def upload_to_vercel_blob(filepath):
@@ -36,17 +68,14 @@ def upload_to_vercel_blob(filepath):
     if not VERCEL_BLOB_TOKEN:
         print("❌ Missing BLOB_READ_WRITE_TOKEN in environment.")
         return None
-
     filename = os.path.basename(filepath)
     url = f"https://api.vercel.com/v2/blob/{filename}"
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_TOKEN}",
         "Content-Type": "application/octet-stream"
     }
-
     with open(filepath, "rb") as f:
         file_data = f.read()
-
     response = requests.put(url, headers=headers, data=file_data)
     if response.status_code == 200:
         return response.json().get("url")
@@ -54,25 +83,38 @@ def upload_to_vercel_blob(filepath):
         print(f"❌ Vercel Blob Upload Failed: {response.status_code} {response.text}")
         return None
 
-def is_header(line):
+def get_bold_header(page):
     """
-    Decide if 'line' is a potential header by checking:
-    - short length (e.g., < 80 chars)
-    - uppercase or title-case
-    You could also do a 'bold' check if using word-level pdfplumber data.
+    Extracts words in the top 30% of the page and returns a concatenated header string
+    if a sufficient number of words have 'bold' in their fontname.
+    """
+    words = page.extract_words()
+    if not words:
+        return None
+    top_threshold = page.height * 0.3
+    top_words = [w for w in words if w.get("top", 9999) < top_threshold]
+    # Filter words with "bold" in their fontname
+    bold_words = [w for w in top_words if "bold" in w.get("fontname", "").lower()]
+    if not bold_words:
+        return None
+    # Sort by horizontal position and join the text
+    bold_words.sort(key=lambda w: w["x0"])
+    header_line = " ".join(w["text"] for w in bold_words)
+    return header_line
+
+def is_header_line(line):
+    """
+    Determines if a line is a header by checking if it's short and all uppercase or title case.
     """
     line_stripped = line.strip()
     if not line_stripped:
         return False
-
-    # Example logic: short and uppercase
-    if len(line_stripped) < 80 and line_stripped.isupper():
-        return True
-
-    return False
+    return len(line_stripped) < 80 and (line_stripped.isupper() or line_stripped.istitle())
 
 def classify_header(header_line):
-    """Match a header line to known doc types by keywords."""
+    """
+    Matches a header line against known document keywords.
+    """
     text_lower = header_line.lower()
     for keyword, doc_type in DOCUMENT_KEYWORDS.items():
         if keyword in text_lower:
@@ -90,8 +132,8 @@ class handler(BaseHTTPRequestHandler):
             with open(upload_path, "wb") as f:
                 f.write(pdf_data)
 
-            # 2. Use pdfplumber to read each page
-            pdf_reader = pdfplumber.open(upload_path)  # pdfplumber usage
+            # 2. Open the PDF with pdfplumber for header detection
+            pdf_plumber = pdfplumber.open(upload_path)
             split_folder = os.path.join(TEMP_DIR, "split_docs")
             os.makedirs(split_folder, exist_ok=True)
 
@@ -99,59 +141,48 @@ class handler(BaseHTTPRequestHandler):
             groups = []
             current_doc_name = "unclassified"
 
-            # For each page, look in top portion for a heading
-            for i, page in enumerate(pdf_reader.pages):
-                # Extract entire page text
-                full_text = page.extract_text() or ""
-                # Grab the top portion of the text (e.g., first ~30% lines)
-                lines = full_text.split("\n")
-                top_lines = lines[:5]  # check first 5 lines for a heading
-
-                detected_header = None
-                for line in top_lines:
-                    if is_header(line):
-                        # If we found a heading, classify it
-                        doc_type = classify_header(line)
-                        if doc_type:
-                            detected_header = doc_type
-                            break
-
-                # If we found a new doc type, switch
-                if detected_header and detected_header != current_doc_name:
-                    current_doc_name = detected_header
-
-                # Append page with the current doc name
+            # Loop through pages to detect headers and assign document types
+            for i, page in enumerate(pdf_plumber.pages):
+                # Try bold header detection first
+                header_line = get_bold_header(page)
+                detected_doc_type = None
+                if header_line:
+                    detected_doc_type = classify_header(header_line)
+                # Fallback: check first 5 lines of text if no bold header found
+                if not detected_doc_type:
+                    full_text = page.extract_text() or ""
+                    lines = full_text.split("\n")
+                    for line in lines[:5]:
+                        if is_header_line(line):
+                            detected_doc_type = classify_header(line)
+                            if detected_doc_type:
+                                break
+                # If a new doc type is detected, update current_doc_name
+                if detected_doc_type and detected_doc_type != current_doc_name:
+                    current_doc_name = detected_doc_type
                 groups.append({"doc_name": current_doc_name, "page_index": i})
+            pdf_plumber.close()
 
-            pdf_reader.close()
-
-            # 3. Save each group of pages to a PDF, then upload to Blob
+            # 3. Group consecutive pages with the same doc type
             from PyPDF2 import PdfReader, PdfWriter
             local_reader = PdfReader(upload_path)
-
-            # We'll create final "chunks" by grouping consecutive pages with same doc_name
             final_groups = []
             last_doc_name = None
             current_pages = []
-
             for g in groups:
                 doc_name = g["doc_name"]
                 page_idx = g["page_index"]
-
                 if doc_name != last_doc_name:
-                    # start a new group
                     if current_pages:
                         final_groups.append({"doc_name": last_doc_name, "pages": current_pages})
                     current_pages = [page_idx]
                     last_doc_name = doc_name
                 else:
-                    # same doc, keep appending
                     current_pages.append(page_idx)
-
-            # Add the final group
             if current_pages:
                 final_groups.append({"doc_name": last_doc_name, "pages": current_pages})
 
+            # 4. Save each group to a PDF and upload to Vercel Blob
             public_urls = []
             for group in final_groups:
                 base_name = group["doc_name"]
@@ -162,17 +193,25 @@ class handler(BaseHTTPRequestHandler):
                 pdf_writer = PdfWriter()
                 for p in group["pages"]:
                     pdf_writer.add_page(local_reader.pages[p])
-
                 new_doc_path = os.path.join(split_folder, filename)
                 with open(new_doc_path, "wb") as f:
                     pdf_writer.write(f)
 
-                # Upload to Vercel Blob
                 file_url = upload_to_vercel_blob(new_doc_path)
                 if file_url:
                     public_urls.append(file_url)
+                else:
+                    print(f"❌ Could not upload {new_doc_path} to Vercel Blob.")
 
-            # 4. Return public URLs
+            # 5. Debug log local groups
+            if os.path.exists(split_folder):
+                print("✅ /tmp/split_docs/ directory exists.")
+                for cat in os.listdir(split_folder):
+                    cat_path = os.path.join(split_folder, cat)
+                    if os.path.isdir(cat_path):
+                        print(f"📁 {cat} contains:", os.listdir(cat_path))
+
+            # 6. Return public URLs to the frontend
             response = {
                 "message": "PDF split and categorized successfully.",
                 "files": public_urls
