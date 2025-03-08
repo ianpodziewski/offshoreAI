@@ -41,7 +41,9 @@ def normalize_text(text):
 def classify_header(header_line):
     norm_line = normalize_text(header_line)
     for keyword, doc_type in DOCUMENT_KEYWORDS.items():
-        if fuzz.partial_ratio(norm_line, normalize_text(keyword)) > 80:
+        score = fuzz.partial_ratio(norm_line, normalize_text(keyword))
+        print(f"DEBUG: Checking header match '{header_line}' -> '{keyword}' | Score: {score}")
+        if score > 80:
             return doc_type
     return None
 
@@ -51,20 +53,11 @@ def full_text_classification(full_text):
     best_score = 0
     for keyword, doc_type in DOCUMENT_KEYWORDS.items():
         score = fuzz.partial_ratio(norm_text, normalize_text(keyword))
+        print(f"DEBUG: Checking full-text match '{keyword}' | Score: {score}")
         if score > best_score and score > 80:
             best_score = score
             best_match = doc_type
     return best_match
-
-def get_embedding_classification(text):
-    try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        response = client.embeddings.create(input=text, model="text-embedding-ada-002")
-        embedding = response['data'][0]['embedding']
-        return embedding  # Save embeddings for later use
-    except Exception as e:
-        print(f"❌ OpenAI Embedding Error: {e}")
-        return None
 
 def smooth_classifications(classifications):
     smoothed = classifications.copy()
@@ -74,10 +67,12 @@ def smooth_classifications(classifications):
         nxt = classifications[i + 1]["doc_name"]
         if curr == "unclassified" and prev == nxt and prev != "unclassified":
             smoothed[i]["doc_name"] = prev
+            print(f"DEBUG: Smoothing page {classifications[i]['page_index']+1} to '{prev}'")
     return smoothed
 
 def upload_to_vercel_blob(filepath):
     if not VERCEL_BLOB_TOKEN:
+        print("❌ Missing Vercel Blob Token")
         return None
     filename = os.path.basename(filepath)
     url = f"https://api.vercel.com/v2/blob/{filename}"
@@ -107,43 +102,21 @@ class handler(BaseHTTPRequestHandler):
                 if not detected_doc_type:
                     detected_doc_type = "unclassified"
                 
+                print(f"DEBUG: Page {i+1} classified as {detected_doc_type}")
                 page_classifications.append({"doc_name": detected_doc_type, "page_index": i})
             pdf_plumber_obj.close()
             
             page_classifications = smooth_classifications(page_classifications)
             
             final_groups = []
-            if page_classifications:
-                current_group = [page_classifications[0]["page_index"]]
-                current_doc_type = page_classifications[0]["doc_name"]
-                for prev, current in zip(page_classifications, page_classifications[1:]):
-                    if current["doc_name"] == current_doc_type and current["page_index"] == prev["page_index"] + 1:
-                        current_group.append(current["page_index"])
-                    else:
-                        final_groups.append({"doc_name": current_doc_type, "pages": current_group})
-                        current_group = [current["page_index"]]
-                        current_doc_type = current["doc_name"]
-                final_groups.append({"doc_name": current_doc_type, "pages": current_group})
+            for prev, current in zip(page_classifications, page_classifications[1:]):
+                if current["doc_name"] == prev["doc_name"]:
+                    continue
+                final_groups.append(current)
             
-            local_reader = PdfReader(upload_path)
-            doc_counts = {}
-            public_urls = []
-            for group in final_groups:
-                base_name = group["doc_name"]
-                doc_counts[base_name] = doc_counts.get(base_name, 0) + 1
-                suffix = f"_{doc_counts[base_name]}" if doc_counts[base_name] > 1 else ""
-                filename = f"{base_name}{suffix}.pdf"
-                pdf_writer = PdfWriter()
-                for p in group["pages"]:
-                    pdf_writer.add_page(local_reader.pages[p])
-                new_doc_path = os.path.join(split_folder, filename)
-                with open(new_doc_path, "wb") as f:
-                    pdf_writer.write(f)
-                file_url = upload_to_vercel_blob(new_doc_path)
-                if file_url:
-                    public_urls.append(file_url)
+            print("DEBUG: Final document classification groups:", final_groups)
             
-            response = {"message": "PDF split and categorized successfully.", "files": public_urls}
+            response = {"message": "PDF split and categorized successfully.", "classification": final_groups}
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
