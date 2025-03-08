@@ -96,6 +96,9 @@ class handler(BaseHTTPRequestHandler):
             
             page_classifications = []
             public_urls = []
+            pdf_writer_dict = defaultdict(PdfWriter)
+            local_reader = PdfReader(upload_path)
+            
             for i, page in enumerate(pdf_plumber_obj.pages):
                 full_text = page.extract_text() or ""
                 detected_doc_type = full_text_classification(full_text)
@@ -105,14 +108,19 @@ class handler(BaseHTTPRequestHandler):
                 
                 print(f"DEBUG: Page {i+1} classified as {detected_doc_type}")
                 page_classifications.append({"doc_name": detected_doc_type, "page_index": i})
+                pdf_writer_dict[detected_doc_type].add_page(local_reader.pages[i])
             pdf_plumber_obj.close()
             
             page_classifications = smooth_classifications(page_classifications)
             
-            for group in page_classifications:
-                doc_name = group["doc_name"]
+            for doc_name, writer in pdf_writer_dict.items():
                 filename = f"{doc_name}.pdf"
-                file_url = upload_to_vercel_blob(os.path.join(split_folder, filename))
+                file_path = os.path.join(split_folder, filename)
+                with open(file_path, "wb") as output_pdf:
+                    writer.write(output_pdf)
+                
+                print(f"DEBUG: Created split document {file_path}")
+                file_url = upload_to_vercel_blob(file_path)
                 if file_url:
                     public_urls.append({"name": filename, "url": file_url})
             
