@@ -139,27 +139,35 @@ def get_embedding_classification(text):
 def classify_page(page, page_index, previous_classification=None):
     """
     Improved classification:
-    - Prioritizes headers over full-text matches.
-    - Detects continuation pages based on structural analysis.
+    - Checks for headers.
+    - If title contains "Exhibit", assigns the previous classification.
+    - Uses weighted keyword matching.
     """
     print(f"\nDEBUG: classify_page -> Page {page_index + 1}")
 
-    # Step 1: Try to extract a bold/large header
+    # Step 1: Extract header/title
     header_text = get_bold_header(page)
     if header_text:
         print(f"DEBUG: extracted bold header text: {header_text}")
+
+        # Step 2: If header contains "Exhibit", assume it belongs to the previous document
+        if "exhibit" in header_text.lower():
+            print(f"DEBUG: 'Exhibit' detected in title, inheriting classification '{previous_classification}'")
+            return previous_classification
+
+        # Step 3: Classify based on header if no "Exhibit"
         doc_type = classify_header(header_text)
         if doc_type:
             print(f"DEBUG: returning doc_type from header -> {doc_type}")
             return doc_type
 
-    # Step 2: Detect if this is a continuation of the previous page
+    # Step 4: Detect continuation if no header is present
     full_text = page.extract_text() or ""
     if previous_classification and not header_text:
         print(f"DEBUG: No header found, assuming continuation of '{previous_classification}'")
         return previous_classification
 
-    # Step 3: Use full-text classification, but weigh keywords based on position
+    # Step 5: Use full-text classification as fallback
     doc_type = weighted_text_classification(full_text)
     if doc_type:
         print(f"DEBUG: returning doc_type from full_text -> {doc_type}")
@@ -167,7 +175,6 @@ def classify_page(page, page_index, previous_classification=None):
 
     print(f"DEBUG: no doc_type found, defaulting -> unclassified")
     return "unclassified"
-
     
     # Optional final fallback: embedding approach
     # embed_type = get_embedding_classification(full_text[:1000])
@@ -216,8 +223,8 @@ def weighted_text_classification(full_text):
 def smooth_classifications(classifications):
     """
     Post-processing:
-    - Assigns unclassified pages based on previous/next context.
-    - Detects abrupt document breaks and assigns independent classifications where needed.
+    - Assigns unclassified pages based on surrounding classifications.
+    - If "Exhibit" is detected in title, assigns the previous classification.
     """
     print("\nDEBUG: smooth_classifications -> starting smoothing process")
 
@@ -226,6 +233,7 @@ def smooth_classifications(classifications):
         prev = classifications[i - 1]["doc_name"]
         curr = classifications[i]["doc_name"]
         nxt = classifications[i + 1]["doc_name"]
+        header_text = classifications[i].get("header_text", "").lower()
 
         # Rule 1: If unclassified but neighbors match, inherit classification
         if curr == "unclassified" and prev == nxt and prev != "unclassified":
@@ -237,15 +245,10 @@ def smooth_classifications(classifications):
             print(f"  => Smoothing: Page {classifications[i]['page_index']+1} assuming continuation of '{prev}'")
             smoothed[i]["doc_name"] = prev
 
-        # Rule 3: If sudden classification change, check for a heading
-        elif prev != curr and nxt != curr:
-            print(f"  => Sudden classification change detected on Page {classifications[i]['page_index']+1}")
-            # Require a strong heading or indicator to accept change
-            if classifications[i].get("header_detected", False):
-                print(f"  => Confirmed: Heading detected, keeping classification '{curr}'")
-            else:
-                print(f"  => Reverting: No strong heading found, inheriting '{prev}'")
-                smoothed[i]["doc_name"] = prev
+        # Rule 3: If title contains "Exhibit", inherit the previous classification
+        elif "exhibit" in header_text and prev != "unclassified":
+            print(f"  => 'Exhibit' detected in title, reclassifying as '{prev}'")
+            smoothed[i]["doc_name"] = prev
 
     print("DEBUG: smoothing complete\n")
     return smoothed
