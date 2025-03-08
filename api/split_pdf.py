@@ -3,6 +3,7 @@ import json
 import os
 import requests
 import string
+from collections import defaultdict
 from PyPDF2 import PdfReader, PdfWriter
 from http.server import BaseHTTPRequestHandler
 
@@ -12,7 +13,7 @@ VERCEL_BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 # Expanded dictionary for known document keywords (loosened matching)
 DOCUMENT_KEYWORDS = {
     "lender's closing instructions": "lenders_closing_instructions",
-    "lender s closing instructions": "lenders_closing_instructions",  # extra variation
+    "lender s closing instructions": "lenders_closing_instructions",
     "closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
     "deed of trust": "deed_of_trust",
@@ -30,13 +31,13 @@ DOCUMENT_KEYWORDS = {
     "truth in lending": "truth_in_lending_disclosure",
     "closing disclosure": "closing_disclosure",
     "hud/va addendum to uniform residential loan application": "hud_va_addendum",
-    "hud va addendum": "hud_va_addendum",  # alternative
+    "hud va addendum": "hud_va_addendum",
     "direct endorsement approval": "endorsement_approval",
-    "direct endorsement": "endorsement_approval",  # alternative
+    "direct endorsement": "endorsement_approval",
     "tax and insurance disclosure": "tax_insurance_disclosure",
-    "tax & insurance": "tax_insurance_disclosure",  # alternative
+    "tax & insurance": "tax_insurance_disclosure",
     "hecm-fnma submission": "hecm_fnma_sub",
-    "hecm fnma submission": "hecm_fnma_sub",  # alternative
+    "hecm fnma submission": "hecm_fnma_sub",
     "allonge": "allonge",
     "hold harmless agreement": "hold_harmless_agreement",
     "home equity conversion mortgage disclosure": "hecm_third_party_fees",
@@ -60,7 +61,7 @@ FILE_SOCKETS = {
         "deed_of_trust",
         "second_deed_of_trust",
         "allonge",
-        "adjustable_rate_note",  # original note remains legal
+        "adjustable_rate_note",
         "compliance_agreement",
         "hold_harmless_agreement",
         "borrowers_hotel_transient_contract"
@@ -121,10 +122,10 @@ def is_header_line(line):
         return False
     return len(line_stripped) < 80 and (line_stripped.isupper() or line_stripped.istitle())
 
-def get_bold_header(page):
+def get_bold_header(page, size_threshold=12):
     """
     Extracts words from the top 30% of the page with 'bold' in their fontname.
-    Returns a concatenated header line if found.
+    Only returns the header if the average font size of these bold words exceeds the threshold.
     """
     words = page.extract_words()
     if not words:
@@ -133,6 +134,17 @@ def get_bold_header(page):
     top_words = [w for w in words if w.get("top", 9999) < top_threshold]
     bold_words = [w for w in top_words if "bold" in w.get("fontname", "").lower()]
     if not bold_words:
+        return None
+    # Calculate average font size; if below threshold, disregard as header.
+    total_size = 0
+    count = 0
+    for w in bold_words:
+        try:
+            total_size += float(w.get("size", 0))
+            count += 1
+        except Exception:
+            pass
+    if count == 0 or (total_size / count) < size_threshold:
         return None
     bold_words.sort(key=lambda w: w["x0"])
     header_line = " ".join(w["text"] for w in bold_words)
@@ -152,6 +164,21 @@ def full_text_classification(full_text):
             best_count = count
             best_match = doc_type
     return best_match if best_count > 0 else None
+
+def smooth_classifications(classifications):
+    """
+    Second-pass smoothing: if a page is classified as 'unclassified' but both its neighbors
+    have the same non-'unclassified' type, then assign that type.
+    """
+    smoothed = classifications.copy()
+    for i in range(1, len(classifications) - 1):
+        prev = classifications[i - 1]["doc_name"]
+        curr = classifications[i]["doc_name"]
+        nxt = classifications[i + 1]["doc_name"]
+        if curr == "unclassified" and prev == nxt and prev != "unclassified":
+            smoothed[i]["doc_name"] = prev
+            print(f"DEBUG: Smoothing: Page {classifications[i]['page_index']+1} reclassified from 'unclassified' to '{prev}' based on neighbors.")
+    return smoothed
 
 def upload_to_vercel_blob(filepath):
     """Uploads a file to Vercel Blob and returns its public URL."""
@@ -185,17 +212,17 @@ class handler(BaseHTTPRequestHandler):
                 f.write(pdf_data)
 
             # 2. Open PDF with pdfplumber for header detection
-            pdf_plumber = pdfplumber.open(upload_path)
+            pdf_plumber_obj = pdfplumber.open(upload_path)
             split_folder = os.path.join(TEMP_DIR, "split_docs")
             os.makedirs(split_folder, exist_ok=True)
 
             page_classifications = []  # List of {"doc_name": ..., "page_index": ...}
 
             # Loop over each page to detect a header
-            for i, page in enumerate(pdf_plumber.pages):
+            for i, page in enumerate(pdf_plumber_obj.pages):
                 detected_doc_type = None
 
-                # Try bold header extraction first
+                # Try bold header extraction (using our font size threshold)
                 header_line = get_bold_header(page)
                 if header_line:
                     detected_doc_type = classify_header(header_line)
@@ -225,9 +252,12 @@ class handler(BaseHTTPRequestHandler):
                     print(f"DEBUG: Page {i+1}: No valid header found; defaulting to 'unclassified'")
 
                 page_classifications.append({"doc_name": detected_doc_type, "page_index": i})
-            pdf_plumber.close()
+            pdf_plumber_obj.close()
 
-            # 3. Group only contiguous pages with the same classification.
+            # 3. Apply neighbor smoothing to the classifications.
+            page_classifications = smooth_classifications(page_classifications)
+
+            # 4. Group only contiguous pages with the same classification.
             final_groups = []
             if page_classifications:
                 current_group = [page_classifications[0]["page_index"]]
@@ -247,7 +277,7 @@ class handler(BaseHTTPRequestHandler):
             for group in final_groups:
                 print(f"Document type '{group['doc_name']}' covers pages: {group['pages']}")
 
-            # 4. For each group, save the PDF and upload to Vercel Blob.
+            # 5. For each group, save the PDF and upload to Vercel Blob.
             local_reader = PdfReader(upload_path)
             doc_counts = {}
             public_urls = []
@@ -268,13 +298,13 @@ class handler(BaseHTTPRequestHandler):
                 else:
                     print(f"❌ Could not upload {new_doc_path} to Vercel Blob.")
 
-            # 5. Debug: Log the local split_docs structure.
+            # 6. Debug: Log the local split_docs structure.
             if os.path.exists(split_folder):
                 print("✅ /tmp/split_docs/ directory exists.")
                 for item in os.listdir(split_folder):
                     print(f"📄 {item}")
 
-            # 6. Return the public URLs.
+            # 7. Return the public URLs.
             response = {
                 "message": "PDF split and categorized successfully.",
                 "files": public_urls
