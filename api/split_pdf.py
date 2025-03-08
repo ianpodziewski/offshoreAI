@@ -95,6 +95,7 @@ class handler(BaseHTTPRequestHandler):
             os.makedirs(split_folder, exist_ok=True)
             
             page_classifications = []
+            public_urls = []
             for i, page in enumerate(pdf_plumber_obj.pages):
                 full_text = page.extract_text() or ""
                 detected_doc_type = full_text_classification(full_text)
@@ -108,15 +109,16 @@ class handler(BaseHTTPRequestHandler):
             
             page_classifications = smooth_classifications(page_classifications)
             
-            final_groups = []
-            for prev, current in zip(page_classifications, page_classifications[1:]):
-                if current["doc_name"] == prev["doc_name"]:
-                    continue
-                final_groups.append(current)
+            for group in page_classifications:
+                doc_name = group["doc_name"]
+                filename = f"{doc_name}.pdf"
+                file_url = upload_to_vercel_blob(os.path.join(split_folder, filename))
+                if file_url:
+                    public_urls.append({"name": filename, "url": file_url})
             
-            print("DEBUG: Final document classification groups:", final_groups)
+            print("DEBUG: Final document classification groups:", page_classifications)
             
-            response = {"message": "PDF split and categorized successfully.", "classification": final_groups}
+            response = {"message": "PDF split and categorized successfully.", "classification": page_classifications, "files": public_urls}
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
