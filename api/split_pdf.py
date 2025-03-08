@@ -136,14 +136,16 @@ def get_embedding_classification(text):
         print(f"❌ OpenAI Embedding Error: {e}")
         return None
 
-def classify_page(page, page_index):
+def classify_page(page, page_index, previous_classification=None):
     """
-    Attempts to classify a page by:
-    1. Checking bold header text
-    2. Falling back to a full text classification
-    3. Optionally falling back to embedding-based classification
+    Improved classification logic:
+    - Uses bold/large font headers if available.
+    - If no header is found, assumes continuation from the previous page.
+    - Falls back to full-text classification if necessary.
     """
     print(f"\nDEBUG: classify_page -> Page {page_index + 1}")
+
+    # Step 1: Extract heading (if available)
     header_text = get_bold_header(page)
     if header_text:
         print(f"DEBUG: extracted bold header text: {header_text}")
@@ -151,13 +153,21 @@ def classify_page(page, page_index):
         if doc_type:
             print(f"DEBUG: returning doc_type from header -> {doc_type}")
             return doc_type
-    
-    # Fallback: full text
+
+    # Step 2: Check if this page is a continuation of the previous one
+    if previous_classification:
+        print(f"DEBUG: No header found, assuming continuation of '{previous_classification}'")
+        return previous_classification
+
+    # Step 3: Use full-text classification as fallback
     full_text = page.extract_text() or ""
     doc_type = full_text_classification(full_text)
     if doc_type:
         print(f"DEBUG: returning doc_type from full_text -> {doc_type}")
         return doc_type
+
+    print(f"DEBUG: no doc_type found, defaulting -> unclassified")
+    return "unclassified"
     
     # Optional final fallback: embedding approach
     # embed_type = get_embedding_classification(full_text[:1000])
@@ -170,19 +180,28 @@ def classify_page(page, page_index):
 
 def smooth_classifications(classifications):
     """
-    After classifying each page, do a second pass:
-    1. If a page is 'unclassified' but both neighbors have the same doc_type,
-       assign that doc_type to the page.
+    Post-process classifications to:
+    - Assign unclassified pages based on surrounding pages.
+    - If a page is unclassified but follows a classified page, assume continuation.
     """
     print("\nDEBUG: smooth_classifications -> starting smoothing process")
+
     smoothed = classifications.copy()
     for i in range(1, len(classifications) - 1):
         prev = classifications[i - 1]["doc_name"]
         curr = classifications[i]["doc_name"]
         nxt = classifications[i + 1]["doc_name"]
+
+        # Rule 1: If a page is 'unclassified' but both neighbors match, assign that type
         if curr == "unclassified" and prev == nxt and prev != "unclassified":
             print(f"  => Smoothing: Page {classifications[i]['page_index']+1} from 'unclassified' to '{prev}'")
             smoothed[i]["doc_name"] = prev
+
+        # Rule 2: If a page is unclassified and follows a classified page, assume continuation
+        elif curr == "unclassified" and prev != "unclassified":
+            print(f"  => Smoothing: Page {classifications[i]['page_index']+1} assuming continuation of '{prev}'")
+            smoothed[i]["doc_name"] = prev
+
     print("DEBUG: smoothing complete\n")
     return smoothed
 
