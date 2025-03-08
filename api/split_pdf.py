@@ -13,6 +13,7 @@ VERCEL_BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
 DOCUMENT_KEYWORDS = {
     "lender's closing instructions": "lenders_closing_instructions",
     "lender s closing instructions": "lenders_closing_instructions",  # extra variation
+    "closing instructions": "lenders_closing_instructions",
     "promissory note": "promissory_note",
     "deed of trust": "deed_of_trust",
     "second deed of trust": "second_deed_of_trust",
@@ -29,9 +30,13 @@ DOCUMENT_KEYWORDS = {
     "truth in lending": "truth_in_lending_disclosure",
     "closing disclosure": "closing_disclosure",
     "hud/va addendum to uniform residential loan application": "hud_va_addendum",
+    "hud va addendum": "hud_va_addendum",  # alternative
     "direct endorsement approval": "endorsement_approval",
+    "direct endorsement": "endorsement_approval",  # alternative
     "tax and insurance disclosure": "tax_insurance_disclosure",
+    "tax & insurance": "tax_insurance_disclosure",  # alternative
     "hecm-fnma submission": "hecm_fnma_sub",
+    "hecm fnma submission": "hecm_fnma_sub",  # alternative
     "allonge": "allonge",
     "hold harmless agreement": "hold_harmless_agreement",
     "home equity conversion mortgage disclosure": "hecm_third_party_fees",
@@ -133,6 +138,21 @@ def get_bold_header(page):
     header_line = " ".join(w["text"] for w in bold_words)
     return header_line
 
+def full_text_classification(full_text):
+    """
+    If no header is detected in the top lines, this function normalizes the full text,
+    counts occurrences of each keyword and returns the doc type with the highest frequency.
+    """
+    norm_text = normalize_text(full_text)
+    best_match = None
+    best_count = 0
+    for keyword, doc_type in DOCUMENT_KEYWORDS.items():
+        count = norm_text.count(normalize_text(keyword))
+        if count > best_count:
+            best_count = count
+            best_match = doc_type
+    return best_match if best_count > 0 else None
+
 def upload_to_vercel_blob(filepath):
     """Uploads a file to Vercel Blob and returns its public URL."""
     if not VERCEL_BLOB_TOKEN:
@@ -169,17 +189,18 @@ class handler(BaseHTTPRequestHandler):
             split_folder = os.path.join(TEMP_DIR, "split_docs")
             os.makedirs(split_folder, exist_ok=True)
 
-            doc_counts = {}
             page_classifications = []  # List of {"doc_name": ..., "page_index": ...}
 
             # Loop over each page to detect a header
             for i, page in enumerate(pdf_plumber.pages):
                 detected_doc_type = None
+
                 # Try bold header extraction first
                 header_line = get_bold_header(page)
                 if header_line:
                     detected_doc_type = classify_header(header_line)
                     print(f"DEBUG: Page {i+1}: Bold header line: '{header_line}' -> Classified as: {detected_doc_type}")
+
                 # Fallback: scan first 5 lines if no bold header found
                 if not detected_doc_type:
                     full_text = page.extract_text() or ""
@@ -190,9 +211,19 @@ class handler(BaseHTTPRequestHandler):
                             if detected_doc_type:
                                 print(f"DEBUG: Page {i+1}: Fallback header line: '{line}' -> Classified as: {detected_doc_type}")
                                 break
+
+                # Additional fallback: search the full page text for keyword frequency
                 if not detected_doc_type:
-                    print(f"DEBUG: Page {i+1}: No valid header found; defaulting to 'unclassified'")
+                    full_text = page.extract_text() or ""
+                    detected_doc_type = full_text_classification(full_text)
+                    if detected_doc_type:
+                        print(f"DEBUG: Page {i+1}: Full text frequency match -> Classified as: {detected_doc_type}")
+
+                # Final default if still not detected
+                if not detected_doc_type:
                     detected_doc_type = "unclassified"
+                    print(f"DEBUG: Page {i+1}: No valid header found; defaulting to 'unclassified'")
+
                 page_classifications.append({"doc_name": detected_doc_type, "page_index": i})
             pdf_plumber.close()
 
@@ -218,6 +249,7 @@ class handler(BaseHTTPRequestHandler):
 
             # 4. For each group, save the PDF and upload to Vercel Blob.
             local_reader = PdfReader(upload_path)
+            doc_counts = {}
             public_urls = []
             for group in final_groups:
                 base_name = group["doc_name"]
