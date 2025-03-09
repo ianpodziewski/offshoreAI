@@ -1,5 +1,6 @@
 // utilities/loanDatabase.ts
 import { LoanData, generateLoan, generateLoans } from './loanGenerator';
+import { documentService } from './documentService';
 
 const STORAGE_KEY = 'simulated_loans_db';
 const DEFAULT_LOAN_COUNT = 10;
@@ -11,7 +12,13 @@ export const loanDatabase = {
     if (!localStorage.getItem(STORAGE_KEY)) {
       const initialLoans = generateLoans(DEFAULT_LOAN_COUNT);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialLoans));
-      console.log(`Initialized loan database with ${DEFAULT_LOAN_COUNT} loans`);
+      
+      // Generate documents for each loan
+      initialLoans.forEach(loan => {
+        documentService.generateDocumentsForLoan(loan);
+      });
+      
+      console.log(`Initialized loan database with ${DEFAULT_LOAN_COUNT} loans and their documents`);
     }
   },
   
@@ -32,6 +39,10 @@ export const loanDatabase = {
     const loans = loanDatabase.getLoans();
     loans.push(loan);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
+
+    // Generate documents for the new loan
+    documentService.generateDocumentsForLoan(loan);
+
     return loan;
   },
   

@@ -5,10 +5,11 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, Save, User, Calendar, DollarSign, Home, FileCheck, Clock } from 'lucide-react';
+import { ArrowLeft, FileText, Save, User, Calendar, DollarSign, Home, FileCheck, Clock, Upload } from 'lucide-react';
 import LayoutWrapper from '../../layout-wrapper';
 import { LoanData } from '@/utilities/loanGenerator';
 import { loanDatabase } from '@/utilities/loanDatabase';
+import { documentService, LoanDocument } from '@/utilities/documentService';
 import StatusBadge from '@/components/document/status-badge';
 import Link from 'next/link';
 
@@ -16,16 +17,31 @@ export default function LoanDetailPage() {
   const params = useParams();
   const router = useRouter();
   const [loan, setLoan] = useState<LoanData | null>(null);
+  const [loanDocuments, setLoanDocuments] = useState<LoanDocument[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const fetchLoan = async () => {
+    const fetchLoanAndDocuments = async () => {
       setLoading(true);
       try {
         if (params?.id) {
           const loanId = String(params.id);
+          
+          // Fetch loan data
           const fetchedLoan = loanDatabase.getLoanById(loanId);
           setLoan(fetchedLoan);
+          
+          // Fetch documents for this loan
+          if (fetchedLoan) {
+            const documents = documentService.getDocumentsForLoan(loanId);
+            setLoanDocuments(documents);
+            
+            // If no documents exist for this loan, generate them
+            if (documents.length === 0) {
+              const newDocuments = documentService.generateDocumentsForLoan(fetchedLoan);
+              setLoanDocuments(newDocuments);
+            }
+          }
         }
       } catch (error) {
         console.error('Error fetching loan details:', error);
@@ -34,8 +50,17 @@ export default function LoanDetailPage() {
       }
     };
     
-    fetchLoan();
+    fetchLoanAndDocuments();
   }, [params?.id]);
+  
+  // Group documents by category
+  const groupedDocuments = loanDocuments.reduce<Record<string, LoanDocument[]>>((acc, doc) => {
+    if (!acc[doc.category]) {
+      acc[doc.category] = [];
+    }
+    acc[doc.category].push(doc);
+    return acc;
+  }, {});
   
   if (loading) {
     return (
@@ -205,53 +230,63 @@ export default function LoanDetailPage() {
             </Card>
           </div>
           
-          {/* Document List */}
+          {/* Document List - Updated to use our generated documents */}
           <div>
             <Card className="shadow-md">
               <CardHeader className="bg-gray-50 border-b">
                 <CardTitle className="text-lg">Loan Documents</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                {loan.documents.map((category, i) => (
-                  <div key={i} className="mb-4">
-                    <h3 className="font-medium text-gray-700 capitalize mb-2">{category.category} Documents</h3>
-                    <ul className="space-y-2">
-                      {category.files.map((file, j) => (
-                        <li key={j} className="border rounded p-3 hover:bg-gray-50">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center">
-                              <FileText size={14} className="text-gray-500 mr-2" />
-                              <span className="text-sm">{file.filename}</span>
+                {Object.entries(groupedDocuments).length > 0 ? (
+                  Object.entries(groupedDocuments).map(([category, documents]) => (
+                    <div key={category} className="mb-4">
+                      <h3 className="font-medium text-gray-700 capitalize mb-2">{category} Documents</h3>
+                      <ul className="space-y-2">
+                        {documents.map((doc) => (
+                          <li key={doc.id} className="border rounded p-3 hover:bg-gray-50">
+                            <div className="flex justify-between items-center">
+                              <div className="flex items-center">
+                                <FileText size={14} className="text-gray-500 mr-2" />
+                                <span className="text-sm">{doc.filename}</span>
+                              </div>
+                              <StatusBadge status={doc.status} size="sm" />
                             </div>
-                            <StatusBadge status={file.status} size="sm" />
-                          </div>
-                          <div className="mt-2 flex items-center justify-between">
-                            <span className="text-xs text-gray-500">
-                              <Clock size={12} className="inline mr-1" />
-                              {new Date(file.uploadDate).toLocaleDateString()}
-                            </span>
-                            {file.url ? (
+                            <div className="mt-2 flex items-center justify-between">
+                              <span className="text-xs text-gray-500">
+                                <Clock size={12} className="inline mr-1" />
+                                {new Date(doc.dateCreated).toLocaleDateString()}
+                              </span>
                               <Link 
-                                href={file.url}
+                                href={`/loans/${loan.id}/documents/${doc.id}`}
                                 className="text-xs text-blue-600 hover:underline flex items-center"
-                                target="_blank"
                               >
                                 <FileCheck size={12} className="mr-1" />
-                                View
+                                View Document
                               </Link>
-                            ) : (
-                              <span className="text-xs text-gray-400">No preview</span>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 text-sm mb-4">No documents available for this loan</p>
+                    <Button 
+                      onClick={() => {
+                        const newDocs = documentService.generateDocumentsForLoan(loan);
+                        setLoanDocuments(newDocs);
+                      }}
+                      className="text-sm"
+                    >
+                      Generate Documents
+                    </Button>
                   </div>
-                ))}
+                )}
               </CardContent>
               <CardFooter className="bg-gray-50 border-t p-4">
                 <Button className="w-full">
-                  <ArrowLeft size={16} className="mr-2" />
+                  <Upload size={16} className="mr-2" />
                   Upload New Document
                 </Button>
               </CardFooter>
