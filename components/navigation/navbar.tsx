@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, MessageSquare, Upload, Home } from 'lucide-react';
+import { FileText, MessageSquare, Upload, Home, BarChart2 } from 'lucide-react';
 
 // Define navigation items
 const NAV_ITEMS = [
+  { href: '/', label: 'Dashboard', icon: BarChart2 },
   { href: '/documents', label: 'Documents', icon: FileText },
   { href: '/upload', label: 'Upload', icon: Upload },
   { href: '/chat', label: 'Chat Assistant', icon: MessageSquare },
@@ -14,14 +15,19 @@ const Navbar: React.FC = () => {
   const pathname = usePathname();
   
   // Function to check if a nav item is active
-  const isActive = (path: string) => pathname === path || pathname?.startsWith(path + '/');
+  const isActive = (path: string) => {
+    if (path === '/') {
+      return pathname === '/';
+    }
+    return pathname === path || pathname?.startsWith(path + '/');
+  };
   
   return (
     <nav className="fixed top-0 left-0 right-0 z-40 bg-white border-b shadow-sm">
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <Link 
-            href="/documents" 
+            href="/" 
             className="flex items-center gap-2"
           >
             <Home className="h-5 w-5 text-blue-600" />

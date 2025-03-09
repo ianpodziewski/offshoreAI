@@ -5,8 +5,8 @@ import { CHAT_HEADER, CLEAR_BUTTON_TEXT } from "@/configuration/ui";
 import { AI_NAME } from "@/configuration/identity";
 
 export const AILogo = () => (
-  <div className="w-12 h-12 relative">
-    <Image src="/ai-logo.png" alt={AI_NAME} width={48} height={48} />
+  <div className="w-10 h-10 relative">
+    <Image src="/ai-logo.png" alt={AI_NAME} width={40} height={40} className="rounded-full" />
     <div className="w-2 h-2 rounded-full bg-green-500 absolute -bottom-0.5 -right-0.5"></div>
   </div>
 );
@@ -17,12 +17,12 @@ export default function ChatHeader({
   clearMessages: () => void;
 }) {
   return (
-    <div className="z-10 flex justify-center items-center fixed top-0 w-full p-5 bg-white shadow-[0_10px_15px_-3px_rgba(255,255,255,1)]">
-      <div className="flex w-full">
+    <div className="flex justify-center items-center w-full p-4 bg-white border-b">
+      <div className="flex w-full max-w-4xl">
         <div className="flex-0 w-[100px]"></div>
         <div className="flex-1 flex justify-center items-center gap-2">
           <AILogo />
-          <p>{CHAT_HEADER}</p>
+          <p className="font-medium">{CHAT_HEADER}</p>
         </div>
         <div className="flex-0 w-[100px] flex justify-end items-center">
           <Button
