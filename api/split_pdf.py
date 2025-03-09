@@ -272,11 +272,11 @@ def classify_pdf(pdf_pages):
 
     return classifications
 
-def upload_to_vercel_blob(filepath):
+def upload_to_vercel_blob(filepath, category="misc"):
     if not VERCEL_BLOB_TOKEN:
         return None
     filename = os.path.basename(filepath)
-    url = f"https://api.vercel.com/v2/blob/{filename}"
+    url = f"https://api.vercel.com/v2/blob/{category}/{filename}"
     headers = {
         "Authorization": f"Bearer {VERCEL_BLOB_TOKEN}",
         "Content-Type": "application/octet-stream"
@@ -382,14 +382,11 @@ class handler(BaseHTTPRequestHandler):
                 for p in group["pages"]:
                     pdf_writer.add_page(local_reader.pages[p])
                 
-                category_dir = os.path.join(split_folder, doc_category)
-                new_doc_path = os.path.join(category_dir, filename)
-                
-                with open(new_doc_path, "wb") as f:
+                temp_file_path = os.path.join(TEMP_DIR, filename)
+                with open(temp_file_path, "wb") as f:
                     pdf_writer.write(f)
-                print(f"DEBUG: Created {new_doc_path} for pages {group['pages']} with doc_type {base_name}")
                 
-                file_url = upload_to_vercel_blob(new_doc_path)
+                file_url = upload_to_vercel_blob(temp_file_path, doc_category)
                 if file_url:
                     print(f"DEBUG: Uploaded to Vercel Blob -> {file_url}")
                     public_urls.append({

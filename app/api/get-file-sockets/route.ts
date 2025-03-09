@@ -1,34 +1,44 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { list } from '@vercel/blob';
 
-const TEMP_DIR = "/tmp/split_docs/";
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   console.log("✅ API `/api/get-file-sockets` CALLED!");
 
   try {
-    const fileSockets: { [key: string]: string[] } = {};
+    const fileSockets: { [key: string]: string[] } = {
+      "legal": [],
+      "financial": [],
+      "loan": [],
+      "misc": []
+    };
 
-    if (fs.existsSync(TEMP_DIR)) {
-      console.log("📁 /tmp/split_docs/ directory FOUND!");
+    // List all blobs
+    const { blobs } = await list();
+    console.log("📂 Found blobs:", blobs.length);
 
-      const categories = fs.readdirSync(TEMP_DIR);
-      console.log("📂 Categories:", categories);
-
-      categories.forEach((category) => {
-        const categoryPath = path.join(TEMP_DIR, category);
-
-        if (fs.statSync(categoryPath).isDirectory()) {
-          const files = fs.readdirSync(categoryPath);
-          console.log(`📂 ${category} contains:`, files);
-
-          fileSockets[category] = files.map((file) => `/api/download?file=${path.join(categoryPath, file)}`);
-        }
-      });
-    } else {
-      console.warn("⚠️ /tmp/split_docs/ directory NOT FOUND!");
-    }
+    // Group files by category based on path or filename
+    blobs.forEach(blob => {
+      // Extract category from the path or filename
+      let category = "misc"; // Default category
+      
+      // Parse category from URL or pathname
+      const url = new URL(blob.url);
+      const pathname = url.pathname;
+      
+      // Determine category from pathname or filename
+      if (pathname.includes("legal") || blob.pathname.includes("legal")) {
+        category = "legal";
+      } else if (pathname.includes("financial") || blob.pathname.includes("financial")) {
+        category = "financial";
+      } else if (pathname.includes("loan") || blob.pathname.includes("loan")) {
+        category = "loan";
+      }
+      
+      // Add to appropriate category
+      fileSockets[category].push(blob.url);
+    });
 
     console.log("📌 Returning:", fileSockets);
     return NextResponse.json({ message: "File sockets retrieved successfully.", files: fileSockets });
