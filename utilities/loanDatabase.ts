@@ -1,11 +1,12 @@
 // utilities/loanDatabase.ts
-import { LoanData, generateLoans } from './loanGenerator';
+import { LoanData, generateLoan, generateLoans } from './loanGenerator';
 
 const STORAGE_KEY = 'simulated_loans_db';
 const DEFAULT_LOAN_COUNT = 10;
 
 export const loanDatabase = {
-  // Initialize the database with some sample loans
+  generateLoan,
+    // Initialize the database with some sample loans
   initialize: () => {
     if (!localStorage.getItem(STORAGE_KEY)) {
       const initialLoans = generateLoans(DEFAULT_LOAN_COUNT);

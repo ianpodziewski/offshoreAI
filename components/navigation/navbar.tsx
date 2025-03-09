@@ -1,11 +1,13 @@
+// components/navigation/navbar.tsx
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, MessageSquare, Upload, Home, BarChart2 } from 'lucide-react';
+import { FileText, MessageSquare, Upload, Home, BarChart2, DollarSign } from 'lucide-react';
 
-// Define navigation items
+// Updated navigation items to include Loans
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: BarChart2 },
+  { href: '/loans', label: 'Loans', icon: DollarSign }, // New loans navigation item
   { href: '/documents', label: 'Documents', icon: FileText },
   { href: '/upload', label: 'Upload', icon: Upload },
   { href: '/chat', label: 'Chat Assistant', icon: MessageSquare },
