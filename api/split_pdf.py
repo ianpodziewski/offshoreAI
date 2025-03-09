@@ -349,29 +349,54 @@ class handler(BaseHTTPRequestHandler):
             for fg in final_groups:
                 print(f"  => Doc_type: {fg['doc_name']} -> Pages: {fg['pages']}")
 
-            # Save and upload grouped PDFs
+            # Create category directories based on FILE_SOCKETS mapping
+            for category in FILE_SOCKETS.keys():
+                category_dir = os.path.join(split_folder, category)
+                os.makedirs(category_dir, exist_ok=True)
+                print(f"DEBUG: Created category directory: {category_dir}")
+
+            # Save and upload grouped PDFs, now organized by category
             local_reader = PdfReader(upload_path)
             doc_counts = {}
             public_urls = []
+
             for group in final_groups:
                 base_name = group["doc_name"]
+                
+                # Determine which category this document belongs to
+                doc_category = "misc"  # Default category
+                for category, doc_types in FILE_SOCKETS.items():
+                    if base_name in doc_types:
+                        doc_category = category
+                        break
+                        
+                print(f"DEBUG: Assigning document {base_name} to category {doc_category}")
+                
+                # Get count for naming
                 doc_counts[base_name] = doc_counts.get(base_name, 0) + 1
                 suffix = f"_{doc_counts[base_name]}" if doc_counts[base_name] > 1 else ""
                 filename = f"{base_name}{suffix}.pdf"
+                
+                # Create the PDF in the category directory
                 pdf_writer = PdfWriter()
-
                 for p in group["pages"]:
                     pdf_writer.add_page(local_reader.pages[p])
-
-                new_doc_path = os.path.join(split_folder, filename)
+                
+                category_dir = os.path.join(split_folder, doc_category)
+                new_doc_path = os.path.join(category_dir, filename)
+                
                 with open(new_doc_path, "wb") as f:
                     pdf_writer.write(f)
                 print(f"DEBUG: Created {new_doc_path} for pages {group['pages']} with doc_type {base_name}")
-
+                
                 file_url = upload_to_vercel_blob(new_doc_path)
                 if file_url:
                     print(f"DEBUG: Uploaded to Vercel Blob -> {file_url}")
-                    public_urls.append(file_url)
+                    public_urls.append({
+                        "category": doc_category,
+                        "docType": base_name,
+                        "url": file_url
+                    })
 
             # Return final response with public URLs & classification results
             response = {
