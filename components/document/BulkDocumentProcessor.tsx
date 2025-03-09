@@ -110,7 +110,48 @@ export default function BulkDocumentProcessor({ loanId, onProcessComplete }: Bul
     }
   };
 
-  // Simulate PDF splitting based on filename patterns
+  // Add this function inside the BulkDocumentProcessor component before the simulatePdfSplit function
+  function analyzeDocumentContent(filename: string) {
+    // In a real application, this would use AI to analyze document content
+    // For now, simulate analysis based on filename patterns
+    const analysis = {
+      detectedType: 'unknown',
+      confidenceScore: 0,
+      suggestedCategory: 'misc'
+    };
+    
+    // Simulate document analysis
+    if (filename.toLowerCase().includes('closing')) {
+      analysis.detectedType = 'closing_disclosure';
+      analysis.confidenceScore = 0.92;
+      analysis.suggestedCategory = 'financial';
+    } else if (filename.toLowerCase().includes('note')) {
+      analysis.detectedType = 'promissory_note';
+      analysis.confidenceScore = 0.89;
+      analysis.suggestedCategory = 'loan';
+    } else if (filename.toLowerCase().includes('deed') || filename.toLowerCase().includes('trust')) {
+      analysis.detectedType = 'deed_of_trust';
+      analysis.confidenceScore = 0.87;
+      analysis.suggestedCategory = 'legal';
+    } else {
+      // Random document type for simulation
+      const types = [
+        { type: 'appraisal_report', category: 'financial', confidence: 0.75 },
+        { type: 'insurance_policy', category: 'legal', confidence: 0.78 },
+        { type: 'credit_report', category: 'financial', confidence: 0.82 },
+        { type: 'identity_verification', category: 'legal', confidence: 0.76 }
+      ];
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      
+      analysis.detectedType = randomType.type;
+      analysis.confidenceScore = randomType.confidence;
+      analysis.suggestedCategory = randomType.category;
+    }
+    
+    return analysis;
+  }
+
+  // Update the simulatePdfSplit function to use the analyzer
   function simulatePdfSplit(filename: string, url: string, loanId: string) {
     const documents = [];
     
@@ -131,9 +172,13 @@ export default function BulkDocumentProcessor({ loanId, onProcessComplete }: Bul
     for (let i = 0; i < numDocs; i++) {
       const docInfo = docTypes[i % docTypes.length];
       
+      // Analyze the "content" of this simulated document
+      const simulatedName = `${docInfo.type}_${i+1}.pdf`;
+      const analysis = analyzeDocumentContent(simulatedName);
+      
       documents.push({
         loanId,
-        filename: `${docInfo.type}_${i+1}.pdf`,
+        filename: simulatedName,
         fileURL: url, // In a real app, each doc would have its own URL
         documentType: docInfo.type,
         category: docInfo.category,
@@ -141,7 +186,8 @@ export default function BulkDocumentProcessor({ loanId, onProcessComplete }: Bul
         status: 'pending',
         extractedFromBulk: true,
         bulkSourceFile: filename,
-        pageRange: `${i*3+1}-${i*3+3}` // Simulate page ranges
+        pageRange: `${i*3+1}-${i*3+3}`, // Simulate page ranges
+        confidenceScore: analysis.confidenceScore
       });
     }
     
@@ -220,13 +266,21 @@ export default function BulkDocumentProcessor({ loanId, onProcessComplete }: Bul
           
           <p className="text-sm mb-2">Split into {splitDocuments.length} documents:</p>
           
-          <ul className="text-xs space-y-1 ml-5 list-disc">
-            {splitDocuments.map((doc, index) => (
-              <li key={index}>
-                {doc.documentType.replace(/_/g, ' ')} (Pages {doc.pageRange})
-              </li>
-            ))}
-          </ul>
+          <div className="max-h-32 overflow-y-auto">
+            <ul className="text-xs space-y-2 ml-5 list-disc">
+              {splitDocuments.map((doc, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>
+                    {doc.documentType.replace(/_/g, ' ')} 
+                    <span className="text-gray-500">(Pages {doc.pageRange})</span>
+                  </span>
+                  <span className="text-xs bg-blue-100 text-blue-800 rounded-full px-2 py-0.5">
+                    {Math.round(doc.confidenceScore * 100)}% confidence
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
       
