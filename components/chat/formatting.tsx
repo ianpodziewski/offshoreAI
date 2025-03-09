@@ -1,6 +1,6 @@
-// formatting.tsx
+// /components/chat/formatting.tsx
+import React, { memo, useMemo } from "react";
 import { DisplayMessage } from "@/types";
-import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -9,8 +9,27 @@ import "katex/dist/katex.min.css";
 import { preprocessLaTeX, renderCitations } from "@/utilities/formatting";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
-// Helper to extract text and process citations
-function withCitations(children: React.ReactNode, citations: any) {
+// Memoized code component for syntax highlighting
+const CodeBlock = memo(({ children, className, ...rest }: any) => {
+  const match = /language-(\w+)/.exec(className || "");
+  return match ? (
+    <SyntaxHighlighter
+      {...rest}
+      PreTag="div"
+      className="rounded-xl"
+      children={String(children).replace(/\n$/, "")}
+      language={match[1]}
+    />
+  ) : (
+    <code {...rest} className={className}>
+      {children}
+    </code>
+  );
+});
+CodeBlock.displayName = "CodeBlock";
+
+// Helper for citation processing
+const WithCitations = memo(({ children, citations }: { children: React.ReactNode, citations: any }) => {
   let textContent = "";
   if (typeof children === "string") {
     textContent = children;
@@ -20,45 +39,33 @@ function withCitations(children: React.ReactNode, citations: any) {
       .join("");
   }
   return renderCitations(textContent, citations);
-}
+});
+WithCitations.displayName = "WithCitations";
 
-export function Formatting({ message }: { message: DisplayMessage }) {
-  const processedContent = preprocessLaTeX(message.content);
-  const components = {
-    code: ({ children, className, node, ...rest }: any) => {
-      const match = /language-(\w+)/.exec(className || "");
-      return match ? (
-        <SyntaxHighlighter
-          {...rest}
-          PreTag="div"
-          className="rounded-xl"
-          children={String(children).replace(/\n$/, "")}
-          language={match[1]}
-        />
-      ) : (
-        <code {...rest} className={className}>
-          {children}
-        </code>
-      );
-    },
+export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
+  // Process LaTeX only once per message
+  const processedContent = useMemo(() => preprocessLaTeX(message.content), [message.content]);
+  
+  // Create components object with memoized components
+  const components = useMemo(() => ({
+    code: CodeBlock,
     // Apply citation processing to paragraphs, list items, and headings
     p: ({ children }: { children: React.ReactNode }) => (
-      <p>{withCitations(children, message.citations)}</p>
+      <p><WithCitations children={children} citations={message.citations} /></p>
     ),
     li: ({ children }: { children: React.ReactNode }) => (
-      <li>{withCitations(children, message.citations)}</li>
+      <li><WithCitations children={children} citations={message.citations} /></li>
     ),
     h1: ({ children }: { children: React.ReactNode }) => (
-      <h1>{withCitations(children, message.citations)}</h1>
+      <h1><WithCitations children={children} citations={message.citations} /></h1>
     ),
     h2: ({ children }: { children: React.ReactNode }) => (
-      <h2>{withCitations(children, message.citations)}</h2>
+      <h2><WithCitations children={children} citations={message.citations} /></h2>
     ),
     h3: ({ children }: { children: React.ReactNode }) => (
-      <h3>{withCitations(children, message.citations)}</h3>
+      <h3><WithCitations children={children} citations={message.citations} /></h3>
     ),
-    // Add more elements as needed...
-  };
+  }), [message.citations]);
 
   return (
     <ReactMarkdown
@@ -70,53 +77,6 @@ export function Formatting({ message }: { message: DisplayMessage }) {
       {processedContent}
     </ReactMarkdown>
   );
-}
+});
 
-
-
-
-/*
-import { DisplayMessage } from "@/types";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
-import { preprocessLaTeX, renderCitations } from "@/utilities/formatting";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-
-export function Formatting({ message }: { message: DisplayMessage }) {
-  const processedContent = preprocessLaTeX(message.content);
-  const components = {
-    code: ({ children, className, node, ...rest }: any) => {
-      const match = /language-(\w+)/.exec(className || "");
-      return match ? (
-        <SyntaxHighlighter
-          {...rest}
-          PreTag="div"
-          className="rounded-xl"
-          children={String(children).replace(/\n$/, "")}
-          language={match[1]}
-        />
-      ) : (
-        <code {...rest} className={className}>
-          {children}
-        </code>
-      );
-    },
-    p: ({ children }: { children: React.ReactNode }) => {
-      return renderCitations(children, message.citations);
-    },
-  };
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm, remarkMath]}
-      rehypePlugins={[rehypeKatex]}
-      components={components as any}
-      className="gap-3 flex flex-col"
-    >
-      {processedContent}
-    </ReactMarkdown>
-  );
-}
-*/
+Formatting.displayName = "Formatting";
