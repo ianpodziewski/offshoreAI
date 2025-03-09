@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FileIcon, ArrowRight, AlertCircle, Upload, FileText, CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import LayoutWrapper from '../layout-wrapper';
 
 export default function UploadPage() {
   const router = useRouter();
@@ -96,95 +97,97 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="container mx-auto py-16 px-4">
-      <div className="max-w-2xl mx-auto">
-        <Card className="shadow-lg">
-          <CardHeader className="bg-gray-50 border-b">
-            <CardTitle>Upload Executed Loan Document Package</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 space-y-6">
-            {!success ? (
-              <>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <input 
-                    type="file" 
-                    id="file-upload"
-                    accept=".pdf" 
-                    onChange={handleFileChange} 
-                    className="hidden" 
-                  />
-                  <label 
-                    htmlFor="file-upload" 
-                    className="flex flex-col items-center cursor-pointer"
-                  >
-                    <FileText size={48} className="text-gray-400 mb-4" />
-                    <p className="text-lg font-medium mb-2">
-                      {file ? file.name : "Drop your document package here"}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Upload a PDF containing all loan documents
-                    </p>
-                    <Button 
-                      type="button" 
-                      variant="outline"
+    <LayoutWrapper>
+      <div className="container mx-auto py-16 px-4">
+        <div className="max-w-2xl mx-auto">
+          <Card className="shadow-lg">
+            <CardHeader className="bg-gray-50 border-b">
+              <CardTitle>Upload Executed Loan Document Package</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              {!success ? (
+                <>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <input 
+                      type="file" 
+                      id="file-upload"
+                      accept=".pdf" 
+                      onChange={handleFileChange} 
+                      className="hidden" 
+                    />
+                    <label 
+                      htmlFor="file-upload" 
+                      className="flex flex-col items-center cursor-pointer"
                     >
-                      Select PDF File
-                    </Button>
-                  </label>
-                </div>
-                
-                {error && (
-                  <div className="bg-red-50 text-red-700 p-3 rounded-md flex items-center gap-2">
-                    <AlertCircle size={16} />
-                    <p>{error}</p>
+                      <FileText size={48} className="text-gray-400 mb-4" />
+                      <p className="text-lg font-medium mb-2">
+                        {file ? file.name : "Drop your document package here"}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        Upload a PDF containing all loan documents
+                      </p>
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                      >
+                        Select PDF File
+                      </Button>
+                    </label>
                   </div>
-                )}
-                
-                {file && (
-                  <div className="flex justify-center">
-                    <Button 
-                      onClick={handleUpload} 
-                      disabled={uploading}
-                      className="px-6"
-                    >
-                      {uploading ? "Processing..." : "Process Document Package"}
-                    </Button>
-                  </div>
-                )}
-                
-                {uploading && (
-                  <div className="space-y-2">
-                    <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 transition-all duration-500" 
-                        style={{ width: `${progress}%` }}
-                      />
+                  
+                  {error && (
+                    <div className="bg-red-50 text-red-700 p-3 rounded-md flex items-center gap-2">
+                      <AlertCircle size={16} />
+                      <p>{error}</p>
                     </div>
-                    <p className="text-center text-sm text-gray-600">{message}</p>
+                  )}
+                  
+                  {file && (
+                    <div className="flex justify-center">
+                      <Button 
+                        onClick={handleUpload} 
+                        disabled={uploading}
+                        className="px-6"
+                      >
+                        {uploading ? "Processing..." : "Process Document Package"}
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {uploading && (
+                    <div className="space-y-2">
+                      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-500 transition-all duration-500" 
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <p className="text-center text-sm text-gray-600">{message}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
+                    <CheckCircle className="h-8 w-8" />
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle className="h-8 w-8" />
+                  <h3 className="text-xl font-semibold">Document Package Processed</h3>
+                  <p className="text-gray-600">
+                    Your document package has been successfully processed and split into {processedFiles.length} documents
+                  </p>
+                  <p className="text-sm text-gray-500">Redirecting to documents page...</p>
+                  <Link 
+                    href="/documents" 
+                    className="inline-flex items-center gap-2 bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600"
+                  >
+                    View Documents <ArrowRight size={16} />
+                  </Link>
                 </div>
-                <h3 className="text-xl font-semibold">Document Package Processed</h3>
-                <p className="text-gray-600">
-                  Your document package has been successfully processed and split into {processedFiles.length} documents
-                </p>
-                <p className="text-sm text-gray-500">Redirecting to documents page...</p>
-                <Link 
-                  href="/documents" 
-                  className="inline-flex items-center gap-2 bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600"
-                >
-                  View Documents <ArrowRight size={16} />
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }
