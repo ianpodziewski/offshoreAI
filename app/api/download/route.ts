@@ -13,7 +13,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "No file path provided" }, { status: 400 });
     }
 
-    // Security check to prevent directory traversal attacks
+    // Check if it's a Blob URL
+    if (filePath.startsWith('http')) {
+      // Fetch from URL instead of filesystem
+      const response = await fetch(filePath);
+      if (!response.ok) {
+        return NextResponse.json({ error: "File not found" }, { status: 404 });
+      }
+      
+      const fileData = await response.arrayBuffer();
+      const fileName = filePath.split('/').pop() || 'document.pdf';
+      
+      return new NextResponse(fileData, {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename="${fileName}"`,
+        },
+      });
+    }
+
+    // Original local filesystem code
     const normalizedPath = path.normalize(filePath);
     if (normalizedPath.includes("..")) {
       return NextResponse.json({ error: "Invalid file path" }, { status: 400 });

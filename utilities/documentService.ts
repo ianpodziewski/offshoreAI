@@ -107,10 +107,11 @@ export const documentService = {
     return documents;
   },
   
-  // Get all documents
   getAllDocuments: (): LoanDocument[] => {
     const docsJson = localStorage.getItem(DOCUMENTS_STORAGE_KEY);
-    return docsJson ? JSON.parse(docsJson) : [];
+    const docs = docsJson ? JSON.parse(docsJson) : [];
+    console.log("Retrieved documents:", docs); // Add this for debugging
+    return docs;
   },
   
   // Get documents for a specific loan
