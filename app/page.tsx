@@ -1,35 +1,18 @@
 "use client";
 
-import ChatInput from "@/components/chat/input";
-import ChatMessages from "@/components/chat/messages";
-import useApp from "@/hooks/use-app";
-import ChatHeader from "@/components/chat/header";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function Chat() {
-  const {
-    messages,
-    handleInputChange,
-    handleSubmit,
-    input,
-    isLoading,
-    indicatorState,
-    clearMessages,
-  } = useApp();
-
+export default function Home() {
+  const router = useRouter();
+  
+  useEffect(() => {
+    router.push('/chat');
+  }, [router]);
+  
   return (
-    <>
-      <ChatHeader clearMessages={clearMessages} />
-      <div className="flex justify-center items-center h-screen">
-        <div className="flex flex-col max-w-screen-lg w-full h-full p-5">
-          <ChatMessages messages={messages} indicatorState={indicatorState} />
-        </div>
-      </div>
-      <ChatInput
-        handleInputChange={handleInputChange}
-        handleSubmit={handleSubmit}
-        input={input}
-        isLoading={isLoading}
-      />
-    </>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+    </div>
   );
 }
