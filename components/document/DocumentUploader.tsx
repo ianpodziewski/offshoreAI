@@ -33,6 +33,34 @@ export default function DocumentUploader({ loanId, onUploadComplete }: DocumentU
     }
   };
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      
+      if (droppedFile.type !== "application/pdf") {
+        setError("Please drop a PDF file");
+        return;
+      }
+      
+      setFile(droppedFile);
+      setError(null);
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) {
       setError("Please select a file first");
@@ -144,7 +172,14 @@ export default function DocumentUploader({ loanId, onUploadComplete }: DocumentU
     <div className="p-4 border rounded-lg">
       <h3 className="text-lg font-medium mb-4">Upload Loan Document</h3>
       
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mb-4">
+      <div 
+        className={`border-2 border-dashed rounded-lg p-6 text-center mb-4 ${
+          isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+        }`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <input 
           type="file" 
           id="file-upload"
@@ -158,7 +193,7 @@ export default function DocumentUploader({ loanId, onUploadComplete }: DocumentU
         >
           <FileText size={48} className="text-gray-400 mb-3" />
           <p className="text-lg font-medium mb-2">
-            {file ? file.name : "Drop your document here"}
+            {file ? file.name : isDragging ? "Drop PDF here" : "Drop your document here"}
           </p>
           <p className="text-sm text-gray-500 mb-4">
             Upload a PDF document

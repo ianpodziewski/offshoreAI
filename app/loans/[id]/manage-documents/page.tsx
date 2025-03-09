@@ -9,9 +9,10 @@ import DocumentList from '@/components/document/DocumentList';
 import DocumentViewer from '@/components/document/DocumentViewer';
 import LayoutWrapper from '@/app/layout-wrapper';
 import Link from 'next/link';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/utilities/firebaseConfig';
 import BulkDocumentProcessor from '@/components/document/BulkDocumentProcessor';
+import DocumentAnalytics from '@/components/document/DocumentAnalytics';
 
 export default function ManageDocumentsPage({ params }: { params: { id: string } }) {
   const id = params.id;
@@ -19,6 +20,7 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [loanDetails, setLoanDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [allDocuments, setAllDocuments] = useState<any[]>([]);
   
   // Fetch loan details
   useEffect(() => {
@@ -51,6 +53,29 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
       fetchLoanDetails();
     }
   }, [id]);
+  
+  // Fetch documents - Added new useEffect to fetch documents for analytics
+  useEffect(() => {
+    const fetchDocuments = async () => {
+      if (!id) return;
+      
+      try {
+        const q = query(collection(db, "documents"), where("loanId", "==", id));
+        const querySnapshot = await getDocs(q);
+        
+        const docs = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setAllDocuments(docs);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+      }
+    };
+    
+    fetchDocuments();
+  }, [id, refreshCounter]); // Added refreshCounter to the dependency array
   
   // Force refresh document list when a new document is uploaded
   const handleUploadComplete = () => {
@@ -97,6 +122,11 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
                 loanId={id}
                 onProcessComplete={handleUploadComplete}
               />
+            </div>
+            
+            {/* Add the DocumentAnalytics component here */}
+            <div className="mt-6">
+              <DocumentAnalytics documents={allDocuments} />
             </div>
             
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
