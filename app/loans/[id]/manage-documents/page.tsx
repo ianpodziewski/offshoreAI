@@ -4,25 +4,20 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import DocumentUploader from '@/components/document/DocumentUploader';
-import DocumentList from '@/components/document/DocumentList';
-import DocumentViewer from '@/components/document/DocumentViewer';
 import LayoutWrapper from '@/app/layout-wrapper';
 import Link from 'next/link';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/utilities/firebaseConfig';
-import BulkDocumentProcessor from '@/components/document/BulkDocumentProcessor';
-import DocumentAnalytics from '@/components/document/DocumentAnalytics';
-import EnhancedDocumentUploader from '@/components/document/EnhancedDocumentUploader'; // Import the enhanced uploader
+import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
+import SimpleDocumentUploader from '@/components/document/SimpleDocumentUploader';
+import SimpleDocumentList from '@/components/document/SimpleDocumentList';
+import SimpleDocumentViewer from '@/components/document/SimpleDocumentViewer';
+import { loanDatabase } from '@/utilities/loanDatabase';
 
 export default function ManageDocumentsPage({ params }: { params: { id: string } }) {
   const id = params.id;
-  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [selectedDocument, setSelectedDocument] = useState<SimpleDocument | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [loanDetails, setLoanDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [allDocuments, setAllDocuments] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'standard' | 'enhanced' | 'bulk'>('enhanced'); // Default to enhanced
   
   // Fetch loan details
   useEffect(() => {
@@ -30,17 +25,15 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
       if (!id) return;
       
       try {
-        // First try to fetch from Firebase
-        const docRef = doc(db, "loans", id);
-        const docSnap = await getDoc(docRef);
+        setLoading(true);
+        // Try to fetch from our local database
+        const loan = loanDatabase.getLoanById(id);
         
-        if (docSnap.exists()) {
-          setLoanDetails(docSnap.data());
+        if (loan) {
+          setLoanDetails(loan);
         } else {
-          // Fallback to our mock database
-          const response = await fetch(`/api/loans/${id}`);
-          const data = await response.json();
-          setLoanDetails(data.loan);
+          // Fallback - use loan ID as borrower name
+          setLoanDetails({ id, borrowerName: `Loan #${id}` });
         }
       } catch (error) {
         console.error("Error fetching loan:", error);
@@ -56,31 +49,14 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
     }
   }, [id]);
   
-  // Fetch documents - Added new useEffect to fetch documents for analytics
-  useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!id) return;
-      
-      try {
-        const q = query(collection(db, "documents"), where("loanId", "==", id));
-        const querySnapshot = await getDocs(q);
-        
-        const docs = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        
-        setAllDocuments(docs);
-      } catch (error) {
-        console.error("Error fetching documents:", error);
-      }
-    };
-    
-    fetchDocuments();
-  }, [id, refreshCounter]); // Added refreshCounter to the dependency array
-  
-  // Force refresh document list when a new document is uploaded
+  // Handle document upload completion
   const handleUploadComplete = () => {
+    setRefreshCounter(prev => prev + 1);
+  };
+  
+  // Handle document status change
+  const handleDocumentStatusChange = () => {
+    setSelectedDocument(null);
     setRefreshCounter(prev => prev + 1);
   };
   
@@ -114,68 +90,10 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left sidebar - Upload */}
           <div>
-            {/* Tabs for different upload methods */}
-            <div className="bg-white rounded-lg shadow-sm mb-4">
-              <div className="flex border-b">
-                <button 
-                  onClick={() => setActiveTab('standard')}
-                  className={`flex-1 py-2 px-4 text-sm font-medium ${
-                    activeTab === 'standard' 
-                      ? 'border-b-2 border-blue-500 text-blue-600' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Standard Upload
-                </button>
-                <button 
-                  onClick={() => setActiveTab('enhanced')}
-                  className={`flex-1 py-2 px-4 text-sm font-medium ${
-                    activeTab === 'enhanced' 
-                      ? 'border-b-2 border-blue-500 text-blue-600' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  AI-Powered
-                </button>
-                <button 
-                  onClick={() => setActiveTab('bulk')}
-                  className={`flex-1 py-2 px-4 text-sm font-medium ${
-                    activeTab === 'bulk' 
-                      ? 'border-b-2 border-blue-500 text-blue-600' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  Bulk Processing
-                </button>
-              </div>
-            </div>
-            
-            {/* Active tab content */}
-            {activeTab === 'standard' && (
-              <DocumentUploader 
-                loanId={id} 
-                onUploadComplete={handleUploadComplete}
-              />
-            )}
-            
-            {activeTab === 'enhanced' && (
-              <EnhancedDocumentUploader 
-                loanId={id}
-                onUploadComplete={handleUploadComplete}
-              />
-            )}
-            
-            {activeTab === 'bulk' && (
-              <BulkDocumentProcessor 
-                loanId={id}
-                onProcessComplete={handleUploadComplete}
-              />
-            )}
-            
-            {/* Document analytics - always shown */}
-            <div className="mt-6">
-              <DocumentAnalytics documents={allDocuments} />
-            </div>
+            <SimpleDocumentUploader 
+              loanId={id} 
+              onUploadComplete={handleUploadComplete}
+            />
             
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
               <h3 className="font-medium flex items-center mb-2">
@@ -183,10 +101,10 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
                 Document Tips
               </h3>
               <ul className="text-sm text-gray-700 space-y-2 ml-5 list-disc">
-                <li>Use AI-Powered processing for automatic document classification</li>
+                <li>Upload all required loan documents</li>
                 <li>Ensure all pages are properly oriented</li>
                 <li>Make sure text is legible in the scanned documents</li>
-                <li>For best results, use descriptive filenames</li>
+                <li>Use descriptive filenames for better categorization</li>
               </ul>
             </div>
           </div>
@@ -198,10 +116,10 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
                 <h2 className="text-lg font-semibold">Loan Documents</h2>
               </div>
               <div className="p-4">
-                <DocumentList 
+                <SimpleDocumentList 
                   loanId={id} 
                   onViewDocument={setSelectedDocument}
-                  key={refreshCounter} // Force refresh when counter changes
+                  refreshTrigger={refreshCounter}
                 />
               </div>
             </div>
@@ -210,13 +128,10 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
         
         {/* Document Viewer Modal */}
         {selectedDocument && (
-          <DocumentViewer 
+          <SimpleDocumentViewer 
             document={selectedDocument} 
             onClose={() => setSelectedDocument(null)}
-            onStatusChange={() => {
-              setSelectedDocument(null);
-              setRefreshCounter(prev => prev + 1);
-            }}
+            onStatusChange={handleDocumentStatusChange}
           />
         )}
       </div>

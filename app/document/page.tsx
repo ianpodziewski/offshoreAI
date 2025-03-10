@@ -1,3 +1,4 @@
+// app/document/page.tsx
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -7,14 +8,15 @@ import StatusBadge from '@/components/document/status-badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Save, User, AlertTriangle, CheckCircle } from 'lucide-react';
 import LayoutWrapper from '../layout-wrapper';
+import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
 
 // Create a client component that uses the hooks
 function DocumentViewerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [documentPath, setDocumentPath] = useState<string>('');
-  const [documentUrl, setDocumentUrl] = useState<string>('');
-  const [status, setStatus] = useState<string>('unassigned');
+  const [documentId, setDocumentId] = useState<string>('');
+  const [document, setDocument] = useState<SimpleDocument | null>(null);
+  const [status, setStatus] = useState<string>('pending');
   const [assignedTo, setAssignedTo] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -23,62 +25,47 @@ function DocumentViewerContent() {
   const [saveError, setSaveError] = useState('');
   
   useEffect(() => {
-    const path = searchParams.get('path');
-    if (path) {
-      setDocumentPath(path);
-      setDocumentUrl(`/api/download?file=${path}`);
+    const docId = searchParams.get('id');
+    if (docId) {
+      setDocumentId(docId);
       
-      // Fetch the current status
-      fetchDocumentStatus(path);
+      // Fetch the document
+      const doc = simpleDocumentService.getDocumentById(docId);
+      if (doc) {
+        setDocument(doc);
+        setStatus(doc.status);
+        setAssignedTo(doc.assignedTo || '');
+        setNotes(doc.notes || '');
+      }
+      setLoading(false);
+    } else {
+      // No document ID provided
+      setLoading(false);
     }
   }, [searchParams]);
   
-  // Fetch the document's current status
-  const fetchDocumentStatus = async (path: string) => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/document-status');
-      const data = await response.json();
-      
-      if (data.statuses && data.statuses[path]) {
-        const docStatus = data.statuses[path];
-        setStatus(docStatus.status);
-        setAssignedTo(docStatus.assignedTo || '');
-        setNotes(docStatus.notes || '');
-      }
-    } catch (error) {
-      console.error('Error fetching document status:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
   // Update the document status
   const updateStatus = async () => {
-    // Your existing updateStatus code...
+    if (!document) return;
+    
     try {
       setSaving(true);
       setSaveSuccess(false);
       setSaveError('');
       
-      const response = await fetch('/api/document-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          documentPath,
-          status,
-          assignedTo: assignedTo.trim() || undefined,
-          notes: notes.trim() || undefined
-        }),
-      });
+      const updatedDoc = simpleDocumentService.updateDocumentStatus(
+        document.id,
+        status as 'pending' | 'approved' | 'rejected',
+        notes,
+        assignedTo
+      );
       
-      if (!response.ok) {
+      if (!updatedDoc) {
         throw new Error('Failed to update status');
       }
       
       setSaveSuccess(true);
+      setDocument(updatedDoc);
       
       // Clear success message after a few seconds
       setTimeout(() => {
@@ -99,7 +86,29 @@ function DocumentViewerContent() {
     }
   };
   
-  const documentName = documentPath ? documentPath.split('/').pop() || 'Document' : 'Document';
+  const documentName = document ? document.filename : 'Document';
+  
+  if (loading) {
+    return (
+      <div className="container mx-auto py-16 px-4 text-center">
+        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+        <p>Loading document...</p>
+      </div>
+    );
+  }
+  
+  if (!document) {
+    return (
+      <div className="container mx-auto py-16 px-4 text-center">
+        <h2 className="text-2xl font-bold text-gray-700 mb-4">Document Not Found</h2>
+        <p className="text-gray-600 mb-6">The document you're looking for doesn't exist or has been removed.</p>
+        <Button onClick={() => router.push('/documents')}>
+          <ArrowLeft size={16} className="mr-2" />
+          Back to Documents
+        </Button>
+      </div>
+    );
+  }
   
   return (
     <div className="container mx-auto py-16 px-4">
@@ -121,9 +130,9 @@ function DocumentViewerContent() {
               <CardTitle className="text-lg">{documentName}</CardTitle>
             </CardHeader>
             <CardContent className="p-0 h-[800px]">
-              {documentUrl && (
+              {document.content && (
                 <iframe 
-                  src={documentUrl} 
+                  src={document.content} 
                   className="w-full h-full border-0" 
                   title="Document Preview"
                 />
@@ -139,71 +148,57 @@ function DocumentViewerContent() {
               <CardTitle className="text-lg">Document Status</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
-              {/* Rest of your component remains the same */}
-              {loading ? (
-                <div className="text-center py-4">
-                  <div className="animate-spin w-6 h-6 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-3"></div>
-                  <p className="text-sm text-gray-500">Loading status...</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Status
+                </label>
+                <div className="mb-4">
+                  <StatusBadge status={status} size="lg" showLabel={true} />
                 </div>
-              ) : (
-                <>
-                  {/* Your existing status UI */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Current Status
-                    </label>
-                    <div className="mb-4">
-                      <StatusBadge status={status} size="lg" showLabel={true} />
-                    </div>
-                    
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Update Status
-                    </label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md"
-                    >
-                      {/* Your status options would go here */}
-                      <option value="unassigned">Unassigned</option>
-                      <option value="assigned">Assigned</option>
-                      <option value="reviewing">Under Review</option>
-                      <option value="approved">Approved</option>
-                      <option value="rejected">Rejected</option>
-                    </select>
+                
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Update Status
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                >
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Assigned To
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User size={16} className="text-gray-400" />
                   </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Assigned To
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <User size={16} className="text-gray-400" />
-                      </div>
-                      <input
-                        type="text"
-                        value={assignedTo}
-                        onChange={(e) => setAssignedTo(e.target.value)}
-                        className="pl-10 w-full p-2 border border-gray-300 rounded-md"
-                        placeholder="Enter reviewer name"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Review Notes
-                    </label>
-                    <textarea
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md h-32"
-                      placeholder="Add notes about this document..."
-                    />
-                  </div>
-                </>
-              )}
+                  <input
+                    type="text"
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    className="pl-10 w-full p-2 border border-gray-300 rounded-md"
+                    placeholder="Enter reviewer name"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Review Notes
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md h-32"
+                  placeholder="Add notes about this document..."
+                />
+              </div>
               
               {saveSuccess && (
                 <div className="bg-green-50 text-green-700 p-3 rounded-md flex items-center gap-2">

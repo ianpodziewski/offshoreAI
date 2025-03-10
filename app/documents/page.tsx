@@ -1,61 +1,52 @@
+// app/documents/page.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import StatusBadge from '@/components/document/status-badge';
 import { Button } from '@/components/ui/button';
+import { Upload, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { FileText, Upload, Eye, RefreshCw } from 'lucide-react';
 import LayoutWrapper from '../layout-wrapper';
+import SimpleDocumentUploader from '@/components/document/SimpleDocumentUploader';
+import SimpleDocumentList from '@/components/document/SimpleDocumentList';
+import SimpleDocumentViewer from '@/components/document/SimpleDocumentViewer';
+import { SimpleDocument, simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 
-// Define document categories based on your split_pdf.py FILE_SOCKETS
+// Define document categories
 const DOCUMENT_CATEGORIES = {
+  "loan": "Loan Documentation",
   "legal": "Legal Documents",
   "financial": "Financial Documents",
-  "loan": "Loan Documentation",
   "misc": "Miscellaneous Documents"
 };
 
 export default function DocumentDashboard() {
-  const [documentSockets, setDocumentSockets] = useState<Record<string, string[]>>({});
-  const [statuses, setStatuses] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<SimpleDocument | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [loading, setLoading] = useState(false);
   
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      // Fetch document sockets
-      const socketsResponse = await fetch('/api/get-file-sockets');
-      const socketsData = await socketsResponse.json();
-      
-      // Fetch document statuses
-      const statusesResponse = await fetch('/api/document-status');
-      const statusesData = await statusesResponse.json();
-      
-      setDocumentSockets(socketsData.files || {});
-      setStatuses(statusesData.statuses || {});
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+  // Dummy loanId for demo purposes when not viewing from a specific loan
+  const demoLoanId = "demo-loan-123";
+  
+  const handleUploadComplete = () => {
+    // Increment counter to trigger a refresh of the document list
+    setRefreshCounter(prev => prev + 1);
   };
   
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const handleDocumentStatusChange = () => {
+    // Close the viewer and refresh the list
+    setSelectedDocument(null);
+    setRefreshCounter(prev => prev + 1);
+  };
   
   const refreshData = () => {
-    setRefreshing(true);
-    fetchData();
+    setLoading(true);
+    // Simple timeout to simulate loading
+    setTimeout(() => {
+      setRefreshCounter(prev => prev + 1);
+      setLoading(false);
+    }, 500);
   };
-  
-  const getDocumentStatus = (docUrl: string) => {
-    return statuses[docUrl]?.status || 'unassigned';
-  };
-  
 
   return (
     <LayoutWrapper>
@@ -66,10 +57,10 @@ export default function DocumentDashboard() {
             <Button 
               onClick={refreshData} 
               variant="outline"
-              disabled={refreshing}
+              disabled={loading}
               className="flex items-center gap-2"
             >
-              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
               Refresh
             </Button>
             <Link 
@@ -77,58 +68,44 @@ export default function DocumentDashboard() {
               className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
             >
               <Upload size={18} />
-              Upload Document Package
+              Upload New Document
             </Link>
           </div>
         </div>
         
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Loading document sockets...</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Document Uploader */}
+          <div>
+            <SimpleDocumentUploader 
+              loanId={demoLoanId} 
+              onUploadComplete={handleUploadComplete}
+            />
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Object.entries(DOCUMENT_CATEGORIES).map(([category, title]) => (
-              <Card key={category} className="shadow-md">
-                <CardHeader className="bg-gray-50 border-b">
-                  <CardTitle className="text-lg">{title}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  {documentSockets[category]?.length > 0 ? (
-                    <ul className="space-y-3">
-                      {documentSockets[category].map((docUrl, idx) => {
-                        const docName = docUrl.split('/').pop()?.replace('.pdf', '') || `Document ${idx+1}`;
-                        const status = getDocumentStatus(docUrl);
-                        return (
-                          <li key={idx} className="flex justify-between items-center p-2 border rounded hover:bg-gray-50">
-                            <div className="flex items-center gap-3">
-                              <FileText size={18} className="text-gray-500" />
-                              <span className="font-medium">{docName}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <StatusBadge status={status} size="sm" />
-                              <Link 
-                                href={`/document?path=${encodeURIComponent(docUrl.replace('/api/download?file=', ''))}`}
-                                className="p-1 rounded hover:bg-gray-200"
-                                title="View Document"
-                              >
-                                <Eye size={16} />
-                              </Link>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      No {title.toLowerCase()} uploaded yet
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+          
+          {/* Document List */}
+          <div className="lg:col-span-2">
+            <Card className="shadow-md">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle className="text-lg">Document Library</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <SimpleDocumentList 
+                  loanId={demoLoanId}
+                  onViewDocument={setSelectedDocument}
+                  refreshTrigger={refreshCounter}
+                />
+              </CardContent>
+            </Card>
           </div>
+        </div>
+        
+        {/* Document Viewer Modal */}
+        {selectedDocument && (
+          <SimpleDocumentViewer 
+            document={selectedDocument}
+            onClose={() => setSelectedDocument(null)}
+            onStatusChange={handleDocumentStatusChange}
+          />
         )}
       </div>
     </LayoutWrapper>
