@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import pdf from 'pdf-parse';
 import OpenAI from 'openai';
 
-export const runtime = 'nodejs';
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
@@ -206,9 +205,7 @@ export async function POST(req: NextRequest) {
 }
 
 export const config = {
-  api: {
     bodyParser: {
-      sizeLimit: '10mb', // Adjust as needed
-    },
-  },
+      sizeLimit: '10mb'
+    }
 };
