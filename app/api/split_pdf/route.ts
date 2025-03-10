@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import pdf from 'pdf-parse';
 import OpenAI from 'openai';
 
-export const maxDuration = 60;
-export const dynamic = 'force-dynamic';
+export const runtime = 'edge';
+export const preferredRegion = ['iad1'];
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -179,6 +179,14 @@ async function splitPDF(pdfData: pdf.Result): Promise<{
 }
 
 export async function POST(req: NextRequest) {
+  // Check request body size manually
+  const contentLength = req.headers.get('content-length');
+  if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) { // 10MB
+    return NextResponse.json({ 
+      success: false, 
+      message: 'File too large' 
+    }, { status: 413 });
+  }
   try {
     // Read the PDF file buffer from the request
     const fileBuffer = await req.arrayBuffer();
