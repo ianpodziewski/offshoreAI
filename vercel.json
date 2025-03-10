@@ -10,11 +10,16 @@
         "use": "@vercel/python"
       },
       {
+        "src": "api/health.py",
+        "use": "@vercel/python"
+      },
+      {
         "src": "package.json",
         "use": "@vercel/next"
       }
     ],
     "routes": [
+      { "src": "/api/health", "dest": "api/health.py" },
       { "src": "/api/split_pdf", "dest": "api/split_pdf.py" },
       { "src": "/(.*)", "dest": "/$1" }
     ]
