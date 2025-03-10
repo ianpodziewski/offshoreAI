@@ -5,6 +5,9 @@ import OpenAI from 'openai';
 
 export const runtime = 'edge';
 export const preferredRegion = ['iad1'];
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const maxDuration = 60; // Set max duration to 60 seconds
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -211,9 +214,3 @@ export async function POST(req: NextRequest) {
     }, { status: 500 });
   }
 }
-
-export const config = {
-    bodyParser: {
-      sizeLimit: '10mb'
-    }
-};
