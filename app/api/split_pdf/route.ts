@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { spawn, ChildProcessWithoutNullStreams } from "child_process";
-import { writeFile } from "fs/promises";
+import { writeFile, mkdir, access } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 import path from "path";
+import { unlink } from "fs/promises";
 
 export async function POST(req: NextRequest) {
   try {
@@ -36,12 +37,11 @@ export async function POST(req: NextRequest) {
 }
 
 async function createDirectoryIfNotExists(dirPath: string): Promise<void> {
-  const fs = require("fs").promises;
   try {
-    await fs.access(dirPath);
+    await access(dirPath);
   } catch (error) {
     // Directory doesn't exist, create it
-    await fs.mkdir(dirPath, { recursive: true });
+    await mkdir(dirPath, { recursive: true });
   }
 }
 
@@ -72,12 +72,13 @@ async function processPdfWithPython(filePath: string): Promise<any> {
     });
     
     // Handle process completion
-    pythonProcess.on("close", (code) => {
+    pythonProcess.on("close", async (code) => {
       // Clean up the temp file
-      const fs = require("fs");
-      fs.unlink(filePath, (err: any) => {
-        if (err) console.error(`Failed to delete temp file: ${err}`);
-      });
+      try {
+        await unlink(filePath);
+      } catch (err) {
+        console.error(`Failed to delete temp file: ${err}`);
+      }
       
       if (code !== 0) {
         reject(new Error(`Python process exited with code ${code}. Error: ${errorData}`));
