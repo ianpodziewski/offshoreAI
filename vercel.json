@@ -2,12 +2,12 @@
     "version": 2,
     "builds": [
       {
-        "src": "api/*.py",
-        "use": "@vercel/python@3",
-        "config": { 
-          "runtime": "python3.11",
-          "pythonVersion": "3.11"
-        }
+        "src": "api/split_pdf.py",
+        "use": "@vercel/python"
+      },
+      {
+        "src": "api/split_pdf_cli.py",
+        "use": "@vercel/python"
       },
       {
         "src": "package.json",
@@ -15,7 +15,7 @@
       }
     ],
     "routes": [
-      { "src": "/api/(.*)", "dest": "/api/$1" },
+      { "src": "/api/split_pdf", "dest": "api/split_pdf.py" },
       { "src": "/(.*)", "dest": "/$1" }
     ]
   }
