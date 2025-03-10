@@ -3,6 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import pdf from 'pdf-parse';
 import OpenAI from 'openai';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
