@@ -1,415 +1,321 @@
-import pdfplumber
-import json
 import os
-import requests
-import string
-from collections import defaultdict
-from PyPDF2 import PdfReader, PdfWriter
-from http.server import BaseHTTPRequestHandler
-from rapidfuzz import fuzz
-from openai import OpenAI
+import json
+import base64
+import tempfile
+from typing import List, Dict, Any, Optional
+import fitz  # PyMuPDF
+from fastapi import FastAPI, File, UploadFile, HTTPException
+from fastapi.responses import JSONResponse
+import numpy as np
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+from pydantic import BaseModel
+import re
+from pathlib import Path
 
-TEMP_DIR = "/tmp/"
-VERCEL_BLOB_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+# Define document types
+DOCUMENT_TYPES = [
+    "promissory_note",
+    "deed_of_trust",
+    "closing_disclosure",
+    "settlement_statement",
+    "compliance_agreement", 
+    "appraisal_report",
+    "loan_application",
+    "credit_report",
+    "tax_return",
+    "insurance_policy",
+    "hud_statement",
+    "identity_verification",
+    "unclassified"
+]
 
-# Updated dictionary: new keywords for HUD/VA Addendum & HECM-FNMA Submission
+# Ensure upload directories exist
+UPLOAD_DIR = Path("./public/uploads")
+SPLIT_DIR = UPLOAD_DIR / "split"
+UPLOAD_DIR.mkdir(exist_ok=True)
+SPLIT_DIR.mkdir(exist_ok=True)
+
+# Keywords that indicate each document type
 DOCUMENT_KEYWORDS = {
-    "lender's closing instructions": "lenders_closing_instructions",
-    "closing instructions": "lenders_closing_instructions",
-    "promissory note": "promissory_note",
-    "deed of trust": "deed_of_trust",
-    "settlement statement": "settlement_statement",
-    "closing disclosure": "closing_disclosure",
-    "truth in lending": "truth_in_lending_disclosure",
-    "compliance agreement": "compliance_agreement",
-    "notice of right to cancel": "notice_of_right_to_cancel",
-    "invoice": "invoice",
-
-    # Newly added:
-    "hud/va addendum to uniform residential loan application": "hud_va_addendum",
-    "hud va addendum": "hud_va_addendum",
-    "hecm-fnma submission": "hecm_fnma_sub",
-    "hecm fnma submission": "hecm_fnma_sub"
+    "promissory_note": ["promissory note", "promise to pay", "borrower promises", "fixed rate note"],
+    "deed_of_trust": ["deed of trust", "security instrument", "mortgage", "trustee", "grant deed"],
+    "closing_disclosure": ["closing disclosure", "loan estimate", "settlement costs", "loan terms"],
+    "settlement_statement": ["settlement statement", "hud-1", "settlement charges", "disbursement"],
+    "compliance_agreement": ["compliance agreement", "compliance certification", "federal regulations"],
+    "appraisal_report": ["appraisal report", "appraised value", "property valuation", "market value"],
+    "loan_application": ["uniform residential loan application", "loan application", "borrower information"],
+    "credit_report": ["credit report", "credit score", "credit history", "credit inquiry"],
+    "tax_return": ["tax return", "irs form", "adjusted gross income", "tax year"],
+    "insurance_policy": ["insurance policy", "hazard insurance", "homeowner's insurance", "coverage"],
+    "hud_statement": ["hud statement", "department of housing", "urban development"],
+    "identity_verification": ["identity verification", "identification", "driver's license", "passport"]
 }
 
-# Expanded categorization mapping
-FILE_SOCKETS = {
-    "legal": [
-        "lenders_closing_instructions",
-        "deed_of_trust",
-        "compliance_agreement"
-    ],
-    "financial": [
-        "settlement_statement",
-        "closing_disclosure",
-        "truth_in_lending_disclosure",
-        "hud_va_addendum"
-    ],
-    "loan": [
-        "promissory_note",
-        "hecm_fnma_sub"
-    ],
-    "misc": [
-        "invoice"
-    ]
-}
+# Document boundary indicators
+BOUNDARY_INDICATORS = [
+    "This agreement", "This document", "AGREEMENT", "DISCLOSURE", "NOTE", "DEED", 
+    "CERTIFICATION", "Page 1 of", "Page 1", "SECTION 1", "In witness whereof", 
+    "Uniform Residential Loan"
+]
 
-def normalize_text(text):
-    """Lowercases and removes punctuation/spaces for more accurate fuzzy matching."""
-    return text.lower().translate(str.maketrans("", "", string.punctuation)).strip()
+class DocumentPage:
+    def __init__(self, page_num: int, text: str, doc_type: str, confidence: float):
+        self.page_num = page_num
+        self.text = text
+        self.doc_type = doc_type
+        self.confidence = confidence
 
-def get_bold_header(page):
-    """
-    Attempt to extract any bold text near the top of the page.
-    Optional logic that can improve classification if pages
-    have bold headings.
-    """
-    words = page.extract_words() or []
-    page_top_cutoff = page.height * 0.25
-    bold_candidates = []
-    for w in words:
-        if w.get("top", 9999) < page_top_cutoff and "bold" in w.get("fontname", "").lower():
-            bold_candidates.append(w["text"])
-    if not bold_candidates:
-        return None
-    return " ".join(bold_candidates)
+class DocumentBoundary:
+    def __init__(self, start_page: int, end_page: int, doc_type: str, confidence: float):
+        self.start_page = start_page
+        self.end_page = end_page
+        self.doc_type = doc_type
+        self.confidence = confidence
+        
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "start_page": self.start_page,
+            "end_page": self.end_page,
+            "doc_type": self.doc_type,
+            "confidence": self.confidence
+        }
 
-def classify_header(header_line):
-    """
-    Use token_set_ratio for more flexible matching on headers.
-    """
-    if not header_line:
-        return None
+def classify_page_with_keywords(text: str) -> tuple[str, float]:
+    """Classify a page using keyword matching."""
+    text = text.lower()
+    best_match = "unclassified"
+    highest_score = 0
     
-    norm_line = normalize_text(header_line)
-    best_match = None
-    best_score = 0
-
-    # Debug log
-    print(f"DEBUG: classify_header -> analyzing '{header_line}'")
-
-    for keyword, doc_type in DOCUMENT_KEYWORDS.items():
-        score = fuzz.token_set_ratio(norm_line, normalize_text(keyword))
-        if score > best_score and score > 80:
-            best_score = score
+    for doc_type, keywords in DOCUMENT_KEYWORDS.items():
+        score = 0
+        for keyword in keywords:
+            if keyword.lower() in text:
+                # More specific/longer keywords get higher score
+                keyword_score = len(keyword.split()) * 0.1
+                score += keyword_score
+        
+        if score > highest_score:
+            highest_score = score
             best_match = doc_type
-        # Additional debug
-        if score > 50:  # Only log "somewhat relevant" matches
-            print(f"  => Checking header vs keyword '{keyword}': score {score}")
-    print(f"DEBUG: final header doc_type: {best_match}, best_score={best_score}")
-    return best_match
-
-def full_text_classification(full_text):
-    norm_text = normalize_text(full_text)
-    best_match = None
-    best_score = 0
-
-    # Debug log
-    print(f"DEBUG: full_text_classification -> analyzing text length {len(norm_text)}")
-
-    for keyword, doc_type in DOCUMENT_KEYWORDS.items():
-        score = fuzz.token_set_ratio(norm_text, normalize_text(keyword))
-        if score > best_score and score > 80:
-            best_score = score
-            best_match = doc_type
-        # Additional debug
-        if score > 50:
-            print(f"  => Checking full_text vs keyword '{keyword}': score {score}")
-
-    print(f"DEBUG: final full_text doc_type: {best_match}, best_score={best_score}")
-    return best_match
-
-def get_embedding_classification(text):
-    """
-    Optional fallback classification using OpenAI embeddings.
-    Currently returns just "unclassified", but you could compare
-    embeddings with known doc_type embeddings if you store them.
-    """
-    try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        response = client.embeddings.create(input=text, model="text-embedding-ada-002")
-        embedding = response['data'][0]['embedding']
-        # Real embedding classification would require comparison logic here
-        return "unclassified"  # Placeholder
-    except Exception as e:
-        print(f"❌ OpenAI Embedding Error: {e}")
-        return None
-
-def classify_page(page, page_index, current_document_type=None):
-    """
-    Implements structured document tracking to prevent misclassification.
-    - Uses section continuity rules.
-    - Ensures multi-page documents like Lender's Closing Instructions are not split incorrectly.
-    """
-    print(f"\nDEBUG: classify_page -> Page {page_index + 1}")
-
-    # Step 1: Extract header/title
-    header_text = get_bold_header(page)
-    if header_text:
-        print(f"DEBUG: extracted bold header text: {header_text}")
-
-        # Step 2: If a new section starts, update current document type
-        doc_type = classify_header(header_text)
-        if doc_type:
-            print(f"DEBUG: NEW DOCUMENT DETECTED -> '{doc_type}'")
-            return doc_type  # This marks the start of a new section
-
-    # Step 3: Detect continuation if no clear heading is found
-    full_text = page.extract_text() or ""
-    if current_document_type:
-        print(f"DEBUG: No new header found, ASSUMING CONTINUATION of '{current_document_type}'")
-        return current_document_type
-
-    # Step 4: Default to text-based classification as a last resort
-    doc_type = weighted_text_classification(full_text)
-    if doc_type:
-        print(f"DEBUG: returning doc_type from full_text -> {doc_type}")
-        return doc_type
-
-    print(f"DEBUG: no doc_type found, defaulting -> unclassified")
-    return "unclassified"
     
-    # Optional final fallback: embedding approach
-    # embed_type = get_embedding_classification(full_text[:1000])
-    # if embed_type:
-    #     print(f"DEBUG: returning doc_type from embeddings -> {embed_type}")
-    #     return embed_type
+    # Convert score to confidence (0.5-0.95 range)
+    confidence = min(0.5 + (highest_score * 0.15), 0.95) if highest_score > 0 else 0.5
     
-    print(f"DEBUG: no doc_type found, defaulting -> unclassified")
-    return "unclassified"
+    return best_match, confidence
 
-def weighted_text_classification(full_text, previous_classification=None):
-    """
-    Improves classification by reducing mid-page keyword influence.
-    - Prioritizes the first few lines as headings.
-    - Prefers previous classification if no strong indicator is found.
-    """
-    norm_text = normalize_text(full_text)
-    best_match = None
-    best_score = 0
+def is_likely_boundary(doc: fitz.Document, page1: int, page2: int) -> bool:
+    """Determine if there's likely a document boundary between two pages."""
+    # Skip if one of the pages is out of bounds
+    if page1 < 0 or page2 >= len(doc):
+        return False
+        
+    # Check if page2 has title-like text at the top
+    page = doc[page2]
+    top_text = page.get_text("text", clip=(0, 0, page.rect.width, 100)).strip()
+    
+    # Check for boundary indicators
+    for indicator in BOUNDARY_INDICATORS:
+        if indicator in top_text:
+            return True
+    
+    # Check for page numbers resetting to 1 or "Page 1 of"
+    page_num_match = re.search(r"Page\s+(\d+)\s+of", top_text)
+    if page_num_match and page_num_match.group(1) == "1":
+        return True
+    
+    # Document probably continues
+    return False
 
-    # Focus more on the first few lines (header area)
-    lines = norm_text.split("\n")
-    header_section = " ".join(lines[:5])  # First 5 lines as "header"
+def detect_document_boundaries(doc: fitz.Document, page_classifications: List[DocumentPage]) -> List[DocumentBoundary]:
+    """Detect document boundaries based on page classifications and layout analysis."""
+    if not page_classifications:
+        return []
+        
+    boundaries = []
+    current_type = page_classifications[0].doc_type
+    start_page = 0
+    total_confidence = page_classifications[0].confidence
+    page_count = 1
+    
+    for i, page in enumerate(page_classifications[1:], 1):
+        # Check if document type changes or if there's a boundary indicator
+        if (page.doc_type != current_type or 
+            is_likely_boundary(doc, i-1, i)):
+            
+            # Calculate average confidence for this document span
+            avg_confidence = total_confidence / page_count
+            
+            boundaries.append(DocumentBoundary(
+                start_page=start_page,
+                end_page=i-1,
+                doc_type=current_type,
+                confidence=avg_confidence
+            ))
+            
+            # Reset for next document
+            current_type = page.doc_type
+            start_page = i
+            total_confidence = page.confidence
+            page_count = 1
+        else:
+            # Continue current document
+            total_confidence += page.confidence
+            page_count += 1
+    
+    # Add the last document
+    avg_confidence = total_confidence / page_count
+    boundaries.append(DocumentBoundary(
+        start_page=start_page,
+        end_page=len(page_classifications)-1,
+        doc_type=current_type,
+        confidence=avg_confidence
+    ))
+    
+    return boundaries
 
-    print(f"DEBUG: weighted_text_classification -> analyzing text length {len(norm_text)}")
+def extract_text_with_layout(page: fitz.Page) -> str:
+    """Extract text while preserving some layout information."""
+    blocks = page.get_text("dict")["blocks"]
+    text_lines = []
+    
+    for block in blocks:
+        if "lines" in block:
+            for line in block["lines"]:
+                line_text = ""
+                for span in line["spans"]:
+                    line_text += span["text"] + " "
+                text_lines.append(line_text.strip())
+    
+    return "\n".join(text_lines)
 
-    for keyword, doc_type in DOCUMENT_KEYWORDS.items():
-        header_score = fuzz.token_set_ratio(header_section, normalize_text(keyword))
-        body_score = fuzz.token_set_ratio(norm_text, normalize_text(keyword))
-
-        # Reduce mid-page keyword influence by weighting body scores lower
-        final_score = max(header_score * 1.5, body_score * 0.7)
-
-        if final_score > best_score and final_score > 80:
-            best_score = final_score
-            best_match = doc_type
-
-        # Debugging logs
-        if final_score > 50:
-            print(f"  => Checking text vs keyword '{keyword}': header={header_score}, body={body_score}, weighted={final_score}")
-
-    # If no strong classification is found but a previous classification exists, assume continuation
-    if not best_match and previous_classification:
-        print(f"DEBUG: No strong match found, inheriting '{previous_classification}'")
-        return previous_classification
-
-    print(f"DEBUG: final full_text doc_type: {best_match}, best_score={best_score}")
-    return best_match
-
-def smooth_classifications(classifications):
-    """
-    Post-processing:
-    - Assigns unclassified pages based on surrounding classifications.
-    - If "Exhibit" is detected in title, assigns the previous classification.
-    """
-    print("\nDEBUG: smooth_classifications -> starting smoothing process")
-
-    smoothed = classifications.copy()
-    for i in range(1, len(classifications) - 1):
-        prev = classifications[i - 1]["doc_name"]
-        curr = classifications[i]["doc_name"]
-        nxt = classifications[i + 1]["doc_name"]
-        header_text = classifications[i].get("header_text", "").lower()
-
-        # Rule 1: If unclassified but neighbors match, inherit classification
-        if curr == "unclassified" and prev == nxt and prev != "unclassified":
-            print(f"  => Smoothing: Page {classifications[i]['page_index']+1} from 'unclassified' to '{prev}'")
-            smoothed[i]["doc_name"] = prev
-
-        # Rule 2: If unclassified but follows a document, assume continuation
-        elif curr == "unclassified" and prev != "unclassified":
-            print(f"  => Smoothing: Page {classifications[i]['page_index']+1} assuming continuation of '{prev}'")
-            smoothed[i]["doc_name"] = prev
-
-        # Rule 3: If title contains "Exhibit", inherit the previous classification
-        elif "exhibit" in header_text and prev != "unclassified":
-            print(f"  => 'Exhibit' detected in title, reclassifying as '{prev}'")
-            smoothed[i]["doc_name"] = prev
-
-    print("DEBUG: smoothing complete\n")
-    return smoothed
-
-def classify_pdf(pdf_pages):
-    """
-    Processes an entire PDF while maintaining structured document tracking.
-    """
-    classifications = []
-    current_document_type = None
-
-    for i, page in enumerate(pdf_pages):
-        doc_type = classify_page(page, i, current_document_type)
-
-        # Step 1: If this is a new classification, update the tracker
-        if doc_type and doc_type != "unclassified":
-            current_document_type = doc_type
-
-        classifications.append({
-            "page_index": i,
-            "doc_name": doc_type
+def split_pdf_by_boundaries(doc: fitz.Document, boundaries: List[DocumentBoundary], upload_id: str) -> List[Dict[str, Any]]:
+    """Split PDF document according to detected boundaries."""
+    result_files = []
+    
+    for i, boundary in enumerate(boundaries):
+        # Create a new document with the pages from this boundary
+        new_doc = fitz.open()
+        start = boundary.start_page
+        end = boundary.end_page
+        
+        # Skip documents with only one mostly empty page
+        if start == end:
+            page_text = doc[start].get_text().strip()
+            if len(page_text) < 50:  # Skip very short single-page documents
+                continue
+                
+        # Insert the pages
+        new_doc.insert_pdf(doc, from_page=start, to_page=end)
+        
+        # Create a meaningful filename
+        doc_type = boundary.doc_type.replace("_", "-")
+        filename = f"{doc_type}_{i+1}_{upload_id}.pdf"
+        file_path = str(SPLIT_DIR / filename)
+        
+        # Save the document
+        new_doc.save(file_path)
+        new_doc.close()
+        
+        # Add metadata to results
+        result_files.append({
+            "path": file_path,
+            "filename": filename,
+            "docType": boundary.doc_type,
+            "category": get_category_from_doc_type(boundary.doc_type),
+            "pageRange": f"{start+1}-{end+1}",
+            "confidenceScore": round(boundary.confidence, 2),
         })
+    
+    return result_files
 
-    return classifications
-
-def upload_to_vercel_blob(filepath, category="misc"):
-    if not VERCEL_BLOB_TOKEN:
-        return None
-    filename = os.path.basename(filepath)
-    url = f"https://api.vercel.com/v2/blob/{category}/{filename}"
-    headers = {
-        "Authorization": f"Bearer {VERCEL_BLOB_TOKEN}",
-        "Content-Type": "application/octet-stream"
+def get_category_from_doc_type(doc_type: str) -> str:
+    """Map document type to a category."""
+    category_mapping = {
+        "promissory_note": "loan",
+        "deed_of_trust": "legal",
+        "closing_disclosure": "financial",
+        "settlement_statement": "financial",
+        "compliance_agreement": "legal",
+        "appraisal_report": "financial",
+        "loan_application": "loan",
+        "credit_report": "financial",
+        "tax_return": "financial",
+        "insurance_policy": "financial",
+        "hud_statement": "financial",
+        "identity_verification": "legal"
     }
-    with open(filepath, "rb") as f:
-        response = requests.put(url, headers=headers, data=f.read())
-    return response.json().get("url") if response.status_code == 200 else None
+    return category_mapping.get(doc_type, "misc")
 
-class handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        try:
-            content_length = int(self.headers["Content-Length"])
-            pdf_data = self.rfile.read(content_length)
-            upload_path = os.path.join(TEMP_DIR, "uploaded_package.pdf")
-            with open(upload_path, "wb") as f:
-                f.write(pdf_data)
+def process_pdf(pdf_path: str, upload_id: str) -> List[Dict[str, Any]]:
+    """Process a PDF file, detecting document types and splitting into separate files."""
+    try:
+        doc = fitz.open(pdf_path)
+        
+        # Step 1: Classify each page
+        page_classifications = []
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            text = extract_text_with_layout(page)
+            doc_type, confidence = classify_page_with_keywords(text)
+            page_classifications.append(DocumentPage(page_num, text, doc_type, confidence))
+        
+        # Step 2: Detect document boundaries
+        boundaries = detect_document_boundaries(doc, page_classifications)
+        
+        # Step 3: Split the PDF by boundaries
+        result_files = split_pdf_by_boundaries(doc, boundaries, upload_id)
+        
+        doc.close()
+        return result_files
+        
+    except Exception as e:
+        print(f"Error processing PDF: {e}")
+        raise e
 
-            print("DEBUG: PDF saved to:", upload_path)
+async def split_pdf_handler(file_content: bytes) -> Dict[str, Any]:
+    """Handle PDF splitting."""
+    try:
+        # Generate a unique ID for this upload
+        upload_id = base64.urlsafe_b64encode(os.urandom(8)).decode('ascii')
+        
+        # Write the uploaded file to a temporary location
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            temp_file.write(file_content)
+            temp_path = temp_file.name
+        
+        # Process the PDF
+        result_files = process_pdf(temp_path, upload_id)
+        
+        # Clean up the temp file
+        os.unlink(temp_path)
+        
+        return {
+            "success": True,
+            "message": f"Successfully split into {len(result_files)} documents",
+            "files": result_files
+        }
+        
+    except Exception as e:
+        print(f"Error in split_pdf_handler: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Error processing PDF: {str(e)}"
+        }
 
-            pdf_plumber_obj = pdfplumber.open(upload_path)
-            split_folder = os.path.join(TEMP_DIR, "split_docs")
-            os.makedirs(split_folder, exist_ok=True)
-
-            # Classify each page
-            page_classifications = []
-            for i, page in enumerate(pdf_plumber_obj.pages):
-                doc_type = classify_page(page, i)
-                page_classifications.append({
-                    "doc_name": doc_type or "unclassified",
-                    "page_index": i
-                })
-            pdf_plumber_obj.close()
-
-            print("\nDEBUG: Initial classifications:")
-            for c in page_classifications:
-                print(f"  => Page {c['page_index']+1}: {c['doc_name']}")
-
-            # Smooth out misclassifications
-            page_classifications = smooth_classifications(page_classifications)
-
-            print("\nDEBUG: Final classifications after smoothing:")
-            for c in page_classifications:
-                print(f"  => Page {c['page_index']+1}: {c['doc_name']}")
-
-            # Group contiguous pages with same classification
-            final_groups = []
-            if page_classifications:
-                current_group = [page_classifications[0]["page_index"]]
-                current_doc_type = page_classifications[0]["doc_name"]
-                for prev, current in zip(page_classifications, page_classifications[1:]):
-                    if (
-                        current["doc_name"] == current_doc_type
-                        and current["page_index"] == prev["page_index"] + 1
-                    ):
-                        current_group.append(current["page_index"])
-                    else:
-                        final_groups.append({
-                            "doc_name": current_doc_type,
-                            "pages": current_group
-                        })
-                        current_group = [current["page_index"]]
-                        current_doc_type = current["doc_name"]
-                # Append the last group
-                final_groups.append({
-                    "doc_name": current_doc_type,
-                    "pages": current_group
-                })
-
-            print("\nDEBUG: Final document groups:")
-            for fg in final_groups:
-                print(f"  => Doc_type: {fg['doc_name']} -> Pages: {fg['pages']}")
-
-            # Create category directories based on FILE_SOCKETS mapping
-            for category in FILE_SOCKETS.keys():
-                category_dir = os.path.join(split_folder, category)
-                os.makedirs(category_dir, exist_ok=True)
-                print(f"DEBUG: Created category directory: {category_dir}")
-
-            # Save and upload grouped PDFs, now organized by category
-            local_reader = PdfReader(upload_path)
-            doc_counts = {}
-            public_urls = []
-
-            for group in final_groups:
-                base_name = group["doc_name"]
-                
-                # Determine which category this document belongs to
-                doc_category = "misc"  # Default category
-                for category, doc_types in FILE_SOCKETS.items():
-                    if base_name in doc_types:
-                        doc_category = category
-                        break
-                        
-                print(f"DEBUG: Assigning document {base_name} to category {doc_category}")
-                
-                # Get count for naming
-                doc_counts[base_name] = doc_counts.get(base_name, 0) + 1
-                suffix = f"_{doc_counts[base_name]}" if doc_counts[base_name] > 1 else ""
-                filename = f"{base_name}{suffix}.pdf"
-                
-                # Create the PDF in the category directory
-                pdf_writer = PdfWriter()
-                for p in group["pages"]:
-                    pdf_writer.add_page(local_reader.pages[p])
-                
-                temp_file_path = os.path.join(TEMP_DIR, filename)
-                with open(temp_file_path, "wb") as f:
-                    pdf_writer.write(f)
-                
-                file_url = upload_to_vercel_blob(temp_file_path, doc_category)
-                if file_url:
-                    print(f"DEBUG: Uploaded to Vercel Blob -> {file_url}")
-                    public_urls.append({
-                        "category": doc_category,
-                        "docType": base_name,
-                        "url": file_url
-                    })
-
-            # Return final response with public URLs & classification results
-            response = {
-                "message": "PDF split and categorized successfully.",
-                "classification": page_classifications,
-                "files": public_urls
-            }
-            self.send_response(200)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode())
-
-        except Exception as e:
-            print(f"❌ ERROR in split_pdf: {str(e)}")
-            response = {"message": f"Server Error: {str(e)}"}
-            self.send_response(500)
-            self.send_header("Content-type", "application/json")
-            self.end_headers()
-            self.wfile.write(json.dumps(response).encode())
+# API route handler (for Next.js API route)
+async def handle_api_request(request):
+    try:
+        # Parse the request body to get the file content
+        body = await request.body()
+        
+        # Call the PDF splitting function
+        result = await split_pdf_handler(body)
+        
+        return result
+    except Exception as e:
+        print(f"API Error: {str(e)}")
+        return {
+            "success": False,
+            "message": f"Server error: {str(e)}"
+        }

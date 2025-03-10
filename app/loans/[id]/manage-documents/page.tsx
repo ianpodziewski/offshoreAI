@@ -13,6 +13,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import { db } from '@/utilities/firebaseConfig';
 import BulkDocumentProcessor from '@/components/document/BulkDocumentProcessor';
 import DocumentAnalytics from '@/components/document/DocumentAnalytics';
+import EnhancedDocumentUploader from '@/components/document/EnhancedDocumentUploader'; // Import the enhanced uploader
 
 export default function ManageDocumentsPage({ params }: { params: { id: string } }) {
   const id = params.id;
@@ -21,6 +22,7 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
   const [loanDetails, setLoanDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [allDocuments, setAllDocuments] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'standard' | 'enhanced' | 'bulk'>('enhanced'); // Default to enhanced
   
   // Fetch loan details
   useEffect(() => {
@@ -112,19 +114,65 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left sidebar - Upload */}
           <div>
-            <DocumentUploader 
-              loanId={id} 
-              onUploadComplete={handleUploadComplete}
-            />
+            {/* Tabs for different upload methods */}
+            <div className="bg-white rounded-lg shadow-sm mb-4">
+              <div className="flex border-b">
+                <button 
+                  onClick={() => setActiveTab('standard')}
+                  className={`flex-1 py-2 px-4 text-sm font-medium ${
+                    activeTab === 'standard' 
+                      ? 'border-b-2 border-blue-500 text-blue-600' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Standard Upload
+                </button>
+                <button 
+                  onClick={() => setActiveTab('enhanced')}
+                  className={`flex-1 py-2 px-4 text-sm font-medium ${
+                    activeTab === 'enhanced' 
+                      ? 'border-b-2 border-blue-500 text-blue-600' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  AI-Powered
+                </button>
+                <button 
+                  onClick={() => setActiveTab('bulk')}
+                  className={`flex-1 py-2 px-4 text-sm font-medium ${
+                    activeTab === 'bulk' 
+                      ? 'border-b-2 border-blue-500 text-blue-600' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Bulk Processing
+                </button>
+              </div>
+            </div>
             
-            <div className="mt-6">
+            {/* Active tab content */}
+            {activeTab === 'standard' && (
+              <DocumentUploader 
+                loanId={id} 
+                onUploadComplete={handleUploadComplete}
+              />
+            )}
+            
+            {activeTab === 'enhanced' && (
+              <EnhancedDocumentUploader 
+                loanId={id}
+                onUploadComplete={handleUploadComplete}
+              />
+            )}
+            
+            {activeTab === 'bulk' && (
               <BulkDocumentProcessor 
                 loanId={id}
                 onProcessComplete={handleUploadComplete}
               />
-            </div>
+            )}
             
-            {/* Add the DocumentAnalytics component here */}
+            {/* Document analytics - always shown */}
             <div className="mt-6">
               <DocumentAnalytics documents={allDocuments} />
             </div>
@@ -135,7 +183,7 @@ export default function ManageDocumentsPage({ params }: { params: { id: string }
                 Document Tips
               </h3>
               <ul className="text-sm text-gray-700 space-y-2 ml-5 list-disc">
-                <li>Upload each document as a separate PDF</li>
+                <li>Use AI-Powered processing for automatic document classification</li>
                 <li>Ensure all pages are properly oriented</li>
                 <li>Make sure text is legible in the scanned documents</li>
                 <li>For best results, use descriptive filenames</li>
