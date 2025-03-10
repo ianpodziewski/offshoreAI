@@ -1,7 +1,7 @@
 // app/document/page.tsx
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import StatusBadge from '@/components/document/status-badge';
@@ -10,7 +10,6 @@ import { ArrowLeft, Save, User, AlertTriangle, CheckCircle } from 'lucide-react'
 import LayoutWrapper from '../layout-wrapper';
 import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
 
-// Create a client component that uses the hooks
 function DocumentViewerContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -43,6 +42,28 @@ function DocumentViewerContent() {
       setLoading(false);
     }
   }, [searchParams]);
+  
+  // Function to safely display PDF content
+  const getDocumentSrc = () => {
+    if (!document?.content) return '';
+    
+    // Check if content is already a data URL
+    if (document.content.startsWith('data:')) {
+      return document.content;
+    }
+    
+    // If it's not a data URL but we have content, try to convert it
+    try {
+      // Check if it needs a prefix
+      if (!document.content.startsWith('data:application/pdf')) {
+        return `data:application/pdf;base64,${document.content.replace(/^data:.*?;base64,/, '')}`;
+      }
+    } catch (error) {
+      console.error('Error formatting document content:', error);
+    }
+    
+    return '';
+  };
   
   // Update the document status
   const updateStatus = async () => {
@@ -130,12 +151,28 @@ function DocumentViewerContent() {
               <CardTitle className="text-lg">{documentName}</CardTitle>
             </CardHeader>
             <CardContent className="p-0 h-[800px]">
-              {document.content && (
-                <iframe 
-                  src={document.content} 
-                  className="w-full h-full border-0" 
-                  title="Document Preview"
-                />
+              {document.content ? (
+                <object 
+                  data={getDocumentSrc()}
+                  type="application/pdf"
+                  className="w-full h-full border-0"
+                >
+                  <div className="flex flex-col items-center justify-center h-full p-4 bg-gray-100">
+                    <p className="mb-4 text-gray-600">PDF cannot be displayed directly.</p>
+                    <a 
+                      href={getDocumentSrc()} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      Open PDF in New Tab
+                    </a>
+                  </div>
+                </object>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  No document content available
+                </div>
               )}
             </CardContent>
           </Card>
@@ -231,18 +268,10 @@ function DocumentViewerContent() {
   );
 }
 
-// Main page component with Suspense
 export default function DocumentViewer() {
   return (
     <LayoutWrapper>
-      <Suspense fallback={<div className="container mx-auto py-16 px-4">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-          <p className="ml-3 text-gray-600">Loading document viewer...</p>
-        </div>
-      </div>}>
-        <DocumentViewerContent />
-      </Suspense>
+      <DocumentViewerContent />
     </LayoutWrapper>
   );
 }

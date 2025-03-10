@@ -87,6 +87,13 @@ export const simpleDocumentService = {
       // Read file as base64
       const content = await readFileAsBase64(file);
       
+      // Ensure content is properly formatted as a data URL
+      let formattedContent = content;
+      if (!content.startsWith('data:application/pdf')) {
+        // If FileReader didn't add the correct prefix, add it
+        formattedContent = `data:application/pdf;base64,${content.replace(/^data:.*?;base64,/, '')}`;
+      }
+      
       // Classify document
       const { docType, category } = classifyDocument(file.name);
       
@@ -101,7 +108,7 @@ export const simpleDocumentService = {
         category,
         docType,
         status: 'pending',
-        content
+        content: formattedContent
       };
       
       // Add to storage
@@ -163,9 +170,10 @@ export const simpleDocumentService = {
 };
 
 // Helper function to read file as base64
-async function readFileAsBase64(file: File): Promise<string> {
+function readFileAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
+    
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         resolve(reader.result);
@@ -173,7 +181,10 @@ async function readFileAsBase64(file: File): Promise<string> {
         reject(new Error('Failed to convert file to base64'));
       }
     };
+    
     reader.onerror = () => reject(reader.error);
+    
+    // Use readAsDataURL instead of readAsArrayBuffer for PDFs
     reader.readAsDataURL(file);
   });
 }

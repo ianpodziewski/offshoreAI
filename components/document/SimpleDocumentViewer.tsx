@@ -40,6 +40,25 @@ export default function SimpleDocumentViewer({
     }
   };
   
+  // Function to safely display PDF content
+  const getDocumentSrc = () => {
+    // Check if content is already a data URL
+    if (document.content && document.content.startsWith('data:')) {
+      return document.content;
+    }
+    
+    // If it's not a data URL but we have content, try to convert it
+    if (document.content) {
+      // Check if it needs a prefix
+      if (!document.content.startsWith('data:application/pdf')) {
+        return `data:application/pdf;base64,${document.content.replace(/^data:.*?;base64,/, '')}`;
+      }
+    }
+    
+    // Fallback to a placeholder if we can't display the content
+    return '';
+  };
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -75,11 +94,24 @@ export default function SimpleDocumentViewer({
           <div className="flex-grow overflow-auto p-4 border-r">
             {document?.content ? (
               <div className="w-full h-full flex items-center justify-center">
-                <iframe 
-                  src={document.content}
-                  className="w-full h-[600px] border-0"
-                  title={document.filename}
-                />
+                {/* Use object tag instead of iframe for better PDF rendering */}
+                <object 
+                  data={getDocumentSrc()}
+                  type="application/pdf"
+                  className="w-full h-[600px]"
+                >
+                  <div className="flex flex-col items-center justify-center h-full bg-gray-100 rounded p-4">
+                    <p className="text-gray-500 mb-2">Unable to display PDF directly.</p>
+                    <a 
+                      href={getDocumentSrc()} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                    >
+                      Open PDF in New Tab
+                    </a>
+                  </div>
+                </object>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
