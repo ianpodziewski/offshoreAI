@@ -17,26 +17,42 @@ export default function SimpleDocumentViewer({
 }: SimpleDocumentViewerProps) {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState(document.notes || '');
-  const [pdfDataUrl, setPdfDataUrl] = useState<string>('');
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string>('');
   
-  // Process the PDF data URL when the component mounts
+  // Convert data URL to Blob URL on component mount
   useEffect(() => {
     try {
       // Ensure content has the proper data URL format
       if (document.content) {
-        // If it's already a proper data URL, use it
-        if (document.content.startsWith('data:application/pdf')) {
-          setPdfDataUrl(document.content);
-        } 
-        // If it's a base64 string without the prefix
-        else {
-          const formattedContent = `data:application/pdf;base64,${document.content.replace(/^data:.*?;base64,/, '')}`;
-          setPdfDataUrl(formattedContent);
+        let dataUrl = document.content;
+        
+        // If it's not a complete data URL, add the prefix
+        if (!dataUrl.startsWith('data:application/pdf')) {
+          dataUrl = `data:application/pdf;base64,${dataUrl.replace(/^data:.*?;base64,/, '')}`;
         }
+        
+        // Convert Data URL to Blob
+        fetch(dataUrl)
+          .then(res => res.blob())
+          .then(blob => {
+            // Create a blob URL from the blob
+            const url = URL.createObjectURL(blob);
+            setPdfBlobUrl(url);
+          })
+          .catch(err => {
+            console.error("Error creating blob URL:", err);
+          });
       }
     } catch (error) {
       console.error('Error processing PDF data:', error);
     }
+    
+    // Clean up blob URL on component unmount
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
   }, [document.content]);
   
   // Handle status update
@@ -63,35 +79,17 @@ export default function SimpleDocumentViewer({
   
   // Open PDF in a new tab
   const openPdfInNewTab = () => {
-    if (pdfDataUrl) {
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>${document.filename}</title>
-            </head>
-            <body style="margin: 0; padding: 0; overflow: hidden; height: 100vh;">
-              <embed 
-                src="${pdfDataUrl}" 
-                type="application/pdf" 
-                width="100%" 
-                height="100%"
-                style="border: none;"
-              />
-            </body>
-          </html>
-        `);
-      }
+    if (pdfBlobUrl) {
+      window.open(pdfBlobUrl, '_blank');
     }
   };
   
   // Download the PDF
   const downloadPdf = () => {
-    if (pdfDataUrl) {
+    if (pdfBlobUrl) {
       // Use window.document to access the global document object
       const a = window.document.createElement('a');
-      a.href = pdfDataUrl;
+      a.href = pdfBlobUrl;
       a.download = document.filename;
       window.document.body.appendChild(a);
       a.click();
@@ -132,7 +130,7 @@ export default function SimpleDocumentViewer({
         <div className="flex flex-col md:flex-row h-full">
           {/* Document Preview */}
           <div className="flex-grow overflow-auto p-4 border-r">
-            {pdfDataUrl ? (
+            {pdfBlobUrl ? (
               <div className="w-full h-full flex flex-col">
                 <div className="mb-4 flex justify-end gap-2">
                   <Button onClick={openPdfInNewTab} variant="outline" size="sm">
@@ -146,14 +144,15 @@ export default function SimpleDocumentViewer({
                 </div>
                 
                 <div className="flex-grow">
-                  <embed 
-                    src={pdfDataUrl}
-                    type="application/pdf"
+                  {/* Use iframe instead of embed for better browser compatibility */}
+                  <iframe 
+                    src={pdfBlobUrl}
                     className="w-full h-[600px] border rounded"
+                    title={document.filename}
                   />
                 </div>
                 
-                {/* Fallback for browsers that don't support embed */}
+                {/* Fallback for browsers that don't support iframe */}
                 <div className="mt-4 p-4 bg-gray-100 rounded text-center">
                   <p className="text-gray-600 mb-2">If the document is not visible above, you can:</p>
                   <div className="flex justify-center gap-3">
@@ -170,7 +169,7 @@ export default function SimpleDocumentViewer({
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">No preview available</p>
+                <p className="text-gray-500">Loading document preview...</p>
               </div>
             )}
           </div>

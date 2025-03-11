@@ -35,7 +35,7 @@ function DocumentViewerContent() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const [pdfDataUrl, setPdfDataUrl] = useState<string>('');
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string>('');
   
   useEffect(() => {
     const docId = searchParams.get('id');
@@ -50,19 +50,27 @@ function DocumentViewerContent() {
         setAssignedTo(doc.assignedTo || '');
         setNotes(doc.notes || '');
         
-        // Process PDF data
+        // Process PDF data to create a blob URL
         try {
-          // Ensure content has the proper data URL format
           if (doc.content) {
-            // If it's already a proper data URL, use it
-            if (doc.content.startsWith('data:application/pdf')) {
-              setPdfDataUrl(doc.content);
-            } 
-            // If it's a base64 string without the prefix
-            else {
-              const formattedContent = `data:application/pdf;base64,${doc.content.replace(/^data:.*?;base64,/, '')}`;
-              setPdfDataUrl(formattedContent);
+            let dataUrl = doc.content;
+            
+            // If it's not a complete data URL, add the prefix
+            if (!dataUrl.startsWith('data:application/pdf')) {
+              dataUrl = `data:application/pdf;base64,${dataUrl.replace(/^data:.*?;base64,/, '')}`;
             }
+            
+            // Convert Data URL to Blob
+            fetch(dataUrl)
+              .then(res => res.blob())
+              .then(blob => {
+                // Create a blob URL from the blob
+                const url = URL.createObjectURL(blob);
+                setPdfBlobUrl(url);
+              })
+              .catch(err => {
+                console.error("Error creating blob URL:", err);
+              });
           }
         } catch (error) {
           console.error('Error processing PDF data:', error);
@@ -73,39 +81,27 @@ function DocumentViewerContent() {
       // No document ID provided
       setLoading(false);
     }
+    
+    // Clean up blob URL on component unmount
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
   }, [searchParams]);
   
   // Open PDF in a new tab
   const openPdfInNewTab = () => {
-    if (pdfDataUrl) {
-      const newWindow = window.open();
-      if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>${docData?.filename || 'Document'}</title>
-            </head>
-            <body style="margin: 0; padding: 0; overflow: hidden; height: 100vh;">
-              <embed 
-                src="${pdfDataUrl}" 
-                type="application/pdf" 
-                width="100%" 
-                height="100%"
-                style="border: none;"
-              />
-            </body>
-          </html>
-        `);
-      }
+    if (pdfBlobUrl) {
+      window.open(pdfBlobUrl, '_blank');
     }
   };
   
   // Download the PDF
   const downloadPdf = () => {
-    if (pdfDataUrl && docData) {
-      // Use window.document to access the global document object
+    if (pdfBlobUrl && docData) {
       const a = window.document.createElement('a');
-      a.href = pdfDataUrl;
+      a.href = pdfBlobUrl;
       a.download = docData.filename;
       window.document.body.appendChild(a);
       a.click();
@@ -211,15 +207,16 @@ function DocumentViewerContent() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              {pdfDataUrl ? (
+              {pdfBlobUrl ? (
                 <div className="w-full h-full">
-                  <embed 
-                    src={pdfDataUrl}
-                    type="application/pdf"
+                  {/* Use iframe instead of embed for better compatibility */}
+                  <iframe 
+                    src={pdfBlobUrl}
                     className="w-full h-[700px] border rounded"
+                    title={documentName}
                   />
                   
-                  {/* Fallback for browsers that don't support embed */}
+                  {/* Fallback for browsers that don't support iframe */}
                   <div className="mt-4 p-4 bg-gray-100 rounded text-center">
                     <p className="text-gray-600 mb-2">If the document is not visible above, you can:</p>
                     <div className="flex justify-center gap-3">
@@ -236,7 +233,7 @@ function DocumentViewerContent() {
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-[700px] text-gray-500">
-                  No document content available
+                  Loading document preview...
                 </div>
               )}
             </CardContent>
