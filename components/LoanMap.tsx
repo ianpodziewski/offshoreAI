@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from "react";
 import "leaflet/dist/leaflet.css";
 
-// We define the prop type to match your dynamic import in EnhancedDashboard
+// Define props to accept the aggregated state data
 interface LoanMapProps {
-  // For each state (e.g. "California"), we store a numeric value
   stateData: Record<string, number>;
 }
 
-// Lazily import Leaflet and react-leaflet
+// Lazy-load Leaflet and react-leaflet
 const importLeaflet = () => import("leaflet");
 const importReactLeaflet = () => import("react-leaflet");
 
@@ -19,13 +18,16 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
   const [GeoJSON, setGeoJSON] = useState<any>(null);
 
   const [isClient, setIsClient] = useState(false);
-
-  // Holds the GeoJSON data for US states
   const [usStatesData, setUsStatesData] = useState<any>(null);
+
+  // Store the currently “hovered” or “active” state to show in the corner popup
+  const [hoveredState, setHoveredState] = useState<{
+    name: string;
+    value: number;
+  } | null>(null);
 
   useEffect(() => {
     setIsClient(true);
-    // Load Leaflet & React-Leaflet modules
     Promise.all([importLeaflet(), importReactLeaflet()])
       .then(([L, RL]) => {
         setMapContainer(() => RL.MapContainer);
@@ -35,8 +37,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       .catch((error) => console.error("Failed to load Leaflet:", error));
   }, []);
 
-  // Fetch a US states GeoJSON file from /public/us-states.geojson
-  // If you prefer localStorage or an API, adjust accordingly.
+  // Fetch your US states GeoJSON from /public/us-states.geojson
   useEffect(() => {
     fetch("/us-states.geojson")
       .then((res) => res.json())
@@ -44,8 +45,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       .catch((err) => console.error("Failed to load geojson:", err));
   }, []);
 
-  // A color scale function for numeric values
-  // Adjust thresholds & colors as needed
+  // Color scale for your numeric values
   const getColor = (value: number) => {
     return value > 1_000_000
       ? "#08306b"
@@ -64,33 +64,36 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       : "#deebf7";
   };
 
-  // Style callback for each state polygon
+  // Style callback for the choropleth
   const styleFeature = (feature: any) => {
-    // For example, "California", "Texas", etc.
-    const stateName = feature.properties?.name;
-    // Pull the numeric value from your stateData
+    const stateName = feature.properties?.name || "Unknown";
     const value = stateData[stateName] ?? 0;
-
     return {
       fillColor: getColor(value),
       fillOpacity: 0.7,
-      color: "#222", // Outline color
-      weight: 1,     // Outline thickness
-      dashArray: "3" // Dotted outline
+      color: "#222",
+      weight: 1,
+      dashArray: "3",
     };
   };
 
-  // Attach a popup showing the state name & your numeric value
+  // Instead of `bindPopup()`, handle hover or click events to update `hoveredState`
   const onEachFeature = (feature: any, layer: any) => {
     const stateName = feature.properties?.name || "Unknown";
     const value = stateData[stateName] ?? 0;
 
-    layer.bindPopup(
-      `<div style="color: #fff; background: #333; padding: 5px; border-radius: 3px;">
-         <strong>${stateName}</strong><br/>
-         Value: ${value.toLocaleString()}
-       </div>`
-    );
+    // If you want "hover" style:
+    layer.on({
+      mouseover: () => {
+        setHoveredState({ name: stateName, value });
+      },
+      mouseout: () => {
+        setHoveredState(null);
+      },
+    });
+
+    // If you prefer click events, do something like:
+    // layer.on("click", () => { setHoveredState({ name: stateName, value }); });
   };
 
   if (!isClient || !MapContainer || !TileLayer || !GeoJSON) {
@@ -102,7 +105,8 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
   }
 
   return (
-    <div className="h-full w-full">
+    // Use relative positioning so we can position the info box absolutely
+    <div className="h-full w-full relative">
       <MapContainer
         center={[39.8283, -98.5795]}
         zoom={4}
@@ -113,8 +117,6 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
           attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
-
-        {/* The choropleth layer (only if usStatesData is loaded) */}
         {usStatesData && (
           <GeoJSON
             data={usStatesData}
@@ -123,6 +125,14 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
           />
         )}
       </MapContainer>
+
+      {/* A custom “popup” pinned in the top-right corner */}
+      {hoveredState && (
+        <div className="absolute top-2 right-2 bg-gray-800 text-white p-4 rounded shadow-lg z-10">
+          <div className="font-bold text-lg">{hoveredState.name}</div>
+          <div className="mt-1">Value: {hoveredState.value.toLocaleString()}</div>
+        </div>
+      )}
     </div>
   );
 };
