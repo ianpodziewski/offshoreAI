@@ -5,24 +5,24 @@ import { ArrowRight, Home, DollarSign } from 'lucide-react';
 import { LoanData } from '@/utilities/loanGenerator';
 
 interface LoanCardProps {
-  loan: LoanData;
+  loan?: LoanData | null;
 }
 
 // Helper function to capitalize first letter of each word
-const capitalize = (str: string) => {
+const capitalize = (str: string = '') => {
   return str.split(' ').map(word => 
     word.charAt(0).toUpperCase() + word.slice(1)
   ).join(' ');
 };
 
 // Function to format loan status
-const formatStatus = (status: string) => {
-  return capitalize(status.replace('_', ' '));
+const formatStatus = (status?: string) => {
+  return capitalize(status?.replace('_', ' '));
 };
 
 const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
   // Get status color
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'approved':
         return 'bg-green-100 text-green-800';
@@ -42,11 +42,22 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
   };
 
   // Format loan type for display
-  const formatLoanType = (loanType: string) => {
-    return loanType.split('_').map(word => 
+  const formatLoanType = (loanType?: string) => {
+    return loanType?.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+    ).join(' ') || 'Unknown Loan Type';
   };
+
+  // Render placeholder if no loan
+  if (!loan) {
+    return (
+      <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200 opacity-50">
+        <div className="p-4 text-center text-gray-500">
+          Loan Not Available
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
@@ -56,7 +67,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
           <div className="text-blue-600 mr-2">
             <DollarSign size={16} />
           </div>
-          <h3 className="font-medium">Loan #{loan.id.substring(0, 8)}</h3>
+          <h3 className="font-medium">Loan #{(loan.id || '').substring(0, 8)}</h3>
         </div>
         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(loan.status)}`}>
           {formatStatus(loan.status)}
@@ -69,7 +80,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
           <Home size={16} className="text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
           <div>
             <p className="text-xs text-gray-500 font-medium">Property Address</p>
-            <p className="text-sm">{loan.propertyAddress}</p>
+            <p className="text-sm">{loan.propertyAddress || 'No Address'}</p>
           </div>
         </div>
       </div>
@@ -82,7 +93,9 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
         </div>
         <div className="flex flex-col items-end">
           <p className="text-xs text-gray-500 font-medium mb-1">Loan Amount</p>
-          <p className="text-sm font-medium mb-2">${loan.loanAmount.toLocaleString()}</p>
+          <p className="text-sm font-medium mb-2">
+            ${(loan.loanAmount ?? 0).toLocaleString()}
+          </p>
           <Link 
             href={`/loans/${loan.id}`}
             className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"

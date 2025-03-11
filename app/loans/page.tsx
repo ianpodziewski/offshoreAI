@@ -12,16 +12,33 @@ import { LoanData } from '@/utilities/loanGenerator';
 export default function LoansPage() {
   const [loans, setLoans] = useState<LoanData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const fetchLoans = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Initialize database if needed
+      // Ensure database is initialized
       loanDatabase.initialize();
+      
+      // Fetch loans
       const fetchedLoans = loanDatabase.getLoans();
-      setLoans(fetchedLoans);
+      
+      // Validate loans
+      const validLoans = fetchedLoans.filter(loan => 
+        loan && typeof loan === 'object' && loan.id
+      );
+      
+      if (validLoans.length === 0) {
+        // If no valid loans, reset the database
+        const resetLoans = loanDatabase.reset();
+        setLoans(resetLoans);
+      } else {
+        setLoans(validLoans);
+      }
     } catch (error) {
       console.error('Error fetching loans:', error);
+      setError('Failed to load loans. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -40,6 +57,19 @@ export default function LoansPage() {
     const newLoan = loanDatabase.addLoan({});
     fetchLoans();
   };
+  
+  if (error) {
+    return (
+      <LayoutWrapper>
+        <div className="container mx-auto py-8 px-4 text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={resetDatabase}>
+            Reset Database
+          </Button>
+        </div>
+      </LayoutWrapper>
+    );
+  }
   
   return (
     <LayoutWrapper>
@@ -70,10 +100,17 @@ export default function LoansPage() {
             <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
             <p>Loading loans...</p>
           </div>
+        ) : loans.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">No loans available. Please create a new loan.</p>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loans.map((loan) => (
-              <LoanCard key={loan.id} loan={loan} />
+              <LoanCard 
+                key={loan.id} 
+                loan={loan} 
+              />
             ))}
           </div>
         )}
