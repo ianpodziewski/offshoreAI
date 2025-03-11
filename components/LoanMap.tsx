@@ -8,7 +8,7 @@ interface LoanMapProps {
   stateData: Record<string, number>;
 }
 
-// Lazy-load Leaflet and react-leaflet
+// Lazily import Leaflet and react-leaflet
 const importLeaflet = () => import("leaflet");
 const importReactLeaflet = () => import("react-leaflet");
 
@@ -20,11 +20,8 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
   const [isClient, setIsClient] = useState(false);
   const [usStatesData, setUsStatesData] = useState<any>(null);
 
-  // Store the currently “hovered” or “active” state to show in the corner popup
-  const [hoveredState, setHoveredState] = useState<{
-    name: string;
-    value: number;
-  } | null>(null);
+  // Keep track of which state the user last hovered (or clicked).
+  const [hoveredState, setHoveredState] = useState<{ name: string; value: number } | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -45,7 +42,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       .catch((err) => console.error("Failed to load geojson:", err));
   }, []);
 
-  // Color scale for your numeric values
+  // A basic color scale function
   const getColor = (value: number) => {
     return value > 1_000_000
       ? "#08306b"
@@ -77,12 +74,12 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
     };
   };
 
-  // Instead of `bindPopup()`, handle hover or click events to update `hoveredState`
+  // Use onEachFeature to handle pointer events
   const onEachFeature = (feature: any, layer: any) => {
     const stateName = feature.properties?.name || "Unknown";
     const value = stateData[stateName] ?? 0;
 
-    // If you want "hover" style:
+    // Show popup info on hover
     layer.on({
       mouseover: () => {
         setHoveredState({ name: stateName, value });
@@ -90,10 +87,9 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       mouseout: () => {
         setHoveredState(null);
       },
+      // or if you prefer click:
+      // click: () => { setHoveredState({ name: stateName, value }); },
     });
-
-    // If you prefer click events, do something like:
-    // layer.on("click", () => { setHoveredState({ name: stateName, value }); });
   };
 
   if (!isClient || !MapContainer || !TileLayer || !GeoJSON) {
@@ -105,7 +101,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
   }
 
   return (
-    // Use relative positioning so we can position the info box absolutely
+    // "relative" ensures the absolute popup is positioned relative to this container
     <div className="h-full w-full relative">
       <MapContainer
         center={[39.8283, -98.5795]}
@@ -126,9 +122,9 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
         )}
       </MapContainer>
 
-      {/* A custom “popup” pinned in the top-right corner */}
+      {/* Popup in the top-right corner */}
       {hoveredState && (
-        <div className="absolute top-2 right-2 bg-gray-800 text-white p-4 rounded shadow-lg z-10">
+        <div className="absolute top-2 right-2 z-50 bg-gray-800 text-white p-4 rounded shadow-lg">
           <div className="font-bold text-lg">{hoveredState.name}</div>
           <div className="mt-1">Value: {hoveredState.value.toLocaleString()}</div>
         </div>
