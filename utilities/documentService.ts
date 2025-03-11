@@ -1,5 +1,5 @@
 // utilities/documentService.ts
-import { LoanData } from './loanGenerator';
+import { LoanData, LoanType } from './loanGenerator';
 import { 
   generatePromissoryNote, 
   generateDeedOfTrust, 
@@ -60,28 +60,97 @@ export function generateLoanDocuments(loan: LoanData): LoanDocument[] {
   });
   
   // Add loan-specific documents based on loan type
-  if (loan.loanType === 'fha') {
-    documents.push({
-      id: `fha-${loan.id}`,
-      loanId: loan.id,
-      docType: 'fha_loan_application',
-      category: 'loan',
-      filename: 'fha_loan_application.pdf',
-      dateCreated: loan.dateCreated,
-      status: 'pending',
-      content: `<div class="document">FHA Loan Application for ${loan.borrowerName}</div>`
-    });
-  } else if (loan.loanType === 'va') {
-    documents.push({
-      id: `va-${loan.id}`,
-      loanId: loan.id,
-      docType: 'va_loan_certificate',
-      category: 'loan',
-      filename: 'va_loan_certificate.pdf',
-      dateCreated: loan.dateCreated,
-      status: 'pending',
-      content: `<div class="document">VA Loan Certificate for ${loan.borrowerName}</div>`
-    });
+  switch(loan.loanType) {
+    case 'fix_and_flip':
+      documents.push({
+        id: `rehab-plan-${loan.id}`,
+        loanId: loan.id,
+        docType: 'rehab_plan',
+        category: 'property',
+        filename: 'rehab_plan.pdf',
+        dateCreated: loan.dateCreated,
+        status: 'pending',
+        content: `<div class="document">Rehab Plan for ${loan.borrowerName}'s Fix and Flip Project</div>`
+      });
+      break;
+    
+    case 'construction':
+      documents.push({
+        id: `construction-plan-${loan.id}`,
+        loanId: loan.id,
+        docType: 'construction_plan',
+        category: 'property',
+        filename: 'construction_plan.pdf',
+        dateCreated: loan.dateCreated,
+        status: 'pending',
+        content: `<div class="document">Construction Plan for ${loan.borrowerName}'s Development Project</div>`
+      });
+      break;
+    
+    case 'bridge':
+      documents.push({
+        id: `bridge-loan-docs-${loan.id}`,
+        loanId: loan.id,
+        docType: 'bridge_loan_docs',
+        category: 'loan',
+        filename: 'bridge_loan_documents.pdf',
+        dateCreated: loan.dateCreated,
+        status: 'pending',
+        content: `<div class="document">Bridge Loan Documentation for ${loan.borrowerName}</div>`
+      });
+      break;
+    
+    case 'rental':
+      documents.push({
+        id: `rental-pro-forma-${loan.id}`,
+        loanId: loan.id,
+        docType: 'rental_pro_forma',
+        category: 'financial',
+        filename: 'rental_pro_forma.pdf',
+        dateCreated: loan.dateCreated,
+        status: 'pending',
+        content: `<div class="document">Rental Property Pro Forma for ${loan.borrowerName}</div>`
+      });
+      break;
+    
+    case 'commercial':
+      documents.push({
+        id: `commercial-appraisal-${loan.id}`,
+        loanId: loan.id,
+        docType: 'commercial_appraisal',
+        category: 'financial',
+        filename: 'commercial_appraisal.pdf',
+        dateCreated: loan.dateCreated,
+        status: 'pending',
+        content: `<div class="document">Commercial Property Appraisal for ${loan.borrowerName}</div>`
+      });
+      break;
+    
+    case 'land':
+      documents.push({
+        id: `land-feasibility-${loan.id}`,
+        loanId: loan.id,
+        docType: 'land_feasibility',
+        category: 'property',
+        filename: 'land_feasibility_study.pdf',
+        dateCreated: loan.dateCreated,
+        status: 'pending',
+        content: `<div class="document">Land Feasibility Study for ${loan.borrowerName}</div>`
+      });
+      break;
+    
+    case 'rehab':
+      documents.push({
+        id: `rehab-assessment-${loan.id}`,
+        loanId: loan.id,
+        docType: 'rehab_assessment',
+        category: 'property',
+        filename: 'rehab_assessment.pdf',
+        dateCreated: loan.dateCreated,
+        status: 'pending',
+        content: `<div class="document">Rehab Property Assessment for ${loan.borrowerName}</div>`
+      });
+      break;
   }
   
   return documents;
