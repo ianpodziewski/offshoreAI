@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Input, FileInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Paperclip } from "lucide-react";
+import { ArrowUp, Plus, Paperclip, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { simpleDocumentService } from "@/utilities/simplifiedDocumentService";
@@ -26,9 +26,10 @@ export default function ChatInput({
   const [isFocused, setIsFocused] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
-  const [fileInputKey, setFileInputKey] = useState(0); // Add a key to force re-render of file input
+  const [fileInputKey, setFileInputKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     defaultValues: {
@@ -36,80 +37,94 @@ export default function ChatInput({
     },
   });
 
-  // Trigger the file input when clicking the Plus button
+  // Focus input field when component mounts
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+P or Cmd+P to upload file
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        openFileDialog();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const openFileDialog = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setSelectedFileName(selectedFile.name);
       console.log("📂 File selected:", selectedFile.name);
+      
+      // Focus back on the input field after file selection
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     } else {
       console.warn("⚠️ No file selected.");
     }
   };
 
-  // Remove selected file
   const removeFile = () => {
     setFile(null);
     setSelectedFileName(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    
+    // Focus back on the input field
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
-  // Reset the file input completely
   const resetFileInput = () => {
-    // Reset state
     setFile(null);
     setSelectedFileName(null);
-    
-    // Reset form field
     form.reset({ message: "" });
     
-    // Reset file input value
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
     
-    // Increment key to force re-render of file input
     setFileInputKey(prev => prev + 1);
   };
 
-  // Handle form submission
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    console.log("📤 Submitting chat input:", { input, file, fileName: selectedFileName });
 
     if (!input.trim() && !file && !selectedFileName) {
       console.warn("⚠️ No input or file provided.");
       return;
     }
 
-    // Capture the current file and filename in local variables
     const fileToSubmit = file;
     const fileNameToSubmit = selectedFileName;
 
-    // If there's a file, add it to the document service first
     if (fileToSubmit) {
       setIsUploadingDocument(true);
       try {
-        // Use a generic loanId for chat-uploaded documents
         const chatLoanId = 'chat-uploads';
         const result = await simpleDocumentService.addDocument(fileToSubmit, chatLoanId);
         console.log("✅ Document added to Recent Documents:", result);
         
-        // Call the onUploadComplete callback if provided
         if (onUploadComplete) {
           await onUploadComplete();
-          console.log("🔄 Called onUploadComplete to refresh documents");
         }
       } catch (error) {
         console.error("❌ Error saving document to Recent Documents:", error);
@@ -118,57 +133,36 @@ export default function ChatInput({
       }
     }
 
-    console.log("🚀 Calling handleSubmit with:", { message: input, file: fileToSubmit, fileName: fileNameToSubmit });
-
-    if (typeof handleSubmit !== "function") {
-      console.error("❌ handleSubmit is not a function!", handleSubmit);
-      return;
-    }
-
-    // Create a custom File object if we have a fileName but no file
-    // This helps with previously uploaded files
     let fileToPass = fileToSubmit;
     if (!fileToSubmit && fileNameToSubmit) {
-      // Create a minimal File object with just the filename
-      // The actual content will be retrieved from simpleDocumentService
       fileToPass = new File([""], fileNameToSubmit, { type: "application/octet-stream" });
-      console.log("🔍 Creating reference to existing file:", fileNameToSubmit);
     }
 
-    // Send data up to the parent with the captured file value
     handleSubmit(input, fileToPass || undefined);
 
-    // Create a mock event to reset the parent's controlled input
     const mockEvent = {
       target: { value: "" },
       currentTarget: { value: "" },
     } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(mockEvent);
     
-    // Complete reset of file input to allow re-uploading same file
     resetFileInput();
-  };
-
-  // Function to handle document selection from Recent Documents
-  const selectExistingDocument = (filename: string) => {
-    setSelectedFileName(filename);
-    setFile(null); // No actual file object, just the filename
-    console.log("📄 Selected existing document:", filename);
   };
 
   return (
     <div className="w-full">
       {/* Selected File Bubble */}
       {(file || selectedFileName) && (
-        <div className="mb-2 inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
-          <Paperclip className="w-5 h-5 text-gray-500 mr-2" />
-          <span className="text-sm text-gray-800">{file?.name || selectedFileName}</span>
+        <div className="mb-2 inline-flex items-center px-3 py-2 border border-gray-700 rounded-lg bg-gray-800 shadow-md">
+          <Paperclip className="w-5 h-5 text-blue-400 mr-2" />
+          <span className="text-sm text-gray-200">{file?.name || selectedFileName}</span>
           <button
             type="button"
             onClick={removeFile}
-            className="ml-4 text-sm text-red-500 hover:underline"
+            className="ml-4 p-1 rounded-full hover:bg-gray-700 text-gray-400 hover:text-red-400 transition-colors"
+            aria-label="Remove file"
           >
-            Remove
+            <X size={14} />
           </button>
         </div>
       )}
@@ -176,11 +170,12 @@ export default function ChatInput({
       <Form {...form}>
         <form
           onSubmit={onSubmit}
-          className={`flex w-full p-1 border rounded-full shadow-sm ${
-            isFocused ? "ring-2 ring-blue-400" : ""
-          } bg-white`}
+          className={`flex w-full p-1.5 border ${
+            isFocused 
+              ? "border-blue-500 ring-2 ring-blue-500/20" 
+              : "border-gray-700"
+          } rounded-full shadow-md bg-gray-800 transition-all duration-200`}
         >
-          {/* File Input (Hidden) - Now with key to force re-render */}
           <FileInput
             key={fileInputKey}
             ref={fileInputRef}
@@ -189,7 +184,6 @@ export default function ChatInput({
             className="hidden"
           />
 
-          {/* Text Input */}
           <FormField
             control={form.control}
             name="message"
@@ -198,12 +192,12 @@ export default function ChatInput({
                 <FormControl>
                   <Input
                     {...field}
+                    ref={inputRef}
                     onChange={(e) => {
                       handleInputChange(e);
-                      console.log("📝 Input changed:", e.target.value);
                     }}
                     value={input}
-                    className="border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+                    className="border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-white placeholder:text-gray-500"
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     placeholder="Type your message here..."
@@ -213,26 +207,41 @@ export default function ChatInput({
             )}
           />
 
-          {/* Plus Button (Triggers File Upload) */}
-          <Button
-            type="button"
-            variant="ghost"
-            className="rounded-full w-10 h-10 p-0 flex items-center justify-center mr-2"
-            onClick={openFileDialog}
-          >
-            <Plus className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="rounded-full w-9 h-9 text-gray-400 hover:text-blue-400 hover:bg-gray-700"
+              onClick={openFileDialog}
+              disabled={isLoading || isUploadingDocument}
+              title="Upload file (Ctrl+P)"
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
 
-          {/* Send Button */}
-          <Button
-            type="submit"
-            className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
-            disabled={(input.trim() === "" && !file && !selectedFileName) || isLoading || isUploadingDocument}
-          >
-            <ArrowUp className="w-5 h-5" />
-          </Button>
+            <Button
+              type="submit"
+              size="icon"
+              className={`rounded-full w-9 h-9 ml-1 ${
+                isLoading || isUploadingDocument
+                  ? "bg-gray-700 text-gray-500"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
+              disabled={(input.trim() === "" && !file && !selectedFileName) || isLoading || isUploadingDocument}
+            >
+              <ArrowUp className="w-5 h-5" />
+            </Button>
+          </div>
         </form>
       </Form>
+      
+      {isUploadingDocument && (
+        <div className="mt-2 text-xs text-gray-400 flex items-center">
+          <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-blue-500 border-r-2 border-blue-500 border-b-2 border-transparent mr-2"></div>
+          Uploading document...
+        </div>
+      )}
     </div>
   );
 }
