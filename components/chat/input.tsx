@@ -28,6 +28,7 @@ export default function ChatInput({
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [fileInputKey, setFileInputKey] = useState(0); // Add a key to force re-render of file input
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -45,8 +46,10 @@ export default function ChatInput({
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      console.log("📂 File selected:", e.target.files[0].name);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setSelectedFileName(selectedFile.name);
+      console.log("📂 File selected:", selectedFile.name);
     } else {
       console.warn("⚠️ No file selected.");
     }
@@ -55,6 +58,7 @@ export default function ChatInput({
   // Remove selected file
   const removeFile = () => {
     setFile(null);
+    setSelectedFileName(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -64,6 +68,7 @@ export default function ChatInput({
   const resetFileInput = () => {
     // Reset state
     setFile(null);
+    setSelectedFileName(null);
     
     // Reset form field
     form.reset({ message: "" });
@@ -81,15 +86,16 @@ export default function ChatInput({
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    console.log("📤 Submitting chat input:", { input, file });
+    console.log("📤 Submitting chat input:", { input, file, fileName: selectedFileName });
 
-    if (!input.trim() && !file) {
+    if (!input.trim() && !file && !selectedFileName) {
       console.warn("⚠️ No input or file provided.");
       return;
     }
 
-    // Capture the current file in a local variable
+    // Capture the current file and filename in local variables
     const fileToSubmit = file;
+    const fileNameToSubmit = selectedFileName;
 
     // If there's a file, add it to the document service first
     if (fileToSubmit) {
@@ -112,15 +118,25 @@ export default function ChatInput({
       }
     }
 
-    console.log("🚀 Calling handleSubmit with:", { message: input, file: fileToSubmit });
+    console.log("🚀 Calling handleSubmit with:", { message: input, file: fileToSubmit, fileName: fileNameToSubmit });
 
     if (typeof handleSubmit !== "function") {
       console.error("❌ handleSubmit is not a function!", handleSubmit);
       return;
     }
 
+    // Create a custom File object if we have a fileName but no file
+    // This helps with previously uploaded files
+    let fileToPass = fileToSubmit;
+    if (!fileToSubmit && fileNameToSubmit) {
+      // Create a minimal File object with just the filename
+      // The actual content will be retrieved from simpleDocumentService
+      fileToPass = new File([""], fileNameToSubmit, { type: "application/octet-stream" });
+      console.log("🔍 Creating reference to existing file:", fileNameToSubmit);
+    }
+
     // Send data up to the parent with the captured file value
-    handleSubmit(input, fileToSubmit || undefined);
+    handleSubmit(input, fileToPass || undefined);
 
     // Create a mock event to reset the parent's controlled input
     const mockEvent = {
@@ -133,13 +149,20 @@ export default function ChatInput({
     resetFileInput();
   };
 
+  // Function to handle document selection from Recent Documents
+  const selectExistingDocument = (filename: string) => {
+    setSelectedFileName(filename);
+    setFile(null); // No actual file object, just the filename
+    console.log("📄 Selected existing document:", filename);
+  };
+
   return (
     <div className="w-full">
       {/* Selected File Bubble */}
-      {file && (
+      {(file || selectedFileName) && (
         <div className="mb-2 inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
           <Paperclip className="w-5 h-5 text-gray-500 mr-2" />
-          <span className="text-sm text-gray-800">{file.name}</span>
+          <span className="text-sm text-gray-800">{file?.name || selectedFileName}</span>
           <button
             type="button"
             onClick={removeFile}
@@ -204,7 +227,7 @@ export default function ChatInput({
           <Button
             type="submit"
             className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
-            disabled={(input.trim() === "" && !file) || isLoading || isUploadingDocument}
+            disabled={(input.trim() === "" && !file && !selectedFileName) || isLoading || isUploadingDocument}
           >
             <ArrowUp className="w-5 h-5" />
           </Button>

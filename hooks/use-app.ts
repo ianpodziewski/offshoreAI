@@ -62,20 +62,35 @@ export default function useApp() {
     return newAssistantMessage;
   }, []);
 
-  // Memoize fetchAssistantResponse function
+  // Memoize fetchAssistantResponse function with updated file handling
   const fetchAssistantResponse = useCallback(async (combinedInput: string, file?: File) => {
     const formData = new FormData();
     formData.append("message", combinedInput);
+    
     if (file) {
       formData.append("file", file);
+      // Always include the fileName as a separate field
+      // This is crucial for the API to find previously uploaded files
+      formData.append("fileName", file.name);
+      console.log("📎 Sending file to API:", file.name);
     }
+    
+    // Log form data fields in a way that's compatible with all TypeScript targets
+    const formDataFields: string[] = [];
+    formData.forEach((value, key) => {
+      formDataFields.push(key);
+    });
+    console.log("🚀 FormData fields:", formDataFields);
+    
     const response = await fetch("/api/chat", {
       method: "POST",
       body: formData,
     });
+    
     if (!response.ok) {
       throw new Error("Failed to send message");
     }
+    
     return response;
   }, []);
 
@@ -183,7 +198,7 @@ export default function useApp() {
 
     // If a file is included, ensure it's saved to the document service
     // We only do this as a fallback in case it wasn't already handled in the input component
-    if (file) {
+    if (file && file.size > 0) { // Only process real files, not reference-only files
       try {
         // Use a dedicated loanId for chat-related documents
         const chatLoanId = 'chat-uploads';
@@ -192,6 +207,9 @@ export default function useApp() {
       } catch (error) {
         console.error("❌ Error saving document to Recent Documents:", error);
       }
+    } else if (file) {
+      // This might be a reference file (empty file with just a name)
+      console.log("📑 Processing reference to existing file:", file.name);
     }
 
     if (wordCount > WORD_CUTOFF) {
