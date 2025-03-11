@@ -8,16 +8,17 @@ interface LayoutWrapperProps {
   children: React.ReactNode;
 }
 
+// app/layout-wrapper.tsx
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="pt-16 flex-grow overflow-hidden">
+      <main className="pt-16 flex-grow overflow-auto">
         {children}
       </main>
-      <footer className="bg-gray-50 border-t py-6 mt-auto">
+      <footer className="bg-gray-50 border-t py-6">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between items-center max-w-screen-xl mx-auto">
             <div className="mb-4 md:mb-0">
               <p className="text-sm text-gray-500">
                 © {new Date().getFullYear()} Loan Document Management System

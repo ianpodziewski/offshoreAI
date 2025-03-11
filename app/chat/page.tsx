@@ -11,6 +11,7 @@ import { FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import LayoutWrapper from '../layout-wrapper';
+import ChatFooter from "@/components/chat/footer";
 
 export default function ChatWithContext() {
   const {
@@ -53,12 +54,12 @@ export default function ChatWithContext() {
 
   return (
     <LayoutWrapper>
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col min-h-screen">
         {/* Chat Header */}
         <ChatHeader clearMessages={clearMessages} />
         
         {/* Main Chat Area */}
-        <div className="container mx-auto px-4 py-6 flex-grow overflow-hidden">
+        <div className="container mx-auto px-4 py-6 flex-grow overflow-hidden max-w-screen-xl">
           <div className="flex gap-6 h-full">
             {/* Messages and Input Area */}
             <div className="w-3/4 flex flex-col h-full">
@@ -69,8 +70,8 @@ export default function ChatWithContext() {
                 </div>
               </div>
               
-              {/* Chat Input - Fixed at bottom with proper spacing */}
-              <div className="mb-4">
+              {/* Chat Input - aligned with chat container */}
+              <div className="mb-8">
                 <ChatInput
                   handleInputChange={handleInputChange}
                   handleSubmit={handleSubmit}
@@ -152,6 +153,13 @@ export default function ChatWithContext() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </div>
+        
+        {/* Add ChatFooter here instead of inside the ChatInput component */}
+        <div className="mt-auto">
+          <div className="container mx-auto px-4 max-w-screen-xl">
+            <ChatFooter />
           </div>
         </div>
       </div>
