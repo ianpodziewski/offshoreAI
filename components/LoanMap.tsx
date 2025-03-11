@@ -3,19 +3,24 @@
 import React, { useState, useEffect } from "react";
 import "leaflet/dist/leaflet.css";
 
+// We define the prop type to match your dynamic import in EnhancedDashboard
+interface LoanMapProps {
+  // For each state (e.g. "California"), we store a numeric value
+  stateData: Record<string, number>;
+}
+
 // Lazily import Leaflet and react-leaflet
 const importLeaflet = () => import("leaflet");
 const importReactLeaflet = () => import("react-leaflet");
 
-const LoanMap: React.FC = () => {
+const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
   const [MapContainer, setMapContainer] = useState<any>(null);
   const [TileLayer, setTileLayer] = useState<any>(null);
   const [GeoJSON, setGeoJSON] = useState<any>(null);
 
   const [isClient, setIsClient] = useState(false);
 
-  // Sample data for a US states geojson file
-  // If you have your own dataset, you can fetch it or store it in localStorage.
+  // Holds the GeoJSON data for US states
   const [usStatesData, setUsStatesData] = useState<any>(null);
 
   useEffect(() => {
@@ -30,8 +35,8 @@ const LoanMap: React.FC = () => {
       .catch((error) => console.error("Failed to load Leaflet:", error));
   }, []);
 
-  // Example: fetch a US states GeoJSON file
-  // (Replace this path or load from localStorage if desired.)
+  // Fetch a US states GeoJSON file from /public/us-states.geojson
+  // If you prefer localStorage or an API, adjust accordingly.
   useEffect(() => {
     fetch("/us-states.geojson")
       .then((res) => res.json())
@@ -39,32 +44,35 @@ const LoanMap: React.FC = () => {
       .catch((err) => console.error("Failed to load geojson:", err));
   }, []);
 
-  // Choropleth color function - different shades of blue
+  // A color scale function for numeric values
   // Adjust thresholds & colors as needed
   const getColor = (value: number) => {
-    return value > 1000
+    return value > 1_000_000
       ? "#08306b"
-      : value > 500
+      : value > 500_000
       ? "#08519c"
-      : value > 200
+      : value > 200_000
       ? "#2171b5"
-      : value > 100
+      : value > 100_000
       ? "#4292c6"
-      : value > 50
+      : value > 50_000
       ? "#6baed6"
-      : value > 20
+      : value > 20_000
       ? "#9ecae1"
-      : value > 10
+      : value > 10_000
       ? "#c6dbef"
       : "#deebf7";
   };
 
-  // Leaflet style callback for each feature in the geojson
-  // Suppose each state has a "density" property
+  // Style callback for each state polygon
   const styleFeature = (feature: any) => {
-    const density = feature.properties?.density || 0;
+    // For example, "California", "Texas", etc.
+    const stateName = feature.properties?.name;
+    // Pull the numeric value from your stateData
+    const value = stateData[stateName] ?? 0;
+
     return {
-      fillColor: getColor(density),
+      fillColor: getColor(value),
       fillOpacity: 0.7,
       color: "#222", // Outline color
       weight: 1,     // Outline thickness
@@ -72,16 +80,17 @@ const LoanMap: React.FC = () => {
     };
   };
 
-  // Optional: onEachFeature to bind popups or event handlers
+  // Attach a popup showing the state name & your numeric value
   const onEachFeature = (feature: any, layer: any) => {
-    if (feature.properties) {
-      layer.bindPopup(
-        `<div style="color: #fff; background: #333; padding: 5px; border-radius: 3px;">
-           <strong>${feature.properties.name}</strong><br/>
-           Density: ${feature.properties.density ?? "N/A"}
-         </div>`
-      );
-    }
+    const stateName = feature.properties?.name || "Unknown";
+    const value = stateData[stateName] ?? 0;
+
+    layer.bindPopup(
+      `<div style="color: #fff; background: #333; padding: 5px; border-radius: 3px;">
+         <strong>${stateName}</strong><br/>
+         Value: ${value.toLocaleString()}
+       </div>`
+    );
   };
 
   if (!isClient || !MapContainer || !TileLayer || !GeoJSON) {
@@ -100,7 +109,6 @@ const LoanMap: React.FC = () => {
         scrollWheelZoom={false}
         className="h-full w-full"
       >
-        {/* Dark-themed tile layer */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"

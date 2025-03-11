@@ -1,22 +1,22 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { loanDatabase } from '@/utilities/loanDatabase';
-import { LoanData } from '@/utilities/loanGenerator';
-import dynamic from 'next/dynamic';
-import { 
-  BarChart2, 
-  DollarSign, 
-  TrendingUp, 
-  Map, 
-  FileText, 
-  CheckCircle
-} from 'lucide-react';
-import LayoutWrapper from '@/app/layout-wrapper';
-import { 
-  ResponsiveContainer, 
-  LineChart, 
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { loanDatabase } from "@/utilities/loanDatabase";
+import { LoanData } from "@/utilities/loanGenerator";
+import dynamic from "next/dynamic";
+import {
+  BarChart2,
+  DollarSign,
+  TrendingUp,
+  Map,
+  FileText,
+  CheckCircle,
+} from "lucide-react";
+import LayoutWrapper from "@/app/layout-wrapper";
+import {
+  ResponsiveContainer,
+  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -25,8 +25,8 @@ import {
   Legend,
   BarChart,
   Bar,
-  Cell
-} from 'recharts';
+  Cell,
+} from "recharts";
 
 interface LoanStatusCounts {
   approved: number;
@@ -37,16 +37,80 @@ interface LoanStatusCounts {
   [key: string]: number;
 }
 
-// Dynamic import for LoanMap
-const LoanMap = dynamic(() => import('@/components/LoanMap'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-full flex flex-col justify-center items-center bg-gray-900">
-      <Map size={48} className="text-gray-300 mb-4" />
-      <p className="text-gray-400 text-center">Loading map...</p>
-    </div>
-  ),
-});
+// 1) Define the LoanMapProps interface exactly as in LoanMap.tsx
+interface LoanMapProps {
+  stateData: Record<string, number>;
+}
+
+// Map abbreviations to full state names
+const usStateNames: Record<string, string> = {
+  AL: "Alabama",
+  AK: "Alaska",
+  AZ: "Arizona",
+  AR: "Arkansas",
+  CA: "California",
+  CO: "Colorado",
+  CT: "Connecticut",
+  DE: "Delaware",
+  FL: "Florida",
+  GA: "Georgia",
+  HI: "Hawaii",
+  ID: "Idaho",
+  IL: "Illinois",
+  IN: "Indiana",
+  IA: "Iowa",
+  KS: "Kansas",
+  KY: "Kentucky",
+  LA: "Louisiana",
+  ME: "Maine",
+  MD: "Maryland",
+  MA: "Massachusetts",
+  MI: "Michigan",
+  MN: "Minnesota",
+  MS: "Mississippi",
+  MO: "Missouri",
+  MT: "Montana",
+  NE: "Nebraska",
+  NV: "Nevada",
+  NH: "New Hampshire",
+  NJ: "New Jersey",
+  NM: "New Mexico",
+  NY: "New York",
+  NC: "North Carolina",
+  ND: "North Dakota",
+  OH: "Ohio",
+  OK: "Oklahoma",
+  OR: "Oregon",
+  PA: "Pennsylvania",
+  RI: "Rhode Island",
+  SC: "South Carolina",
+  SD: "South Dakota",
+  TN: "Tennessee",
+  TX: "Texas",
+  UT: "Utah",
+  VT: "Vermont",
+  VA: "Virginia",
+  WA: "Washington",
+  WV: "West Virginia",
+  WI: "Wisconsin",
+  WY: "Wyoming",
+  DC: "District of Columbia",
+};
+
+// 2) Dynamically import the default export from LoanMap
+//    Then cast it to React.FC<LoanMapProps> to satisfy TS
+const LoanMap = dynamic(() =>
+  import("@/components/LoanMap").then((mod) => mod.default),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full flex flex-col justify-center items-center bg-gray-900">
+        <Map size={48} className="text-gray-300 mb-4" />
+        <p className="text-gray-400 text-center">Loading map...</p>
+      </div>
+    ),
+  }
+) as React.FC<LoanMapProps>;
 
 export default function EnhancedDashboard() {
   const [loans, setLoans] = useState<LoanData[]>([]);
@@ -59,9 +123,12 @@ export default function EnhancedDashboard() {
     in_review: 0,
     rejected: 0,
     funded: 0,
-    closed: 0
+    closed: 0,
   });
   const [monthlyLoanData, setMonthlyLoanData] = useState<any[]>([]);
+
+  // State data for the map's choropleth
+  const [stateData, setStateData] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -70,9 +137,14 @@ export default function EnhancedDashboard() {
         await loanDatabase.initialize();
         const fetchedLoans = await loanDatabase.getLoans();
         setLoans(fetchedLoans);
+
+        // Normal existing metrics
         calculateMetrics(fetchedLoans);
+
+        // Build dictionary from addresses => aggregated amounts
+        buildStateData(fetchedLoans);
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
@@ -80,10 +152,29 @@ export default function EnhancedDashboard() {
     fetchData();
   }, []);
 
+  // Build up a record: { "California": totalAmount, "New York": totalAmount, ...}
+  const buildStateData = (loanData: LoanData[]) => {
+    const byState: Record<string, number> = {};
+
+    for (const loan of loanData) {
+      if (!loan.propertyAddress) continue;
+      const match = loan.propertyAddress.match(/,\s*([A-Z]{2})\b/);
+      if (!match) continue;
+      const abbr = match[1]; // e.g. "CA"
+      const fullName = usStateNames[abbr] || abbr;
+      byState[fullName] = (byState[fullName] || 0) + (loan.loanAmount || 0);
+    }
+
+    setStateData(byState);
+  };
+
   const calculateMetrics = (loanData: LoanData[]) => {
     if (!loanData || loanData.length === 0) return;
 
-    const totalValue = loanData.reduce((sum, loan) => sum + (loan.loanAmount || 0), 0);
+    const totalValue = loanData.reduce(
+      (sum, loan) => sum + (loan.loanAmount || 0),
+      0
+    );
     const avgSize = Math.round(totalValue / loanData.length);
 
     setTotalLoanValue(totalValue);
@@ -94,10 +185,10 @@ export default function EnhancedDashboard() {
       in_review: 0,
       rejected: 0,
       funded: 0,
-      closed: 0
+      closed: 0,
     };
     loanData.forEach((loan) => {
-      const status = loan.status || 'in_review';
+      const status = loan.status || "in_review";
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
     setLoanStatusCounts(statusCounts);
@@ -128,12 +219,13 @@ export default function EnhancedDashboard() {
     const monthlyArray = Object.keys(monthlyData).map((key) => ({
       month: key,
       count: monthlyData[key].count,
-      volume: monthlyData[key].volume / 1000 
+      volume: monthlyData[key].volume / 1000,
     }));
 
+    // sort ascending
     monthlyArray.sort((a, b) => {
-      const [aMonth, aYear] = a.month.split('/').map(Number);
-      const [bMonth, bYear] = b.month.split('/').map(Number);
+      const [aMonth, aYear] = a.month.split("/").map(Number);
+      const [bMonth, bYear] = b.month.split("/").map(Number);
       if (aYear !== bYear) return aYear - bYear;
       return aMonth - bMonth;
     });
@@ -142,10 +234,10 @@ export default function EnhancedDashboard() {
   };
 
   const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -201,7 +293,7 @@ export default function EnhancedDashboard() {
           </Card>
 
           <Card className="bg-gray-800">
-            <CardContent className="flex flex-col items-center justify-center py-6 space-y-3">
+            <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
               <div className="flex flex-row items-center space-x-2">
                 <FileText className="h-6 w-6 text-orange-500" />
                 <span className="text-lg font-semibold text-gray-200">
@@ -215,7 +307,7 @@ export default function EnhancedDashboard() {
           </Card>
 
           <Card className="bg-gray-800">
-            <CardContent className="flex flex-col items-center justify-center py-6 space-y-3">
+            <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
               <div className="flex flex-row items-center space-x-2">
                 <CheckCircle className="h-6 w-6 text-green-500" />
                 <span className="text-lg font-semibold text-gray-200">
@@ -233,7 +325,6 @@ export default function EnhancedDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Loan Status Pipeline */}
           <Card className="bg-gray-800">
-            {/* Header area with spacing & border below */}
             <div className="px-4 pt-4 pb-2 border-b border-gray-700">
               <div className="flex items-center space-x-2">
                 <BarChart2 className="h-5 w-5 text-blue-500" />
@@ -248,40 +339,44 @@ export default function EnhancedDashboard() {
                   layout="vertical"
                   data={[
                     {
-                      name: 'In Review',
+                      name: "In Review",
                       value: loanStatusCounts.in_review || 0,
-                      fill: '#FFB347',
+                      fill: "#FFB347",
                     },
                     {
-                      name: 'Approved',
+                      name: "Approved",
                       value: loanStatusCounts.approved || 0,
-                      fill: '#77DD77',
+                      fill: "#77DD77",
                     },
                     {
-                      name: 'Funded',
+                      name: "Funded",
                       value: loanStatusCounts.funded || 0,
-                      fill: '#59A5D8',
+                      fill: "#59A5D8",
                     },
                     {
-                      name: 'Closed',
+                      name: "Closed",
                       value: loanStatusCounts.closed || 0,
-                      fill: '#B19CD9',
+                      fill: "#B19CD9",
                     },
                     {
-                      name: 'Rejected',
+                      name: "Rejected",
                       value: loanStatusCounts.rejected || 0,
-                      fill: '#FF6961',
+                      fill: "#FF6961",
                     },
                   ]}
                   margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#444" />
                   <XAxis type="number" stroke="#ccc" />
-                  <YAxis dataKey="name" type="category" tick={{ fontSize: 14, fill: '#ccc' }} />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tick={{ fontSize: 14, fill: "#ccc" }}
+                  />
                   <Tooltip
                     formatter={(value: number) => [`${value} loans`]}
-                    contentStyle={{ backgroundColor: '#2D2D2D', border: 'none' }}
-                    itemStyle={{ color: '#fff' }}
+                    contentStyle={{ backgroundColor: "#2D2D2D", border: "none" }}
+                    itemStyle={{ color: "#fff" }}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -311,19 +406,29 @@ export default function EnhancedDashboard() {
                     angle={-45}
                     textAnchor="end"
                     height={60}
-                    tick={{ fontSize: 12, fill: '#ccc' }}
+                    tick={{ fontSize: 12, fill: "#ccc" }}
                   />
-                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" tick={{ fill: '#ccc' }} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" tick={{ fill: '#ccc' }} />
+                  <YAxis
+                    yAxisId="left"
+                    orientation="left"
+                    stroke="#8884d8"
+                    tick={{ fill: "#ccc" }}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    stroke="#82ca9d"
+                    tick={{ fill: "#ccc" }}
+                  />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#2D2D2D', border: 'none' }}
-                    itemStyle={{ color: '#fff' }}
+                    contentStyle={{ backgroundColor: "#2D2D2D", border: "none" }}
+                    itemStyle={{ color: "#fff" }}
                     formatter={(value: number, name: string) => [
-                      name === 'volume' ? `$${value}k` : value,
-                      name === 'volume' ? 'Loan Volume (thousands)' : 'Loan Count',
+                      name === "volume" ? `$${value}k` : value,
+                      name === "volume" ? "Loan Volume (thousands)" : "Loan Count",
                     ]}
                   />
-                  <Legend wrapperStyle={{ color: '#fff' }} />
+                  <Legend wrapperStyle={{ color: "#fff" }} />
                   <Line
                     yAxisId="left"
                     type="monotone"
@@ -355,9 +460,9 @@ export default function EnhancedDashboard() {
               </h2>
             </div>
           </div>
-          {/* Make the background dark so edges of the map blend in */}
           <CardContent className="h-96 bg-gray-900 relative">
-              <LoanMap />
+            {/* 3) Now <LoanMap stateData={stateData} /> is valid */}
+            <LoanMap stateData={stateData} />
           </CardContent>
         </Card>
       </div>
