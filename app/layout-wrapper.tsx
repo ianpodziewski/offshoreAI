@@ -11,16 +11,16 @@ interface LayoutWrapperProps {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow pt-16">
         {children}
       </main>
-      <footer className="bg-gray-50 border-t py-4">
+      <footer className="bg-secondary text-secondary-foreground border-t py-4">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div>
-              <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-700">
+              <Link href="/terms" className="text-sm text-secondary-foreground hover:text-accent-foreground">
                 Terms of Service
               </Link>
             </div>
@@ -29,7 +29,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 href="http://www.ringel.ai" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="text-sm text-blue-500 hover:text-blue-700"
+                className="text-sm text-accent-foreground hover:text-primary-foreground"
               >
                 powered by ringel.AI
               </a>
