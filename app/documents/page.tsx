@@ -43,6 +43,12 @@ function DocumentDashboardContent() {
     setRefreshCounter(prev => prev + 1);
   };
   
+  const handleDocumentDelete = () => {
+    // Close the viewer and refresh the list
+    setSelectedDocument(null);
+    setRefreshCounter(prev => prev + 1);
+  };
+  
   const refreshData = () => {
     setLoading(true);
     // Simple timeout to simulate loading
@@ -115,6 +121,7 @@ function DocumentDashboardContent() {
           document={selectedDocument}
           onClose={() => setSelectedDocument(null)}
           onStatusChange={handleDocumentStatusChange}
+          onDelete={handleDocumentDelete}
         />
       )}
     </div>

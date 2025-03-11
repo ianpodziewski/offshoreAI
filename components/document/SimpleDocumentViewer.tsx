@@ -2,22 +2,26 @@
 import React, { useState, useEffect } from 'react';
 import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
 import { Button } from '@/components/ui/button';
-import { Check, X, ArrowLeft, Download, ExternalLink } from 'lucide-react';
+import { Check, X, ArrowLeft, Download, ExternalLink, Trash2 } from 'lucide-react';
 
 interface SimpleDocumentViewerProps {
   document: SimpleDocument;
   onClose: () => void;
   onStatusChange?: () => void;
+  onDelete?: () => void;
 }
 
 export default function SimpleDocumentViewer({ 
   document, 
   onClose, 
-  onStatusChange 
+  onStatusChange,
+  onDelete
 }: SimpleDocumentViewerProps) {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState(document.notes || '');
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string>('');
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   // Convert data URL to Blob URL on component mount
   useEffect(() => {
@@ -77,6 +81,39 @@ export default function SimpleDocumentViewer({
     }
   };
   
+  // Handle document deletion
+  const handleDelete = async () => {
+    if (!document?.id) return;
+    
+    if (!deleteConfirm) {
+      // First click - show confirmation
+      setDeleteConfirm(true);
+      return;
+    }
+    
+    // Second click - actually delete
+    setDeleting(true);
+    try {
+      const success = simpleDocumentService.deleteDocument(document.id);
+      
+      if (success && onDelete) {
+        onDelete();
+      } else {
+        setDeleteConfirm(false);
+        setDeleting(false);
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      setDeleteConfirm(false);
+      setDeleting(false);
+    }
+  };
+  
+  // Cancel delete operation
+  const cancelDelete = () => {
+    setDeleteConfirm(false);
+  };
+  
   // Open PDF in a new tab
   const openPdfInNewTab = () => {
     if (pdfBlobUrl) {
@@ -110,7 +147,7 @@ export default function SimpleDocumentViewer({
           <div className="flex gap-2">
             <Button 
               onClick={() => updateStatus('approved')} 
-              disabled={loading}
+              disabled={loading || deleteConfirm}
               className="bg-green-600 hover:bg-green-700 text-white"
             >
               <Check size={16} className="mr-1" />
@@ -118,7 +155,7 @@ export default function SimpleDocumentViewer({
             </Button>
             <Button 
               onClick={() => updateStatus('rejected')} 
-              disabled={loading}
+              disabled={loading || deleteConfirm}
               className="bg-red-600 hover:bg-red-700 text-white"
             >
               <X size={16} className="mr-1" />
@@ -215,11 +252,50 @@ export default function SimpleDocumentViewer({
                 onChange={(e) => setNotes(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded h-32 text-sm"
                 placeholder="Add notes about this document..."
+                disabled={deleteConfirm}
               />
             </div>
             
-            <div className="mt-auto">
-              <Button onClick={onClose} className="w-full">
+            {/* Delete Document Section */}
+            <div className="mt-4 pt-4 border-t">
+              {deleteConfirm ? (
+                <div>
+                  <p className="text-sm text-red-600 font-medium mb-3">
+                    Are you sure you want to delete this document? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleDelete} 
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                      disabled={deleting}
+                    >
+                      {deleting ? 'Deleting...' : 'Confirm Delete'}
+                    </Button>
+                    <Button 
+                      onClick={cancelDelete} 
+                      variant="outline" 
+                      className="flex-1"
+                      disabled={deleting}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button 
+                  onClick={handleDelete} 
+                  variant="outline" 
+                  className="w-full text-red-600 border-red-300 hover:bg-red-50"
+                  disabled={loading}
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Delete Document
+                </Button>
+              )}
+            </div>
+            
+            <div className="mt-auto pt-4">
+              <Button onClick={onClose} className="w-full" disabled={deleteConfirm}>
                 Close
               </Button>
             </div>

@@ -71,6 +71,12 @@ function ManageDocumentsContent({ id }: { id: string }) {
     setRefreshCounter(prev => prev + 1);
   };
   
+  // Handle document deletion
+  const handleDocumentDelete = () => {
+    setSelectedDocument(null);
+    setRefreshCounter(prev => prev + 1);
+  };
+  
   if (loading) {
     return <LoadingState />;
   }
@@ -142,6 +148,7 @@ function ManageDocumentsContent({ id }: { id: string }) {
           document={selectedDocument} 
           onClose={() => setSelectedDocument(null)}
           onStatusChange={handleDocumentStatusChange}
+          onDelete={handleDocumentDelete}
         />
       )}
     </div>
