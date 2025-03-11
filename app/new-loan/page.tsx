@@ -120,7 +120,6 @@ export default function NewLoanPage() {
                           <SelectValue placeholder="Select experience" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select an option</SelectItem>
                           <SelectItem value="Beginner (0-1 projects)">Beginner (0-1 projects)</SelectItem>
                           <SelectItem value="Intermediate (2-5 projects)">Intermediate (2-5 projects)</SelectItem>
                           <SelectItem value="Experienced (6-10 projects)">Experienced (6-10 projects)</SelectItem>
@@ -141,7 +140,6 @@ export default function NewLoanPage() {
                           <SelectValue placeholder="Select loan type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select an option</SelectItem>
                           <SelectItem value="fix_and_flip">Fix and Flip</SelectItem>
                           <SelectItem value="bridge">Bridge Loan</SelectItem>
                           <SelectItem value="construction">Construction</SelectItem>
@@ -210,7 +208,6 @@ export default function NewLoanPage() {
                           <SelectValue placeholder="Select property type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select an option</SelectItem>
                           <SelectItem value="single_family">Single Family</SelectItem>
                           <SelectItem value="multi_family">Multi-Family</SelectItem>
                           <SelectItem value="condo">Condo</SelectItem>
@@ -278,7 +275,6 @@ export default function NewLoanPage() {
                           <SelectValue placeholder="Select exit strategy" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Select an option</SelectItem>
                           <SelectItem value="sale">Sale</SelectItem>
                           <SelectItem value="refinance">Refinance</SelectItem>
                           <SelectItem value="rental">Rental</SelectItem>
