@@ -119,12 +119,14 @@ export default function ChatWithContext() {
             
             {/* Chat Container */}
             <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border shadow">
-              {/* Replace the simple overflow-y-auto div with the ChatContainer component */}
-              <ChatContainer messages={messages}>
-                <ChatMessages messages={messages} indicatorState={indicatorState} />
-              </ChatContainer>
+              {/* The ChatContainer now only wraps the messages, not the input area */}
+              <div className="flex-grow">
+                <ChatContainer messages={messages}>
+                  <ChatMessages messages={messages} indicatorState={indicatorState} />
+                </ChatContainer>
+              </div>
               
-              {/* Input area */}
+              {/* Input area - kept outside the ChatContainer */}
               <div className="p-3 border-t">
                 <ChatInput
                   handleInputChange={handleInputChange}

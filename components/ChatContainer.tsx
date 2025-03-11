@@ -93,10 +93,10 @@ export default function ChatContainer({ messages, children }: ChatContainerProps
   };
 
   return (
-    <div className="relative flex flex-col h-full">
+    <div className="relative h-full">
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="h-full overflow-y-auto p-4"
       >
         {children}
       </div>
