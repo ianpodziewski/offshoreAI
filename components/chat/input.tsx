@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUp, Plus, Paperclip } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import ChatFooter from "@/components/chat/footer";
+// Removed ChatFooter import
 
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;

@@ -11,7 +11,7 @@ import { FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import LayoutWrapper from '../layout-wrapper';
-import ChatFooter from "@/components/chat/footer";
+// Remove ChatFooter import since it's now in the layout-wrapper
 
 export default function ChatWithContext() {
   const {
@@ -58,20 +58,20 @@ export default function ChatWithContext() {
         {/* Chat Header */}
         <ChatHeader clearMessages={clearMessages} />
         
-        {/* Main Chat Area */}
-        <div className="container mx-auto px-4 py-6 flex-grow overflow-hidden max-w-screen-xl">
+        {/* Main Chat Area - reduce vertical padding to gain more space */}
+        <div className="container mx-auto px-4 py-2 flex-grow overflow-hidden max-w-screen-xl">
           <div className="flex gap-6 h-full">
             {/* Messages and Input Area */}
             <div className="w-3/4 flex flex-col h-full">
-              {/* Chat Messages - Flexible height with scrolling */}
-              <div className="bg-white rounded-lg border shadow-sm mb-4 flex-grow overflow-hidden">
+              {/* Chat Messages - reduce margin to gain vertical space */}
+              <div className="bg-white rounded-lg border shadow-sm mb-3 flex-grow overflow-hidden">
                 <div className="p-4 h-full overflow-y-auto">
                   <ChatMessages messages={messages} indicatorState={indicatorState} />
                 </div>
               </div>
               
-              {/* Chat Input - aligned with chat container */}
-              <div className="mb-8">
+              {/* Chat Input - reduce bottom margin */}
+              <div className="mb-2">
                 <ChatInput
                   handleInputChange={handleInputChange}
                   handleSubmit={handleSubmit}
@@ -156,12 +156,7 @@ export default function ChatWithContext() {
           </div>
         </div>
         
-        {/* Add ChatFooter here instead of inside the ChatInput component */}
-        <div className="mt-auto">
-          <div className="container mx-auto px-4 max-w-screen-xl">
-            <ChatFooter />
-          </div>
-        </div>
+        {/* Remove the footer section - it will be handled by LayoutWrapper */}
       </div>
     </LayoutWrapper>
   );

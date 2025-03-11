@@ -1,3 +1,4 @@
+// app/layout-wrapper.tsx
 "use client";
 
 import React from 'react';
@@ -8,32 +9,22 @@ interface LayoutWrapperProps {
   children: React.ReactNode;
 }
 
-// app/layout-wrapper.tsx
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="pt-16 flex-grow overflow-auto">
+      <main className="pt-16 flex-grow">
         {children}
       </main>
-      <footer className="bg-gray-50 border-t py-6">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center max-w-screen-xl mx-auto">
-            <div className="mb-4 md:mb-0">
-              <p className="text-sm text-gray-500">
-                © {new Date().getFullYear()} Loan Document Management System
-              </p>
+      <footer className="bg-gray-50 border-t py-4">
+        <div className="container mx-auto px-4 max-w-screen-xl">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="mb-2 md:mb-0">
+              <Link href="/terms" className="text-sm text-gray-500 hover:text-gray-700">
+                Terms of Service
+              </Link>
             </div>
             <div className="flex space-x-6">
-              <Link href="/documents" className="text-sm text-gray-500 hover:text-gray-700">
-                Documents
-              </Link>
-              <Link href="/upload" className="text-sm text-gray-500 hover:text-gray-700">
-                Upload
-              </Link>
-              <Link href="/chat" className="text-sm text-gray-500 hover:text-gray-700">
-                Chat Assistant
-              </Link>
               <a 
                 href="http://www.ringel.ai" 
                 target="_blank" 
