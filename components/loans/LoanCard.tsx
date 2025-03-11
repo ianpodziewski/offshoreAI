@@ -2,7 +2,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, Home, Calendar, DollarSign, Percent } from 'lucide-react';
+import { ArrowRight, Home, DollarSign } from 'lucide-react';
 import { LoanData } from '@/utilities/loanGenerator';
 
 interface LoanCardProps {
@@ -43,8 +43,8 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
       {/* Card Header with Loan Number and Status */}
       <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
         <div className="flex items-center">
-          <div className="bg-blue-50 rounded-full p-1.5 mr-2">
-            <DollarSign size={16} className="text-blue-600" />
+          <div className="text-blue-600 mr-2">
+            <DollarSign size={16} />
           </div>
           <h3 className="font-medium">Loan #{loan.id.substring(0, 8)}</h3>
         </div>
@@ -53,56 +53,23 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
         </span>
       </div>
 
-      {/* Borrower Name */}
+      {/* Property Address */}
       <div className="p-4 border-b">
-        <h2 className="text-xl font-bold">{loan.borrowerName}</h2>
-      </div>
-
-      {/* Loan Details */}
-      <div className="p-4 space-y-3">
-        <div className="flex items-start space-x-2">
-          <Home size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
+        <div className="flex items-start">
+          <Home size={16} className="text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
           <div>
             <p className="text-xs text-gray-500 font-medium">Property Address</p>
             <p className="text-sm">{loan.propertyAddress}</p>
           </div>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="flex items-start space-x-2">
-            <DollarSign size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Loan Amount</p>
-              <p className="text-sm font-medium">${loan.loanAmount.toLocaleString()}</p>
-            </div>
-          </div>
-
-          <div className="flex items-start space-x-2">
-            <Percent size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Interest Rate</p>
-              <p className="text-sm font-medium">{loan.interestRate}%</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-start space-x-2">
-          <Calendar size={16} className="text-gray-500 mt-0.5 flex-shrink-0" />
-          <div className="flex items-center justify-between w-full">
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Date Created</p>
-              <p className="text-sm">{new Date(loan.dateCreated).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 font-medium">Loan Type</p>
-              <p className="text-sm font-medium">{loan.loanType.toUpperCase()}</p>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Card Footer with View Details Link */}
-      <div className="p-4 border-t bg-gray-50 flex justify-end">
+      {/* Card Footer with Loan Type and View Details Link */}
+      <div className="p-4 flex justify-between items-center">
+        <div>
+          <p className="text-xs text-gray-500 font-medium">Loan Type</p>
+          <p className="text-sm font-medium">{loan.loanType.toUpperCase()}</p>
+        </div>
         <Link 
           href={`/loans/${loan.id}`}
           className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
