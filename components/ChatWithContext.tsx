@@ -10,7 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { FileText, Eye, ExternalLink, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
-import LayoutWrapper from './layout-wrapper';
+import LayoutWrapper from '@/app/layout-wrapper';
 
 export default function ChatWithContext() {
   const {
