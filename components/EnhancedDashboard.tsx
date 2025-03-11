@@ -357,14 +357,7 @@ export default function EnhancedDashboard() {
           </div>
           {/* Make the background dark so edges of the map blend in */}
           <CardContent className="h-96 bg-gray-900 relative">
-            {loans.length > 0 ? (
-              <LoanMap loans={loans} />
-            ) : (
-              <div className="h-full flex flex-col justify-center items-center">
-                <Map size={48} className="text-gray-500 mb-4" />
-                <p className="text-gray-400 text-center">No property data available</p>
-              </div>
-            )}
+              <LoanMap />
           </CardContent>
         </Card>
       </div>
