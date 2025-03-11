@@ -1,3 +1,4 @@
+// components/chat/header.tsx
 import { Button } from "@/components/ui/button";
 import { EraserIcon } from "lucide-react";
 import Image from "next/image";
@@ -17,14 +18,13 @@ export default function ChatHeader({
   clearMessages: () => void;
 }) {
   return (
-    <div className="flex justify-center items-center w-full p-4 bg-white border-b">
-      <div className="flex w-full max-w-4xl">
-        <div className="flex-0 w-[100px]"></div>
-        <div className="flex-1 flex justify-center items-center gap-2">
-          <AILogo />
-          <p className="font-medium">{CHAT_HEADER}</p>
-        </div>
-        <div className="flex-0 w-[100px] flex justify-end items-center">
+    <div className="border-b bg-white">
+      <div className="container mx-auto max-w-screen-xl">
+        <div className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-2">
+            <AILogo />
+            <p className="font-medium">{CHAT_HEADER}</p>
+          </div>
           <Button
             onClick={clearMessages}
             className="gap-2 shadow-sm"
