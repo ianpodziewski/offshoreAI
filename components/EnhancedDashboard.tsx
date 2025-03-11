@@ -380,68 +380,6 @@ export default function EnhancedDashboard() {
             </CardContent>
           </Card>
         </div>
-        
-        {/* Recent Loan Applications Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Recent Loan Applications</h2>
-            <Link href="/loans" className="text-blue-600 hover:text-blue-800 text-sm">
-              View All →
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {loans.slice(0, 3).map((loan) => (
-              <Card key={loan.id} className="overflow-hidden hover:shadow-md transition-shadow duration-200">
-                {/* Card Header with Loan Number and Status */}
-                <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
-                  <div className="flex items-center">
-                    <div className="text-blue-600 mr-2">
-                      <DollarSign size={16} />
-                    </div>
-                    <h3 className="font-medium">{loan.borrowerName}</h3>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    loan.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    loan.status === 'in_review' ? 'bg-yellow-100 text-yellow-800' :
-                    loan.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                    loan.status === 'funded' ? 'bg-blue-100 text-blue-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {loan.status ? loan.status.charAt(0).toUpperCase() + loan.status.slice(1).replace('_', ' ') : 'Pending'}
-                  </span>
-                </div>
-  
-                {/* Card Content */}
-                <div className="p-4">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">Loan Amount</p>
-                      <p className="font-medium">{formatCurrency(loan.loanAmount || 0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium">Loan Type</p>
-                      <p className="font-medium">{formatLoanType(loan.loanType || '')}</p>
-                    </div>
-                    <div className="col-span-2 mt-2">
-                      <p className="text-xs text-gray-500 font-medium">Property</p>
-                      <p className="text-sm truncate">{loan.propertyAddress}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 flex justify-end">
-                    <Link 
-                      href={`/loans/${loan.id}`}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                    >
-                      View Details →
-                    </Link>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
       </div>
     </LayoutWrapper>
   );
