@@ -37,7 +37,7 @@ export default function LoansPage() {
   };
   
   const createNewLoan = () => {
-    loanDatabase.addLoan(loanDatabase.generateLoan());
+    const newLoan = loanDatabase.addLoan({});
     fetchLoans();
   };
   

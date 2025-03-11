@@ -7,7 +7,7 @@ const DEFAULT_LOAN_COUNT = 10;
 
 export const loanDatabase = {
   generateLoan,
-    // Initialize the database with some sample loans
+  // Initialize the database with some sample loans
   initialize: () => {
     if (!localStorage.getItem(STORAGE_KEY)) {
       const initialLoans = generateLoans(DEFAULT_LOAN_COUNT);
@@ -35,15 +35,16 @@ export const loanDatabase = {
   },
   
   // Add a new loan
-  addLoan: (loan: LoanData): LoanData => {
+  addLoan: (loanData: Partial<LoanData>): LoanData => {
+    const newLoan = generateLoan(loanData);
     const loans = loanDatabase.getLoans();
-    loans.push(loan);
+    loans.push(newLoan);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
 
     // Generate documents for the new loan
-    documentService.generateDocumentsForLoan(loan);
+    documentService.generateDocumentsForLoan(newLoan);
 
-    return loan;
+    return newLoan;
   },
   
   // Update an existing loan
@@ -53,7 +54,11 @@ export const loanDatabase = {
     
     if (index === -1) return null;
     
-    loans[index] = { ...loans[index], ...updates, dateModified: new Date().toISOString() };
+    loans[index] = { 
+      ...loans[index], 
+      ...updates, 
+      dateModified: new Date().toISOString() 
+    };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
     return loans[index];
   },
@@ -73,6 +78,12 @@ export const loanDatabase = {
   reset: (count = DEFAULT_LOAN_COUNT) => {
     const initialLoans = generateLoans(count);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initialLoans));
+    
+    // Generate documents for each loan
+    initialLoans.forEach(loan => {
+      documentService.generateDocumentsForLoan(loan);
+    });
+    
     return initialLoans;
   }
 };
