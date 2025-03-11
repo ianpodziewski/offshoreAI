@@ -5,27 +5,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+// You need to create this file if it doesn't exist
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import LayoutWrapper from "../layout-wrapper";
 import SimpleDocumentUploader from "@/components/document/SimpleDocumentUploader";
 import { LoanType, PropertyType, ExitStrategy } from "@/utilities/loanGenerator";
 import { loanDatabase } from "@/utilities/loanDatabase";
 import { useRouter } from "next/navigation";
-
-// Create a shared set of Tailwind classes for <select> elements
-const darkSelectClasses = `
-  w-full h-10
-  px-3 py-2
-  rounded-md
-  bg-gray-800
-  text-gray-200
-  placeholder-gray-400
-  border border-gray-700
-  focus:outline-none
-  focus:ring-2
-  focus:ring-blue-500
-  focus:ring-offset-2
-  focus:ring-offset-gray-900
-`;
 
 export default function NewLoanPage() {
   const router = useRouter();
@@ -123,45 +110,45 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="borrowerExperience">Borrower Experience</Label>
-                      <select
-                        id="borrowerExperience"
-                        name="borrowerExperience"
-                        value={loanData.borrowerExperience}
-                        onChange={handleInputChange}
-                        className={darkSelectClasses}
+                      <Select 
+                        value={loanData.borrowerExperience} 
+                        onValueChange={(value: string) => 
+                          setLoanData((prev) => ({ ...prev, borrowerExperience: value }))
+                        }
                       >
-                        <option value="Beginner (0-1 projects)">
-                          Beginner (0-1 projects)
-                        </option>
-                        <option value="Intermediate (2-5 projects)">
-                          Intermediate (2-5 projects)
-                        </option>
-                        <option value="Experienced (6-10 projects)">
-                          Experienced (6-10 projects)
-                        </option>
-                        <option value="Expert (10+ projects)">
-                          Expert (10+ projects)
-                        </option>
-                      </select>
+                        <SelectTrigger id="borrowerExperience" className="w-full">
+                          <SelectValue placeholder="Select experience" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Beginner (0-1 projects)">Beginner (0-1 projects)</SelectItem>
+                          <SelectItem value="Intermediate (2-5 projects)">Intermediate (2-5 projects)</SelectItem>
+                          <SelectItem value="Experienced (6-10 projects)">Experienced (6-10 projects)</SelectItem>
+                          <SelectItem value="Expert (10+ projects)">Expert (10+ projects)</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div>
                       <Label htmlFor="loanType">Loan Type</Label>
-                      <select
-                        id="loanType"
-                        name="loanType"
-                        value={loanData.loanType}
-                        onChange={handleInputChange}
-                        className={darkSelectClasses}
+                      <Select 
+                        value={loanData.loanType} 
+                        onValueChange={(value: string) => 
+                          setLoanData((prev) => ({ ...prev, loanType: value as LoanType }))
+                        }
                       >
-                        <option value="fix_and_flip">Fix and Flip</option>
-                        <option value="bridge">Bridge Loan</option>
-                        <option value="construction">Construction</option>
-                        <option value="rehab">Rehab</option>
-                        <option value="rental">Rental</option>
-                        <option value="commercial">Commercial</option>
-                        <option value="land">Land</option>
-                      </select>
+                        <SelectTrigger id="loanType" className="w-full">
+                          <SelectValue placeholder="Select loan type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="fix_and_flip">Fix and Flip</SelectItem>
+                          <SelectItem value="bridge">Bridge Loan</SelectItem>
+                          <SelectItem value="construction">Construction</SelectItem>
+                          <SelectItem value="rehab">Rehab</SelectItem>
+                          <SelectItem value="rental">Rental</SelectItem>
+                          <SelectItem value="commercial">Commercial</SelectItem>
+                          <SelectItem value="land">Land</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -211,22 +198,26 @@ export default function NewLoanPage() {
 
                     <div>
                       <Label htmlFor="propertyType">Property Type</Label>
-                      <select
-                        id="propertyType"
-                        name="propertyType"
-                        value={loanData.propertyType}
-                        onChange={handleInputChange}
-                        className={darkSelectClasses}
+                      <Select 
+                        value={loanData.propertyType} 
+                        onValueChange={(value: string) => 
+                          setLoanData((prev) => ({ ...prev, propertyType: value as PropertyType }))
+                        }
                       >
-                        <option value="single_family">Single Family</option>
-                        <option value="multi_family">Multi-Family</option>
-                        <option value="condo">Condo</option>
-                        <option value="townhouse">Townhouse</option>
-                        <option value="commercial">Commercial</option>
-                        <option value="mixed_use">Mixed Use</option>
-                        <option value="land">Land</option>
-                        <option value="industrial">Industrial</option>
-                      </select>
+                        <SelectTrigger id="propertyType" className="w-full">
+                          <SelectValue placeholder="Select property type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="single_family">Single Family</SelectItem>
+                          <SelectItem value="multi_family">Multi-Family</SelectItem>
+                          <SelectItem value="condo">Condo</SelectItem>
+                          <SelectItem value="townhouse">Townhouse</SelectItem>
+                          <SelectItem value="commercial">Commercial</SelectItem>
+                          <SelectItem value="mixed_use">Mixed Use</SelectItem>
+                          <SelectItem value="land">Land</SelectItem>
+                          <SelectItem value="industrial">Industrial</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -274,19 +265,23 @@ export default function NewLoanPage() {
 
                     <div>
                       <Label htmlFor="exitStrategy">Exit Strategy</Label>
-                      <select
-                        id="exitStrategy"
-                        name="exitStrategy"
-                        value={loanData.exitStrategy}
-                        onChange={handleInputChange}
-                        className={darkSelectClasses}
+                      <Select 
+                        value={loanData.exitStrategy} 
+                        onValueChange={(value: string) => 
+                          setLoanData((prev) => ({ ...prev, exitStrategy: value as ExitStrategy }))
+                        }
                       >
-                        <option value="sale">Sale</option>
-                        <option value="refinance">Refinance</option>
-                        <option value="rental">Rental</option>
-                        <option value="development">Development</option>
-                        <option value="other">Other</option>
-                      </select>
+                        <SelectTrigger id="exitStrategy" className="w-full">
+                          <SelectValue placeholder="Select exit strategy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sale">Sale</SelectItem>
+                          <SelectItem value="refinance">Refinance</SelectItem>
+                          <SelectItem value="rental">Rental</SelectItem>
+                          <SelectItem value="development">Development</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
