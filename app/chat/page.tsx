@@ -109,14 +109,15 @@ export default function ChatWithContext() {
             
             {/* Chat Container - FIXED LAYOUT */}
             <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border shadow overflow-hidden">
-              {/* Messages container - explicitly set to take remaining space but allow scrolling */}
-              <div className="flex-1 min-h-0">
+              {/* Messages container - make sure it fills available space */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {/* Pass messages directly to ChatContainer */}
                 <ChatContainer messages={messages}>
                   <ChatMessages messages={messages} indicatorState={indicatorState} />
                 </ChatContainer>
               </div>
               
-              {/* Input area - explicitly set not to shrink */}
+              {/* Input area - fixed at bottom */}
               <div className="flex-shrink-0 p-3 border-t bg-white">
                 <ChatInput
                   handleInputChange={handleInputChange}
