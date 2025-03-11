@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { documentService } from '@/utilities/documentService';
 import { LoanData } from '@/utilities/loanGenerator';
+import StateMap from '@/components/StateMap';
 import { 
   BarChart2, 
   DollarSign, 
@@ -356,12 +357,15 @@ export default function EnhancedDashboard() {
                 Property Locations
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-96 flex flex-col justify-center items-center bg-gray-50">
-              <Map size={48} className="text-gray-300 mb-4" />
-              <p className="text-gray-500 text-center">
-                Interactive property map visualization<br />
-                <span className="text-sm">(Coming soon)</span>
-              </p>
+            <CardContent className="h-96 bg-white">
+              {loans.length > 0 ? (
+                <StateMap loans={loans} />
+              ) : (
+                <div className="h-full flex flex-col justify-center items-center bg-gray-50">
+                  <Map size={48} className="text-gray-300 mb-4" />
+                  <p className="text-gray-500 text-center">No property data available</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
