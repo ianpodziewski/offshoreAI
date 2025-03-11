@@ -1,8 +1,8 @@
 // components/document/SimpleDocumentViewer.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
 import { Button } from '@/components/ui/button';
-import { Check, X, ArrowLeft } from 'lucide-react';
+import { Check, X, ArrowLeft, Download, ExternalLink } from 'lucide-react';
 
 interface SimpleDocumentViewerProps {
   document: SimpleDocument;
@@ -17,6 +17,27 @@ export default function SimpleDocumentViewer({
 }: SimpleDocumentViewerProps) {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState(document.notes || '');
+  const [pdfDataUrl, setPdfDataUrl] = useState<string>('');
+  
+  // Process the PDF data URL when the component mounts
+  useEffect(() => {
+    try {
+      // Ensure content has the proper data URL format
+      if (document.content) {
+        // If it's already a proper data URL, use it
+        if (document.content.startsWith('data:application/pdf')) {
+          setPdfDataUrl(document.content);
+        } 
+        // If it's a base64 string without the prefix
+        else {
+          const formattedContent = `data:application/pdf;base64,${document.content.replace(/^data:.*?;base64,/, '')}`;
+          setPdfDataUrl(formattedContent);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing PDF data:', error);
+    }
+  }, [document.content]);
   
   // Handle status update
   const updateStatus = async (status: 'pending' | 'approved' | 'rejected') => {
@@ -40,23 +61,42 @@ export default function SimpleDocumentViewer({
     }
   };
   
-  // Function to safely display PDF content
-  const getDocumentSrc = () => {
-    // Check if content is already a data URL
-    if (document.content && document.content.startsWith('data:')) {
-      return document.content;
-    }
-    
-    // If it's not a data URL but we have content, try to convert it
-    if (document.content) {
-      // Check if it needs a prefix
-      if (!document.content.startsWith('data:application/pdf')) {
-        return `data:application/pdf;base64,${document.content.replace(/^data:.*?;base64,/, '')}`;
+  // Open PDF in a new tab
+  const openPdfInNewTab = () => {
+    if (pdfDataUrl) {
+      const newWindow = window.open();
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>${document.filename}</title>
+            </head>
+            <body style="margin: 0; padding: 0; overflow: hidden; height: 100vh;">
+              <embed 
+                src="${pdfDataUrl}" 
+                type="application/pdf" 
+                width="100%" 
+                height="100%"
+                style="border: none;"
+              />
+            </body>
+          </html>
+        `);
       }
     }
-    
-    // Fallback to a placeholder if we can't display the content
-    return '';
+  };
+  
+  // Download the PDF
+  const downloadPdf = () => {
+    if (pdfDataUrl) {
+      // Use window.document to access the global document object
+      const a = window.document.createElement('a');
+      a.href = pdfDataUrl;
+      a.download = document.filename;
+      window.document.body.appendChild(a);
+      a.click();
+      window.document.body.removeChild(a);
+    }
   };
   
   return (
@@ -92,26 +132,41 @@ export default function SimpleDocumentViewer({
         <div className="flex flex-col md:flex-row h-full">
           {/* Document Preview */}
           <div className="flex-grow overflow-auto p-4 border-r">
-            {document?.content ? (
-              <div className="w-full h-full flex items-center justify-center">
-                {/* Use object tag instead of iframe for better PDF rendering */}
-                <object 
-                  data={getDocumentSrc()}
-                  type="application/pdf"
-                  className="w-full h-[600px]"
-                >
-                  <div className="flex flex-col items-center justify-center h-full bg-gray-100 rounded p-4">
-                    <p className="text-gray-500 mb-2">Unable to display PDF directly.</p>
-                    <a 
-                      href={getDocumentSrc()} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-                    >
-                      Open PDF in New Tab
-                    </a>
+            {pdfDataUrl ? (
+              <div className="w-full h-full flex flex-col">
+                <div className="mb-4 flex justify-end gap-2">
+                  <Button onClick={openPdfInNewTab} variant="outline" size="sm">
+                    <ExternalLink size={16} className="mr-1" />
+                    Open in New Tab
+                  </Button>
+                  <Button onClick={downloadPdf} variant="outline" size="sm">
+                    <Download size={16} className="mr-1" />
+                    Download
+                  </Button>
+                </div>
+                
+                <div className="flex-grow">
+                  <embed 
+                    src={pdfDataUrl}
+                    type="application/pdf"
+                    className="w-full h-[600px] border rounded"
+                  />
+                </div>
+                
+                {/* Fallback for browsers that don't support embed */}
+                <div className="mt-4 p-4 bg-gray-100 rounded text-center">
+                  <p className="text-gray-600 mb-2">If the document is not visible above, you can:</p>
+                  <div className="flex justify-center gap-3">
+                    <Button onClick={openPdfInNewTab} variant="default" size="sm">
+                      <ExternalLink size={16} className="mr-1" />
+                      Open in New Tab
+                    </Button>
+                    <Button onClick={downloadPdf} variant="default" size="sm">
+                      <Download size={16} className="mr-1" />
+                      Download PDF
+                    </Button>
                   </div>
-                </object>
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
