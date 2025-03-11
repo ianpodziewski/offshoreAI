@@ -19,9 +19,6 @@ import LayoutWrapper from '@/app/layout-wrapper';
 import Link from 'next/link';
 import { 
   ResponsiveContainer, 
-  PieChart as RechartPieChart, 
-  Pie, 
-  Cell, 
   LineChart, 
   Line,
   XAxis,
@@ -30,7 +27,8 @@ import {
   Tooltip,
   Legend,
   BarChart,
-  Bar
+  Bar,
+  Cell
 } from 'recharts';
 
 // Custom type for loan status counts
@@ -41,13 +39,6 @@ interface LoanStatusCounts {
   funded: number;
   closed: number;
   [key: string]: number;
-}
-
-// Custom type for loan type distribution
-interface LoanTypeDistribution {
-  name: string;
-  value: number;
-  color: string;
 }
 
 export default function EnhancedDashboard() {
@@ -65,11 +56,7 @@ export default function EnhancedDashboard() {
     funded: 0,
     closed: 0
   });
-  const [loanTypeDistribution, setLoanTypeDistribution] = useState<LoanTypeDistribution[]>([]);
   const [monthlyLoanData, setMonthlyLoanData] = useState<any[]>([]);
-  
-  // Colors for charts
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
   
   // Fetch loan data
   useEffect(() => {
@@ -121,22 +108,6 @@ export default function EnhancedDashboard() {
     });
     
     setLoanStatusCounts(statusCounts);
-    
-    // Calculate loan type distribution
-    const typeDistribution: Record<string, number> = {};
-    
-    loanData.forEach(loan => {
-      const type = loan.loanType || 'other';
-      typeDistribution[type] = (typeDistribution[type] || 0) + 1;
-    });
-    
-    const typeDistributionData: LoanTypeDistribution[] = Object.keys(typeDistribution).map((type, index) => ({
-      name: formatLoanType(type),
-      value: typeDistribution[type],
-      color: COLORS[index % COLORS.length]
-    }));
-    
-    setLoanTypeDistribution(typeDistributionData);
     
     // Calculate monthly loan origination data
     calculateMonthlyData(loanData);
@@ -276,36 +247,52 @@ export default function EnhancedDashboard() {
           </Card>
         </div>
         
-        {/* Visualizations Row 1 */}
+        {/* Visualizations Row 1 - Side by Side Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Loan Type Distribution Chart */}
+          {/* Loan Status Pipeline */}
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
-                <PieChart className="h-5 w-5 mr-2 text-blue-600" />
-                Loan Type Distribution
+                <BarChart2 className="h-5 w-5 mr-2 text-blue-600" />
+                Loan Status Pipeline
               </CardTitle>
             </CardHeader>
             <CardContent className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <RechartPieChart>
-                  <Pie
+                <BarChart
+                  layout="vertical"
+                  data={[
+                    { name: 'In Review', value: loanStatusCounts.in_review || 0, fill: '#FFB347' },
+                    { name: 'Approved', value: loanStatusCounts.approved || 0, fill: '#77DD77' },
+                    { name: 'Funded', value: loanStatusCounts.funded || 0, fill: '#59A5D8' },
+                    { name: 'Closed', value: loanStatusCounts.closed || 0, fill: '#B19CD9' },
+                    { name: 'Rejected', value: loanStatusCounts.rejected || 0, fill: '#FF6961' }
+                  ]}
+                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    tick={{ fontSize: 14 }} 
+                  />
+                  <Tooltip formatter={(value) => [`${value} loans`]} />
+                  <Bar 
                     dataKey="value"
-                    isAnimationActive={true}
-                    data={loanTypeDistribution}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    fill="#8884d8"
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    radius={[0, 4, 4, 0]}
                   >
-                    {loanTypeDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {[
+                      { name: 'In Review', fill: '#FFB347' },
+                      { name: 'Approved', fill: '#77DD77' },
+                      { name: 'Funded', fill: '#59A5D8' },
+                      { name: 'Closed', fill: '#B19CD9' },
+                      { name: 'Rejected', fill: '#FF6961' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => [`${value} loans`, 'Count']} />
-                  <Legend />
-                </RechartPieChart>
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
@@ -314,7 +301,7 @@ export default function EnhancedDashboard() {
           <Card className="lg:col-span-1">
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
-                <BarChart2 className="h-5 w-5 mr-2 text-blue-600" />
+                <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
                 Monthly Loan Origination
               </CardTitle>
             </CardHeader>
@@ -360,65 +347,16 @@ export default function EnhancedDashboard() {
           </Card>
         </div>
         
-        {/* Visualizations Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Loan Status Pipeline */}
-          <Card className="lg:col-span-1">
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg">
-                <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
-                Loan Status Pipeline
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={[
-                    { name: 'In Review', value: loanStatusCounts.in_review || 0, fill: '#FFB347' },
-                    { name: 'Approved', value: loanStatusCounts.approved || 0, fill: '#77DD77' },
-                    { name: 'Funded', value: loanStatusCounts.funded || 0, fill: '#59A5D8' },
-                    { name: 'Closed', value: loanStatusCounts.closed || 0, fill: '#B19CD9' },
-                    { name: 'Rejected', value: loanStatusCounts.rejected || 0, fill: '#FF6961' }
-                  ]}
-                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    tick={{ fontSize: 14 }} 
-                  />
-                  <Tooltip formatter={(value) => [`${value} loans`]} />
-                  <Bar 
-                    dataKey="value"
-                    radius={[0, 4, 4, 0]}
-                  >
-                    {[
-                      { name: 'In Review', fill: '#FFB347' },
-                      { name: 'Approved', fill: '#77DD77' },
-                      { name: 'Funded', fill: '#59A5D8' },
-                      { name: 'Closed', fill: '#B19CD9' },
-                      { name: 'Rejected', fill: '#FF6961' }
-                    ].map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-          
-          {/* Property Map Placeholder */}
-          <Card className="lg:col-span-1">
+        {/* Property Map - Full Width */}
+        <div className="mb-8">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center text-lg">
                 <Map className="h-5 w-5 mr-2 text-blue-600" />
                 Property Locations
               </CardTitle>
             </CardHeader>
-            <CardContent className="h-80 flex flex-col justify-center items-center bg-gray-50">
+            <CardContent className="h-96 flex flex-col justify-center items-center bg-gray-50">
               <Map size={48} className="text-gray-300 mb-4" />
               <p className="text-gray-500 text-center">
                 Interactive property map visualization<br />
