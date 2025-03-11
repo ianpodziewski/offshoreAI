@@ -82,7 +82,7 @@ export const simpleDocumentService = {
   },
   
   // Add a new document
-  addDocument: async (file: File, loanId: string): Promise<SimpleDocument | null> => {
+  addDocument: async (file: File, loanId: string, classification?: { docType: string; category: 'loan' | 'legal' | 'financial' | 'misc' }): Promise<SimpleDocument | null> => {
     try {
       // Read file as base64
       const content = await readFileAsBase64(file);
@@ -94,12 +94,18 @@ export const simpleDocumentService = {
         formattedContent = `data:application/pdf;base64,${content.replace(/^data:.*?;base64,/, '')}`;
       }
       
-      // Classify document
-      const { docType, category } = classifyDocument(file.name);
+      // Use provided classification or classify automatically
+      const { docType, category } = classification || classifyDocument(file.name);
+      
+      // Before creating a new document, check if one already exists for this docType
+      const allDocs = simpleDocumentService.getAllDocuments();
+      const existingDocIndex = allDocs.findIndex(
+        doc => doc.loanId === loanId && doc.docType === docType
+      );
       
       // Create new document object
       const newDoc: SimpleDocument = {
-        id: uuidv4(),
+        id: existingDocIndex >= 0 ? allDocs[existingDocIndex].id : uuidv4(),
         loanId,
         filename: file.name,
         fileType: file.type,
@@ -111,9 +117,13 @@ export const simpleDocumentService = {
         content: formattedContent
       };
       
-      // Add to storage
-      const allDocs = simpleDocumentService.getAllDocuments();
-      allDocs.push(newDoc);
+      // Replace existing document or add new one
+      if (existingDocIndex >= 0) {
+        allDocs[existingDocIndex] = newDoc;
+      } else {
+        allDocs.push(newDoc);
+      }
+      
       localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
       
       return newDoc;
