@@ -1,86 +1,93 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { LoanData } from "@/utilities/loanGenerator";
 import "leaflet/dist/leaflet.css";
 
+// Lazily import Leaflet and react-leaflet
 const importLeaflet = () => import("leaflet");
 const importReactLeaflet = () => import("react-leaflet");
 
-const LoanMap: React.FC<{ loans: LoanData[] }> = ({ loans }) => {
+const LoanMap: React.FC = () => {
   const [MapContainer, setMapContainer] = useState<any>(null);
   const [TileLayer, setTileLayer] = useState<any>(null);
-  const [Marker, setMarker] = useState<any>(null);
-  const [Popup, setPopup] = useState<any>(null);
-  const [icon, setIcon] = useState<any>(null);
+  const [GeoJSON, setGeoJSON] = useState<any>(null);
+
   const [isClient, setIsClient] = useState(false);
+
+  // Sample data for a US states geojson file
+  // If you have your own dataset, you can fetch it or store it in localStorage.
+  const [usStatesData, setUsStatesData] = useState<any>(null);
 
   useEffect(() => {
     setIsClient(true);
-
-    Promise.all([
-      importLeaflet(),
-      importReactLeaflet()
-    ]).then(([L, ReactLeaflet]) => {
-      const DefaultIcon = L.icon({
-        iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-        iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-      });
-
-      setMapContainer(() => ReactLeaflet.MapContainer);
-      setTileLayer(() => ReactLeaflet.TileLayer);
-      setMarker(() => ReactLeaflet.Marker);
-      setPopup(() => ReactLeaflet.Popup);
-      setIcon(() => DefaultIcon);
-    })
-    .catch(error => console.error("Failed to load Leaflet:", error));
+    // Load Leaflet & React-Leaflet modules
+    Promise.all([importLeaflet(), importReactLeaflet()])
+      .then(([L, RL]) => {
+        setMapContainer(() => RL.MapContainer);
+        setTileLayer(() => RL.TileLayer);
+        setGeoJSON(() => RL.GeoJSON);
+      })
+      .catch((error) => console.error("Failed to load Leaflet:", error));
   }, []);
 
-  const geocodeAddress = (address: string): [number, number] | null => {
-    const defaultCoordinates: Record<string, [number, number]> = {
-      CA: [36.7783, -119.4179],
-      TX: [31.1060, -97.6475],
-      NY: [40.7128, -74.0060],
-      FL: [27.6648, -81.5158],
-      IL: [40.0797, -89.4337]
+  // Example: fetch a US states GeoJSON file
+  // (Replace this path or load from localStorage if desired.)
+  useEffect(() => {
+    fetch("/path/to/us-states.geojson")
+      .then((res) => res.json())
+      .then((data) => setUsStatesData(data))
+      .catch((err) => console.error("Failed to load geojson:", err));
+  }, []);
+
+  // Choropleth color function - different shades of blue
+  // Adjust thresholds & colors as needed
+  const getColor = (value: number) => {
+    return value > 1000
+      ? "#08306b"
+      : value > 500
+      ? "#08519c"
+      : value > 200
+      ? "#2171b5"
+      : value > 100
+      ? "#4292c6"
+      : value > 50
+      ? "#6baed6"
+      : value > 20
+      ? "#9ecae1"
+      : value > 10
+      ? "#c6dbef"
+      : "#deebf7";
+  };
+
+  // Leaflet style callback for each feature in the geojson
+  // Suppose each state has a "density" property
+  const styleFeature = (feature: any) => {
+    const density = feature.properties?.density || 0;
+    return {
+      fillColor: getColor(density),
+      fillOpacity: 0.7,
+      color: "#222", // Outline color
+      weight: 1,     // Outline thickness
+      dashArray: "3" // Dotted outline
     };
+  };
 
-    const stateMatch = address.match(/,\s*([A-Z]{2})\b/);
-    if (stateMatch) {
-      return defaultCoordinates[stateMatch[1]] || null;
+  // Optional: onEachFeature to bind popups or event handlers
+  const onEachFeature = (feature: any, layer: any) => {
+    if (feature.properties) {
+      layer.bindPopup(
+        `<div style="color: #fff; background: #333; padding: 5px; border-radius: 3px;">
+           <strong>${feature.properties.name}</strong><br/>
+           Density: ${feature.properties.density ?? "N/A"}
+         </div>`
+      );
     }
-    return null;
   };
 
-  const processMarkers = () => {
-    return loans.reduce((acc, loan) => {
-      if (!loan.propertyAddress) return acc;
-      const coordinates = geocodeAddress(loan.propertyAddress);
-      if (coordinates) {
-        acc.push({ coordinates, loan });
-      }
-      return acc;
-    }, [] as { coordinates: [number, number]; loan: LoanData }[]);
-  };
-
-  if (!isClient || !MapContainer || !TileLayer || !Marker || !Popup) {
+  if (!isClient || !MapContainer || !TileLayer || !GeoJSON) {
     return (
       <div className="h-full flex items-center justify-center text-gray-500">
         Loading map...
-      </div>
-    );
-  }
-
-  const mapMarkers = processMarkers();
-  if (mapMarkers.length === 0) {
-    return (
-      <div className="h-full flex items-center justify-center text-gray-500">
-        No geocodable loan locations found
       </div>
     );
   }
@@ -96,29 +103,17 @@ const LoanMap: React.FC<{ loans: LoanData[] }> = ({ loans }) => {
         {/* Dark-themed tile layer */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-          // <-- changed
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
 
-        {mapMarkers.map((marker, index) => (
-          <Marker
-            key={index}
-            position={marker.coordinates}
-            icon={icon}
-          >
-            <Popup>
-              {/* Dark popup styling */}
-              <div className="bg-gray-800 text-white p-2 rounded">
-                <h3 className="font-bold">
-                  {marker.loan.borrowerName}
-                </h3>
-                <p>Property Type: {marker.loan.propertyType}</p>
-                <p>Loan Amount: ${marker.loan.loanAmount?.toLocaleString()}</p>
-                <p>Address: {marker.loan.propertyAddress}</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* The choropleth layer (only if usStatesData is loaded) */}
+        {usStatesData && (
+          <GeoJSON
+            data={usStatesData}
+            style={styleFeature}
+            onEachFeature={onEachFeature}
+          />
+        )}
       </MapContainer>
     </div>
   );
