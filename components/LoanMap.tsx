@@ -33,7 +33,7 @@ const LoanMap: React.FC = () => {
   // Example: fetch a US states GeoJSON file
   // (Replace this path or load from localStorage if desired.)
   useEffect(() => {
-    fetch("/path/to/us-states.geojson")
+    fetch("/us-states.geojson")
       .then((res) => res.json())
       .then((data) => setUsStatesData(data))
       .catch((err) => console.error("Failed to load geojson:", err));
