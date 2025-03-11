@@ -2,58 +2,61 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, MessageSquare, Upload, Home, BarChart2, DollarSign } from 'lucide-react';
+import { FileText, MessageSquare, BarChart2, DollarSign } from 'lucide-react';
 
-// Updated navigation items to include Loans
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: BarChart2 },
-  { href: '/loans', label: 'Loans', icon: DollarSign }, // New loans navigation item
+  { href: '/loans', label: 'Loans', icon: DollarSign },
   { href: '/new-loan', label: 'New Loan', icon: FileText },
   { href: '/chat', label: 'Chat Assistant', icon: MessageSquare },
 ];
 
 const Navbar: React.FC = () => {
   const pathname = usePathname();
-  
-  // Function to check if a nav item is active
+
+  // Determine if a navigation item is active
   const isActive = (path: string) => {
     if (path === '/') {
       return pathname === '/';
     }
     return pathname === path || pathname?.startsWith(path + '/');
   };
-  
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-40 bg-white border-b shadow-sm">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          <Link 
-            href="/" 
-            className="flex items-center gap-2"
-          >
-            <Home className="h-5 w-5 text-blue-600" />
-            <span className="text-lg font-semibold">Loan Document Manager</span>
-          </Link>
-          
-          <div className="flex items-center gap-6">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2 text-sm font-medium transition-colors ${
-                    isActive(item.href)
-                      ? "text-blue-600"
-                      : "text-gray-600 hover:text-blue-600"
-                  }`}
-                >
-                  <Icon size={18} />
-                  <span className="hidden md:inline">{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
+    <nav
+      className="
+        bg-gray-900 
+        text-white 
+        font-sans
+      "
+      style={{ fontFamily: 'Work Sans, sans-serif' }} // Use your font setup
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+        {/* Logo / Title */}
+        <div className="text-xl font-bold">
+          Loan Document Manager
+        </div>
+
+        {/* Navigation Links */}
+        <div className="flex space-x-4">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.href);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`
+                  flex items-center px-3 py-2 rounded-md text-sm font-medium 
+                  ${active ? 'bg-gray-800' : 'hover:bg-gray-700'}
+                `}
+              >
+                <Icon className="w-4 h-4 mr-2" />
+                {item.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
     </nav>
