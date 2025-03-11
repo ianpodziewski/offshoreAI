@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ChatInput from "@/components/chat/input";
 import ChatMessages from "@/components/chat/messages";
 import useApp from "@/hooks/use-app";
@@ -26,7 +26,7 @@ export default function ChatWithContext() {
   const [loadingDocs, setLoadingDocs] = useState(true);
   
   // Function to fetch recent documents
-  const fetchRecentDocuments = async () => {
+  const fetchRecentDocuments = useCallback(async () => {
     try {
       setLoadingDocs(true);
       const allDocs = simpleDocumentService.getAllDocuments();
@@ -40,12 +40,27 @@ export default function ChatWithContext() {
     } finally {
       setLoadingDocs(false);
     }
-  };
+  }, []);
+  
+  // Function to clear chat documents
+  const clearChatDocuments = useCallback(async () => {
+    try {
+      // Clear chat documents from the service
+      simpleDocumentService.clearChatDocuments();
+      
+      // Refresh the documents display
+      await fetchRecentDocuments();
+      
+      console.log("🧹 Chat documents cleared");
+    } catch (error) {
+      console.error('Error clearing chat documents:', error);
+    }
+  }, [fetchRecentDocuments]);
   
   // Initial fetch on component mount
   useEffect(() => {
     fetchRecentDocuments();
-  }, []);
+  }, [fetchRecentDocuments]);
   
   // Setup a refresh interval for documents
   useEffect(() => {
@@ -56,7 +71,7 @@ export default function ChatWithContext() {
     
     // Cleanup on unmount
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchRecentDocuments]);
   
   // Listen for messages changes to refresh documents after file uploads
   useEffect(() => {
@@ -68,7 +83,7 @@ export default function ChatWithContext() {
         fetchRecentDocuments();
       }, 1000);
     }
-  }, [messages]);
+  }, [messages, fetchRecentDocuments]);
 
   // Get appropriate link and icon for a document
   const getDocumentActionLink = (doc: any) => {
@@ -96,7 +111,10 @@ export default function ChatWithContext() {
           {/* Main chat area with bubble header */}
           <div className="w-3/4 flex flex-col">
             {/* Chat Header with bubble */}
-            <ChatHeader clearMessages={clearMessages} />
+            <ChatHeader 
+              clearMessages={clearMessages} 
+              clearChatDocuments={clearChatDocuments}
+            />
             
             {/* Chat Container */}
             <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border shadow">

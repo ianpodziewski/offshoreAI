@@ -12,11 +12,25 @@ export const AILogo = () => (
   </div>
 );
 
+interface ChatHeaderProps {
+  clearMessages: () => void;
+  clearChatDocuments?: () => void; // Add new prop
+}
+
 export default function ChatHeader({
   clearMessages,
-}: {
-  clearMessages: () => void;
-}) {
+  clearChatDocuments
+}: ChatHeaderProps) {
+  // Combined clear function that clears both messages and documents
+  const handleClearAll = () => {
+    clearMessages(); // Clear chat messages
+    
+    // If the function to clear documents exists, call it
+    if (clearChatDocuments) {
+      clearChatDocuments();
+    }
+  };
+
   return (
     <div className="mb-4">
       <div className="bg-gray-100 rounded-lg p-3 shadow-sm">
@@ -26,7 +40,7 @@ export default function ChatHeader({
             <p className="font-medium">Loan Underwriting Assistant</p>
           </div>
           <Button
-            onClick={clearMessages}
+            onClick={handleClearAll}
             className="gap-2"
             variant="outline"
             size="sm"

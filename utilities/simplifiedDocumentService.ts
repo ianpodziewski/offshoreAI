@@ -301,6 +301,23 @@ export const simpleDocumentService = {
     }
   },
   
+  // Clear only chat documents
+  clearChatDocuments: (): void => {
+    try {
+      const allDocs = simpleDocumentService.getAllDocuments();
+      // Keep all documents that are NOT chat documents
+      const nonChatDocs = allDocs.filter(doc => 
+        doc.category !== 'chat' && doc.loanId !== 'chat-uploads'
+      );
+      
+      // Save back only the non-chat documents
+      localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(nonChatDocs));
+      console.log("Chat documents cleared successfully");
+    } catch (error) {
+      console.error('Error clearing chat documents:', error);
+    }
+  },
+  
   // Clear all documents (for testing)
   clearAllDocuments: (): void => {
     localStorage.removeItem(DOCUMENTS_STORAGE_KEY);
