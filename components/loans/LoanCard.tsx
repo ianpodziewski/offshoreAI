@@ -1,4 +1,3 @@
-// components/loans/LoanCard.tsx
 import React from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
@@ -33,9 +32,20 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
         return 'bg-red-100 text-red-800';
       case 'closed':
         return 'bg-gray-100 text-gray-800';
+      case 'funded':
+        return 'bg-blue-100 text-blue-800';
+      case 'default':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-blue-100 text-blue-800';
     }
+  };
+
+  // Format loan type for display
+  const formatLoanType = (loanType: string) => {
+    return loanType.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
   };
 
   return (
@@ -64,19 +74,23 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
         </div>
       </div>
 
-      {/* Card Footer with Loan Type and View Details Link */}
+      {/* Card Footer with Loan Details */}
       <div className="p-4 flex justify-between items-center">
         <div>
           <p className="text-xs text-gray-500 font-medium">Loan Type</p>
-          <p className="text-sm font-medium">{loan.loanType.toUpperCase()}</p>
+          <p className="text-sm font-medium">{formatLoanType(loan.loanType)}</p>
         </div>
-        <Link 
-          href={`/loans/${loan.id}`}
-          className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
-        >
-          View Details
-          <ArrowRight size={14} />
-        </Link>
+        <div className="flex flex-col items-end">
+          <p className="text-xs text-gray-500 font-medium mb-1">Loan Amount</p>
+          <p className="text-sm font-medium mb-2">${loan.loanAmount.toLocaleString()}</p>
+          <Link 
+            href={`/loans/${loan.id}`}
+            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
+          >
+            View Details
+            <ArrowRight size={14} />
+          </Link>
+        </div>
       </div>
     </Card>
   );
