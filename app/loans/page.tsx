@@ -2,14 +2,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import Link from 'next/link';
-import { ArrowRight, Plus, RefreshCw } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import LayoutWrapper from '../layout-wrapper';
-import { LoanData } from '@/utilities/loanGenerator';
 import { loanDatabase } from '@/utilities/loanDatabase';
-import { generateLoan } from '@/utilities/loanGenerator';
+import LoanCard from '@/components/loans/LoanCard';
+import { LoanData } from '@/utilities/loanGenerator';
 
 export default function LoansPage() {
   const [loans, setLoans] = useState<LoanData[]>([]);
@@ -39,13 +37,13 @@ export default function LoansPage() {
   };
   
   const createNewLoan = () => {
-    const newLoan = loanDatabase.addLoan(generateLoan());
+    loanDatabase.addLoan(loanDatabase.generateLoan());
     fetchLoans();
   };
   
   return (
     <LayoutWrapper>
-      <div className="container mx-auto py-16 px-4">
+      <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">Loan Management</h1>
           <div className="flex gap-3">
@@ -59,7 +57,7 @@ export default function LoansPage() {
             </Button>
             <Button 
               onClick={createNewLoan}
-              className="flex items-center gap-2 bg-blue-500 text-white"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Plus size={16} />
               Create New Loan
@@ -75,57 +73,7 @@ export default function LoansPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {loans.map((loan) => (
-              <Card key={loan.id} className="shadow-md hover:shadow-lg transition-shadow">
-                <CardHeader className="bg-gray-50 border-b">
-                  <CardTitle className="flex justify-between items-center">
-                    <span className="text-lg truncate">{loan.borrowerName}</span>
-                    <span className={`text-sm px-2 py-1 rounded-full ${
-                      loan.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      loan.status === 'in_review' ? 'bg-yellow-100 text-yellow-800' :
-                      loan.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                      loan.status === 'closed' ? 'bg-gray-100 text-gray-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {loan.status.replace('_', ' ')}
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 space-y-4">
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <p className="text-gray-500">Loan Amount</p>
-                      <p className="font-medium">${loan.loanAmount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Interest Rate</p>
-                      <p className="font-medium">{loan.interestRate}%</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Loan Type</p>
-                      <p className="font-medium">{loan.loanType.toUpperCase()}</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-500">Date Created</p>
-                      <p className="font-medium">{new Date(loan.dateCreated).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-2">
-                    <p className="text-gray-500 text-sm mb-1">Property</p>
-                    <p className="text-sm truncate">{loan.propertyAddress}</p>
-                  </div>
-                  
-                  <div className="pt-2 flex justify-end">
-                    <Link 
-                      href={`/loans/${loan.id}`}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800"
-                    >
-                      View Details
-                      <ArrowRight size={16} />
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
+              <LoanCard key={loan.id} loan={loan} />
             ))}
           </div>
         )}
