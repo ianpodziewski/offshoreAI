@@ -102,10 +102,10 @@ export default function ChatContainer({ messages, children }: ChatContainerProps
       </div>
       
       {/* Scroll to bottom button - only shows when auto-scroll is disabled */}
-      {!shouldAutoScroll && (
+      {!shouldAutoScroll && messages.length > 0 && (
         <button
           onClick={enableAutoScroll}
-          className="absolute bottom-4 right-4 bg-blue-500 text-white rounded-full p-2 shadow-lg z-10"
+          className="absolute bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 shadow-lg z-10 transition-colors"
           aria-label="Scroll to bottom"
         >
           <svg 

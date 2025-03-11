@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ChatInput from "@/components/chat/input";
 import ChatMessages from "@/components/chat/messages";
-import ChatContainer from "@/components/ChatContainer"; // Import the new ChatContainer
+import ChatContainer from "@/components/ChatContainer";
 import useApp from "@/hooks/use-app";
 import ChatHeader from "@/components/chat/header";
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -46,12 +46,8 @@ export default function ChatWithContext() {
   // Function to clear chat documents
   const clearChatDocuments = useCallback(async () => {
     try {
-      // Clear chat documents from the service
       simpleDocumentService.clearChatDocuments();
-      
-      // Refresh the documents display
       await fetchRecentDocuments();
-      
       console.log("🧹 Chat documents cleared");
     } catch (error) {
       console.error('Error clearing chat documents:', error);
@@ -65,21 +61,17 @@ export default function ChatWithContext() {
   
   // Setup a refresh interval for documents
   useEffect(() => {
-    // Poll for new documents every 5 seconds
     const intervalId = setInterval(() => {
       fetchRecentDocuments();
     }, 5000);
     
-    // Cleanup on unmount
     return () => clearInterval(intervalId);
   }, [fetchRecentDocuments]);
   
   // Listen for messages changes to refresh documents after file uploads
   useEffect(() => {
-    // When a new user message is added with a file attachment
     const lastMessage = messages[messages.length - 1];
     if (lastMessage && lastMessage.role === 'user' && lastMessage.fileName) {
-      // Wait a short moment for the document service to complete processing
       setTimeout(() => {
         fetchRecentDocuments();
       }, 1000);
@@ -88,7 +80,6 @@ export default function ChatWithContext() {
 
   // Get appropriate link and icon for a document
   const getDocumentActionLink = (doc: any) => {
-    // For chat documents, we'll just show a preview instead of linking to a loan
     if (doc.category === 'chat' || doc.loanId === 'chat-uploads') {
       return {
         href: `#document-${doc.id}`,
@@ -97,7 +88,6 @@ export default function ChatWithContext() {
       };
     }
     
-    // For loan documents, link to the loan details
     return {
       href: `/loans/${doc.loanId}`,
       text: 'View Loan',
@@ -117,17 +107,17 @@ export default function ChatWithContext() {
               clearChatDocuments={clearChatDocuments}
             />
             
-            {/* Chat Container */}
-            <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border shadow">
-              {/* The ChatContainer now only wraps the messages, not the input area */}
-              <div className="flex-grow">
+            {/* Chat Container - FIXED LAYOUT */}
+            <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border shadow overflow-hidden">
+              {/* Messages container - explicitly set to take remaining space but allow scrolling */}
+              <div className="flex-1 min-h-0">
                 <ChatContainer messages={messages}>
                   <ChatMessages messages={messages} indicatorState={indicatorState} />
                 </ChatContainer>
               </div>
               
-              {/* Input area - kept outside the ChatContainer */}
-              <div className="p-3 border-t">
+              {/* Input area - explicitly set not to shrink */}
+              <div className="flex-shrink-0 p-3 border-t bg-white">
                 <ChatInput
                   handleInputChange={handleInputChange}
                   handleSubmit={handleSubmit}
@@ -141,7 +131,6 @@ export default function ChatWithContext() {
           
           {/* Sidebar with Recent Documents */}
           <div className="w-1/4">
-            {/* Card for Recent Documents - elevated to align with header bubble */}
             <Card className="shadow-sm h-full">
               <CardHeader className="bg-gray-50 border-b py-3">
                 <CardTitle className="text-sm font-medium">Recent Documents</CardTitle>
