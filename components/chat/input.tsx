@@ -26,6 +26,7 @@ export default function ChatInput({
   const [isFocused, setIsFocused] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0); // Add a key to force re-render of file input
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm({
@@ -57,6 +58,23 @@ export default function ChatInput({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  };
+
+  // Reset the file input completely
+  const resetFileInput = () => {
+    // Reset state
+    setFile(null);
+    
+    // Reset form field
+    form.reset({ message: "" });
+    
+    // Reset file input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    
+    // Increment key to force re-render of file input
+    setFileInputKey(prev => prev + 1);
   };
 
   // Handle form submission
@@ -104,16 +122,15 @@ export default function ChatInput({
     // Send data up to the parent with the captured file value
     handleSubmit(input, fileToSubmit || undefined);
 
-    // Clear out file state and the text input
-    setFile(null);
-    form.reset({ message: "" });
-
     // Create a mock event to reset the parent's controlled input
     const mockEvent = {
       target: { value: "" },
       currentTarget: { value: "" },
     } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(mockEvent);
+    
+    // Complete reset of file input to allow re-uploading same file
+    resetFileInput();
   };
 
   return (
@@ -140,8 +157,9 @@ export default function ChatInput({
             isFocused ? "ring-2 ring-blue-400" : ""
           } bg-white`}
         >
-          {/* File Input (Hidden) */}
+          {/* File Input (Hidden) - Now with key to force re-render */}
           <FileInput
+            key={fileInputKey}
             ref={fileInputRef}
             accept=".pdf,.docx,.txt"
             onChange={handleFileChange}

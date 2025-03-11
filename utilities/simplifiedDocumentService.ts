@@ -132,12 +132,43 @@ export const simpleDocumentService = {
       
       const { docType, category } = docClassification;
       
-      // Before creating a new document, check if one already exists for this docType
+      // Get all existing documents
       const allDocs = simpleDocumentService.getAllDocuments();
       
-      // Create new document object
+      // Check if a document with the same filename already exists for chat uploads
+      // This prevents duplicate documents appearing in the Recent Documents sidebar
+      if (loanId === 'chat-uploads') {
+        const existingDoc = allDocs.find(doc => 
+          doc.loanId === 'chat-uploads' && 
+          doc.filename === file.name
+        );
+        
+        if (existingDoc) {
+          console.log(`Updating existing chat document: ${file.name}`);
+          
+          // Update existing document instead of creating new
+          const updatedDoc = {
+            ...existingDoc,
+            fileType: file.type || 'application/pdf',
+            fileSize: file.size,
+            dateUploaded: new Date().toISOString(),
+            content: formattedContent
+          };
+          
+          // Replace in array
+          const index = allDocs.findIndex(doc => doc.id === existingDoc.id);
+          if (index >= 0) {
+            allDocs[index] = updatedDoc;
+            localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+            console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
+            return updatedDoc;
+          }
+        }
+      }
+      
+      // Create new document object if no existing document was found and updated
       const newDoc: SimpleDocument = {
-        id: uuidv4(), // Always create a new ID for chat documents
+        id: uuidv4(),
         loanId,
         filename: file.name,
         fileType: file.type || 'application/pdf',
