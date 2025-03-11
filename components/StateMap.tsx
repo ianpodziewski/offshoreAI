@@ -40,13 +40,12 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     return "#084594"; // Very dark blue for many loans
   };
 
-  // Simplified state data
-  // Each object has a state code, name, and SVG path
+  // Improved state data with more accurate paths
   const states = [
     {
       code: "AL",
       name: "Alabama",
-      path: "M550,350 L560,350 L570,370 L550,390 L545,370 Z"
+      path: "M550,350 L570,350 L585,380 L570,400 L550,390 L540,370 Z"
     },
     {
       code: "AK",
@@ -56,27 +55,27 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "AZ",
       name: "Arizona",
-      path: "M150,300 L170,300 L200,320 L200,350 L150,320 Z"
+      path: "M150,280 L190,280 L215,320 L215,350 L170,350 L150,320 Z"
     },
     {
       code: "AR",
       name: "Arkansas",
-      path: "M470,320 L500,320 L500,350 L470,350 Z"
+      path: "M470,310 L510,310 L510,350 L470,350 Z"
     },
     {
       code: "CA",
       name: "California",
-      path: "M100,200 L120,200 L150,280 L130,320 L100,260 Z"
+      path: "M100,200 L130,200 L160,270 L140,320 L100,260 Z"
     },
     {
       code: "CO",
       name: "Colorado",
-      path: "M250,250 L300,250 L300,290 L250,290 Z"
+      path: "M250,250 L320,250 L320,300 L250,300 Z"
     },
     {
       code: "CT",
       name: "Connecticut",
-      path: "M700,230 L715,230 L715,240 L700,240 Z"
+      path: "M700,220 L715,220 L715,235 L700,235 Z"
     },
     {
       code: "DE",
@@ -86,12 +85,12 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "FL",
       name: "Florida",
-      path: "M570,380 L600,370 L630,380 L635,400 L600,430 L570,400 Z"
+      path: "M570,380 L610,370 L640,380 L645,400 L610,430 L570,400 Z"
     },
     {
       code: "GA",
       name: "Georgia",
-      path: "M580,340 L610,340 L610,380 L580,380 L570,360 Z"
+      path: "M580,340 L610,340 L620,380 L585,380 L570,360 Z"
     },
     {
       code: "HI",
@@ -101,22 +100,22 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "ID",
       name: "Idaho",
-      path: "M150,150 L160,120 L200,150 L180,220 L150,180 Z"
+      path: "M150,150 L170,120 L210,150 L190,220 L160,180 Z"
     },
     {
       code: "IL",
       name: "Illinois",
-      path: "M500,240 L510,220 L520,240 L520,290 L500,290 Z"
+      path: "M510,240 L520,220 L530,240 L530,290 L510,290 Z"
     },
     {
       code: "IN",
       name: "Indiana",
-      path: "M520,240 L550,240 L550,290 L520,290 Z"
+      path: "M530,240 L560,240 L560,290 L530,290 Z"
     },
     {
       code: "IA",
       name: "Iowa",
-      path: "M450,220 L510,220 L500,240 L450,240 Z"
+      path: "M450,220 L510,220 L510,240 L450,240 Z"
     },
     {
       code: "KS",
@@ -126,7 +125,7 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "KY",
       name: "Kentucky",
-      path: "M520,290 L590,280 L580,310 L520,310 Z"
+      path: "M530,290 L600,280 L590,310 L530,310 Z"
     },
     {
       code: "LA",
@@ -146,7 +145,7 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "MA",
       name: "Massachusetts",
-      path: "M700,220 L730,220 L730,230 L700,230 Z"
+      path: "M700,220 L730,220 L730,235 L700,235 Z"
     },
     {
       code: "MI",
@@ -166,7 +165,7 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "MO",
       name: "Missouri",
-      path: "M450,280 L520,280 L520,320 L450,320 Z"
+      path: "M450,280 L510,280 L510,320 L450,320 Z"
     },
     {
       code: "MT",
@@ -181,7 +180,7 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "NV",
       name: "Nevada",
-      path: "M130,190 L150,180 L180,220 L160,280 L140,240 Z"
+      path: "M130,190 L160,180 L190,220 L175,270 L150,240 Z"
     },
     {
       code: "NH",
@@ -191,7 +190,7 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "NJ",
       name: "New Jersey",
-      path: "M680,240 L685,250 L685,260 L675,270 L675,250 Z"
+      path: "M680,240 L690,250 L690,260 L675,270 L675,250 Z"
     },
     {
       code: "NM",
@@ -216,7 +215,7 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "OH",
       name: "Ohio",
-      path: "M550,240 L580,240 L590,280 L550,290 Z"
+      path: "M560,240 L590,240 L600,280 L560,290 Z"
     },
     {
       code: "OK",
@@ -226,12 +225,12 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "OR",
       name: "Oregon",
-      path: "M100,150 L180,150 L180,190 L120,190 Z"
+      path: "M100,150 L180,150 L180,190 L130,190 Z"
     },
     {
       code: "PA",
       name: "Pennsylvania",
-      path: "M580,240 L640,240 L640,270 L580,270 Z"
+      path: "M590,240 L640,240 L640,270 L590,270 Z"
     },
     {
       code: "RI",
@@ -241,7 +240,7 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "SC",
       name: "South Carolina",
-      path: "M580,310 L620,320 L630,340 L610,340 L580,320 Z"
+      path: "M580,310 L620,320 L635,340 L610,340 L580,325 Z"
     },
     {
       code: "SD",
@@ -251,12 +250,12 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "TN",
       name: "Tennessee",
-      path: "M490,310 L580,310 L580,330 L490,330 Z"
+      path: "M500,310 L590,310 L590,330 L500,330 Z"
     },
     {
       code: "TX",
       name: "Texas",
-      path: "M300,320 L370,320 L390,350 L410,380 L410,420 L350,440 L300,410 L290,370 Z"
+      path: "M300,320 L370,320 L400,350 L420,380 L420,420 L350,440 L300,410 L290,370 Z"
     },
     {
       code: "UT",
@@ -271,22 +270,22 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
     {
       code: "VA",
       name: "Virginia",
-      path: "M580,270 L640,270 L650,290 L580,300 Z"
+      path: "M590,270 L640,270 L650,290 L590,300 Z"
     },
     {
       code: "WA",
       name: "Washington",
-      path: "M120,100 L180,100 L180,150 L100,150 Z"
+      path: "M120,100 L180,100 L180,150 L120,150 Z"
     },
     {
       code: "WV",
       name: "West Virginia",
-      path: "M590,270 L640,270 L620,290 L580,280 Z"
+      path: "M600,270 L640,270 L620,290 L590,280 Z"
     },
     {
       code: "WI",
       name: "Wisconsin",
-      path: "M480,180 L510,180 L520,240 L480,230 Z"
+      path: "M490,180 L520,180 L530,240 L490,230 Z"
     },
     {
       code: "WY",
@@ -313,6 +312,9 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
         className="w-full h-full"
         style={{ maxHeight: "100%" }}
       >
+        {/* Background */}
+        <rect x="0" y="0" width="800" height="500" fill="#f9f9f9" />
+        
         {/* Render each state */}
         {states.map((state) => (
           <g key={state.code}>
@@ -320,34 +322,52 @@ const StateMap: React.FC<StateMapProps> = ({ loans }) => {
               d={state.path}
               fill={getStateColor(state.code)}
               stroke="#fff"
-              strokeWidth="1"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              style={{ 
+                filter: "drop-shadow(0px 1px 2px rgba(0,0,0,0.1))",
+                transition: "fill 0.3s ease"
+              }}
             >
               <title>{state.name}: {loansByState[state.code] || 0} loan(s)</title>
             </path>
             <text
-              x={state.code === "AK" ? 140 : state.code === "HI" ? 200 : parseInt(state.path.split(" ")[1]) + 5}
-              y={state.code === "AK" ? 465 : state.code === "HI" ? 465 : parseInt(state.path.split(" ")[2]) + 5}
-              fontSize="8"
+              x={state.code === "AK" ? 140 : state.code === "HI" ? 200 : parseInt(state.path.split(" ")[1]) + 15}
+              y={state.code === "AK" ? 465 : state.code === "HI" ? 465 : parseInt(state.path.split(" ")[2]) + 15}
+              fontSize="10"
+              fontWeight="bold"
               fill="#333"
               textAnchor="middle"
+              style={{ pointerEvents: "none" }}
             >
               {state.code}
             </text>
           </g>
         ))}
+        
+        {/* US outline */}
+        <path
+          d="M100,100 L180,100 L210,150 L450,150 L510,180 L640,210 L750,200 L740,240 L640,270 L650,290 L640,380 L500,430 L300,410 L100,260 Z"
+          fill="none"
+          stroke="#ddd"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ pointerEvents: "none" }}
+        />
       </svg>
 
       {/* Legend */}
-      <div className="absolute bottom-4 right-4 bg-white bg-opacity-80 p-2 rounded-md shadow-sm">
-        <p className="text-xs font-medium mb-1">Loans per state</p>
-        <div className="flex flex-col">
+      <div className="absolute bottom-4 right-4 bg-white bg-opacity-90 p-3 rounded-md shadow-lg border border-gray-200">
+        <p className="text-xs font-medium mb-2">Loans per state</p>
+        <div className="flex flex-col space-y-1">
           {legendItems.map((item, index) => (
             <div key={index} className="flex items-center text-xs">
               <div 
-                className="w-3 h-3 mr-1" 
+                className="w-4 h-4 mr-2 rounded-sm border border-gray-300" 
                 style={{ backgroundColor: item.color }}
               />
-              <span>{item.label}</span>
+              <span className="text-gray-700">{item.label}</span>
             </div>
           ))}
         </div>
