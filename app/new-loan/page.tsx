@@ -24,13 +24,13 @@ export default function NewLoanPage() {
     loanAmount: "",
     interestRate: "",
     originationFee: "",
-    loanType: "fix_and_flip" as LoanType,
+    loanType: "" as LoanType,
     propertyAddress: "",
-    propertyType: "single_family" as PropertyType,
+    propertyType: "" as PropertyType,
     purchasePrice: "",
     afterRepairValue: "",
     rehabBudget: "",
-    exitStrategy: "sale" as ExitStrategy,
+    exitStrategy: "" as ExitStrategy,
   });
 
   const handleInputChange = (
@@ -52,13 +52,13 @@ export default function NewLoanPage() {
       loanAmount: parseFloat(loanData.loanAmount) || 250000,
       interestRate: parseFloat(loanData.interestRate) || 10,
       originationFee: parseFloat(loanData.originationFee) || 3,
-      loanType: loanData.loanType,
+      loanType: loanData.loanType || "fix_and_flip",
       propertyAddress: loanData.propertyAddress,
-      propertyType: loanData.propertyType,
+      propertyType: loanData.propertyType || "single_family",
       purchasePrice: parseFloat(loanData.purchasePrice) || 0,
       afterRepairValue: parseFloat(loanData.afterRepairValue) || 0,
       rehabBudget: parseFloat(loanData.rehabBudget) || 0,
-      exitStrategy: loanData.exitStrategy,
+      exitStrategy: loanData.exitStrategy || "sale",
     });
 
     setLoading(false);
@@ -111,7 +111,7 @@ export default function NewLoanPage() {
                     <div>
                       <Label htmlFor="borrowerExperience">Borrower Experience</Label>
                       <Select 
-                        value={loanData.borrowerExperience} 
+                        value={loanData.borrowerExperience || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, borrowerExperience: value }))
                         }
@@ -131,7 +131,7 @@ export default function NewLoanPage() {
                     <div>
                       <Label htmlFor="loanType">Loan Type</Label>
                       <Select 
-                        value={loanData.loanType} 
+                        value={loanData.loanType || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, loanType: value as LoanType }))
                         }
@@ -199,7 +199,7 @@ export default function NewLoanPage() {
                     <div>
                       <Label htmlFor="propertyType">Property Type</Label>
                       <Select 
-                        value={loanData.propertyType} 
+                        value={loanData.propertyType || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, propertyType: value as PropertyType }))
                         }
@@ -266,7 +266,7 @@ export default function NewLoanPage() {
                     <div>
                       <Label htmlFor="exitStrategy">Exit Strategy</Label>
                       <Select 
-                        value={loanData.exitStrategy} 
+                        value={loanData.exitStrategy || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, exitStrategy: value as ExitStrategy }))
                         }
