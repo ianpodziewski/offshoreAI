@@ -1,3 +1,4 @@
+// app/chat/page.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -6,9 +7,9 @@ import ChatMessages from "@/components/chat/messages";
 import useApp from "@/hooks/use-app";
 import ChatHeader from "@/components/chat/header";
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import StatusBadge from '@/components/document/status-badge';
 import { FileText, Eye } from 'lucide-react';
 import Link from 'next/link';
+import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import LayoutWrapper from '../layout-wrapper';
 
 export default function ChatWithContext() {
@@ -26,47 +27,20 @@ export default function ChatWithContext() {
   const [loadingDocs, setLoadingDocs] = useState(true);
   
   useEffect(() => {
-    // Fetch recent documents to provide context
+    // Fetch recent documents from your actual document service
     const fetchRecentDocuments = async () => {
       try {
         setLoadingDocs(true);
         
-        // Fetch document sockets
-        const socketsResponse = await fetch('/api/get-file-sockets');
-        const socketsData = await socketsResponse.json();
+        // Get all documents from your service
+        const allDocs = simpleDocumentService.getAllDocuments();
         
-        // Fetch document statuses
-        const statusesResponse = await fetch('/api/document-status');
-        const statusesData = await statusesResponse.json();
+        // Sort by date and take the 5 most recent
+        const sortedDocs = allDocs
+          .sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime())
+          .slice(0, 5);
         
-        // Flatten the document structure for display
-        const flattenedDocs = [];
-        for (const [category, docs] of Object.entries(socketsData.files || {})) {
-          for (const docUrl of docs as string[]) {
-            const path = docUrl.replace('/api/download?file=', '');
-            const name = path.split('/').pop()?.replace('.pdf', '') || 'Document';
-            const status = statusesData.statuses?.[path]?.status || 'unassigned';
-            
-            flattenedDocs.push({
-              category,
-              url: docUrl,
-              path,
-              name,
-              status
-            });
-          }
-        }
-        
-        // Sort by status: prioritize 'reviewing' and 'assigned' documents
-        flattenedDocs.sort((a, b) => {
-          const statusOrder = { 'reviewing': 0, 'assigned': 1, 'unassigned': 2, 'approved': 3, 'rejected': 4 };
-          return (statusOrder[a.status as keyof typeof statusOrder] || 99) - 
-                 (statusOrder[b.status as keyof typeof statusOrder] || 99);
-        });
-        
-        // Take top 5
-        setRecentDocuments(flattenedDocs.slice(0, 5));
-        
+        setRecentDocuments(sortedDocs);
       } catch (error) {
         console.error('Error fetching documents:', error);
       } finally {
@@ -111,22 +85,37 @@ export default function ChatWithContext() {
                     </div>
                   ) : recentDocuments.length > 0 ? (
                     <ul className="space-y-2">
-                      {recentDocuments.map((doc, idx) => (
-                        <li key={idx} className="text-xs border rounded p-2 hover:bg-gray-50">
+                      {recentDocuments.map((doc) => (
+                        <li key={doc.id} className="text-xs border rounded p-2 hover:bg-gray-50">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center">
+                            <div className="flex items-center max-w-[80%]">
                               <FileText size={12} className="text-gray-500 mr-2 flex-shrink-0" />
-                              <span className="truncate font-medium">{doc.name}</span>
+                              <span className="truncate font-medium" title={doc.filename}>
+                                {doc.filename.length > 25 
+                                  ? doc.filename.substring(0, 22) + '...' 
+                                  : doc.filename}
+                              </span>
                             </div>
-                            <StatusBadge status={doc.status} size="sm" />
+                            <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                              doc.status === 'approved' 
+                                ? 'bg-green-100 text-green-800' 
+                                : doc.status === 'rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                            </span>
                           </div>
-                          <div className="mt-1 flex justify-end">
+                          <div className="mt-1 flex justify-between items-center">
+                            <span className="text-xs text-gray-500 truncate">
+                              {new Date(doc.dateUploaded).toLocaleDateString()}
+                            </span>
                             <Link 
-                              href={`/document?path=${encodeURIComponent(doc.path)}`}
+                              href={`/loans/${doc.loanId}`}
                               className="text-xs text-blue-600 hover:underline flex items-center"
                             >
                               <Eye size={10} className="mr-1" />
-                              View
+                              View Loan
                             </Link>
                           </div>
                         </li>
@@ -134,7 +123,11 @@ export default function ChatWithContext() {
                     </ul>
                   ) : (
                     <div className="text-center py-8 text-gray-500 text-xs">
-                      No documents available
+                      <FileText size={24} className="mx-auto mb-2 text-gray-300" />
+                      <p>No documents available</p>
+                      <Link href="/new-loan" className="text-blue-600 hover:underline mt-2 inline-block">
+                        Upload your first document
+                      </Link>
                     </div>
                   )}
                   
