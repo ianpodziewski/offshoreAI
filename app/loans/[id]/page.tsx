@@ -1,4 +1,3 @@
-// app/loans/[id]/page.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -82,9 +81,9 @@ export default function LoanDetailPage() {
             </Button>
           </Link>
           
-          <h1 className="text-3xl font-bold mb-2">{loan.borrowerName}'s Loan</h1>
+          <h1 className="text-3xl font-bold mb-2">{loan.borrowerName}'s Hard Money Loan</h1>
           <p className="text-gray-600">
-            {loan.loanType.toUpperCase()} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
+            {loan.loanType.replace('_', ' ').toUpperCase()} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
           </p>
         </div>
         
@@ -99,7 +98,7 @@ export default function LoanDetailPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Loan Type</h3>
-                    <p className="font-medium">{loan.loanType.toUpperCase()}</p>
+                    <p className="font-medium">{loan.loanType.replace('_', ' ').toUpperCase()}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Loan Amount</h3>
@@ -110,22 +109,80 @@ export default function LoanDetailPage() {
                     <p className="font-medium">{loan.interestRate}%</p>
                   </div>
                   <div>
+                    <h3 className="text-sm font-medium text-gray-500">Origination Fee</h3>
+                    <p className="font-medium">{loan.originationFee}%</p>
+                  </div>
+                  <div>
                     <h3 className="text-sm font-medium text-gray-500">Loan Term</h3>
-                    <p className="font-medium">{loan.loanTerm / 12} years</p>
+                    <p className="font-medium">{loan.loanTerm} months</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Status</h3>
                     <p className="font-medium capitalize">{loan.status.replace('_', ' ')}</p>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Created Date</h3>
-                    <p className="font-medium">{new Date(loan.dateCreated).toLocaleDateString()}</p>
-                  </div>
                 </div>
                 
-                <div className="mt-4 pt-4 border-t">
-                  <h3 className="text-sm font-medium text-gray-500">Property Address</h3>
-                  <p className="font-medium">{loan.propertyAddress}</p>
+                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Property Address</h3>
+                    <p className="font-medium">{loan.propertyAddress}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Property Type</h3>
+                    <p className="font-medium">{loan.propertyType.replace('_', ' ')}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Purchase Price</h3>
+                    <p className="font-medium">${loan.purchasePrice.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">After Repair Value</h3>
+                    <p className="font-medium">${loan.afterRepairValue.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Rehab Budget</h3>
+                    <p className="font-medium">${loan.rehabBudget.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Exit Strategy</h3>
+                    <p className="font-medium">{loan.exitStrategy.replace('_', ' ')}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">LTV</h3>
+                    <p className="font-medium">{loan.ltv}%</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">ARV LTV</h3>
+                    <p className="font-medium">{loan.arv_ltv}%</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Borrower Experience</h3>
+                    <p className="font-medium">{loan.borrowerExperience}</p>
+                  </div>
+                  {loan.lender && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Lender</h3>
+                      <p className="font-medium">{loan.lender}</p>
+                    </div>
+                  )}
+                  {loan.fundingDate && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Funding Date</h3>
+                      <p className="font-medium">{new Date(loan.fundingDate).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  {loan.maturityDate && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Maturity Date</h3>
+                      <p className="font-medium">{new Date(loan.maturityDate).toLocaleDateString()}</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -165,10 +222,13 @@ export default function LoanDetailPage() {
                 <h3 className="font-medium">Required Documents</h3>
               </div>
               <ul className="pl-6 space-y-1 text-sm text-gray-700">
+                <li>Purchase Contract</li>
+                <li>Proof of Funds</li>
+                <li>Rehab Scope of Work</li>
+                <li>Personal Financial Statement</li>
                 <li>Promissory Note</li>
                 <li>Deed of Trust</li>
-                <li>Closing Disclosure</li>
-                <li>Property Appraisal</li>
+                <li>Draw Schedule</li>
               </ul>
             </div>
           </div>

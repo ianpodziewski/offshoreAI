@@ -1,4 +1,3 @@
-// app/documents/page.tsx (renamed to app/new-loan/page.tsx)
 "use client";
 
 import React, { useState } from 'react';
@@ -8,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import LayoutWrapper from '../layout-wrapper';
 import SimpleDocumentUploader from '@/components/document/SimpleDocumentUploader';
-import { LoanData } from '@/utilities/loanGenerator';
+import { LoanType, PropertyType, ExitStrategy } from '@/utilities/loanGenerator';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { useRouter } from 'next/navigation';
 
@@ -17,10 +16,18 @@ export default function NewLoanPage() {
   const [loading, setLoading] = useState(false);
   const [loanData, setLoanData] = useState({
     borrowerName: '',
+    borrowerEmail: '',
+    borrowerExperience: '',
     loanAmount: '',
     interestRate: '',
-    loanType: 'conventional',
-    propertyAddress: ''
+    originationFee: '',
+    loanType: 'fix_and_flip' as LoanType,
+    propertyAddress: '',
+    propertyType: 'single_family' as PropertyType,
+    purchasePrice: '',
+    afterRepairValue: '',
+    rehabBudget: '',
+    exitStrategy: 'sale' as ExitStrategy
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -35,10 +42,18 @@ export default function NewLoanPage() {
     const newLoan = loanDatabase.addLoan({
       ...loanDatabase.generateLoan(), // Generate default values
       borrowerName: loanData.borrowerName,
+      borrowerEmail: loanData.borrowerEmail || '',
+      borrowerExperience: loanData.borrowerExperience || 'Beginner (0-1 projects)',
       loanAmount: parseFloat(loanData.loanAmount) || 250000,
-      interestRate: parseFloat(loanData.interestRate) || 4.5,
-      loanType: loanData.loanType as any,
-      propertyAddress: loanData.propertyAddress
+      interestRate: parseFloat(loanData.interestRate) || 10,
+      originationFee: parseFloat(loanData.originationFee) || 3,
+      loanType: loanData.loanType,
+      propertyAddress: loanData.propertyAddress,
+      propertyType: loanData.propertyType,
+      purchasePrice: parseFloat(loanData.purchasePrice) || 0,
+      afterRepairValue: parseFloat(loanData.afterRepairValue) || 0,
+      rehabBudget: parseFloat(loanData.rehabBudget) || 0,
+      exitStrategy: loanData.exitStrategy
     });
     
     setLoading(false);
@@ -50,7 +65,7 @@ export default function NewLoanPage() {
   return (
     <LayoutWrapper>
       <div className="container mx-auto py-12 px-4">
-        <h1 className="text-2xl font-bold mb-6">Create New Loan</h1>
+        <h1 className="text-2xl font-bold mb-6">Create New Hard Money Loan</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Loan Information Form */}
@@ -70,36 +85,40 @@ export default function NewLoanPage() {
                         value={loanData.borrowerName} 
                         onChange={handleInputChange}
                         placeholder="John Doe"
+                        required
                       />
                     </div>
                     
                     <div>
-                      <Label htmlFor="loanAmount">Loan Amount ($)</Label>
+                      <Label htmlFor="borrowerEmail">Borrower Email</Label>
                       <Input 
-                        id="loanAmount" 
-                        name="loanAmount" 
-                        value={loanData.loanAmount} 
+                        id="borrowerEmail" 
+                        name="borrowerEmail" 
+                        value={loanData.borrowerEmail} 
                         onChange={handleInputChange}
-                        placeholder="250000"
-                        type="number"
+                        placeholder="john.doe@example.com"
+                        type="email"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="interestRate">Interest Rate (%)</Label>
-                      <Input 
-                        id="interestRate" 
-                        name="interestRate" 
-                        value={loanData.interestRate} 
+                      <Label htmlFor="borrowerExperience">Borrower Experience</Label>
+                      <select 
+                        id="borrowerExperience" 
+                        name="borrowerExperience"
+                        value={loanData.borrowerExperience}
                         onChange={handleInputChange}
-                        placeholder="4.5"
-                        type="number"
-                        step="0.125"
-                      />
+                        className="w-full h-10 px-3 py-2 border rounded-md"
+                      >
+                        <option value="Beginner (0-1 projects)">Beginner (0-1 projects)</option>
+                        <option value="Intermediate (2-5 projects)">Intermediate (2-5 projects)</option>
+                        <option value="Experienced (6-10 projects)">Experienced (6-10 projects)</option>
+                        <option value="Expert (10+ projects)">Expert (10+ projects)</option>
+                      </select>
                     </div>
-                    
+
                     <div>
                       <Label htmlFor="loanType">Loan Type</Label>
                       <select 
@@ -109,13 +128,142 @@ export default function NewLoanPage() {
                         onChange={handleInputChange}
                         className="w-full h-10 px-3 py-2 border rounded-md"
                       >
-                        <option value="conventional">Conventional</option>
-                        <option value="fha">FHA</option>
-                        <option value="va">VA</option>
+                        <option value="fix_and_flip">Fix and Flip</option>
+                        <option value="bridge">Bridge Loan</option>
+                        <option value="construction">Construction</option>
+                        <option value="rehab">Rehab</option>
+                        <option value="rental">Rental</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="land">Land</option>
                       </select>
                     </div>
                   </div>
-                  
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="loanAmount">Loan Amount ($)</Label>
+                      <Input 
+                        id="loanAmount" 
+                        name="loanAmount" 
+                        value={loanData.loanAmount} 
+                        onChange={handleInputChange}
+                        placeholder="250,000"
+                        type="number"
+                        min="0"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                      <Input 
+                        id="interestRate" 
+                        name="interestRate" 
+                        value={loanData.interestRate} 
+                        onChange={handleInputChange}
+                        placeholder="10"
+                        type="number"
+                        step="0.25"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="originationFee">Origination Fee (%)</Label>
+                      <Input 
+                        id="originationFee" 
+                        name="originationFee" 
+                        value={loanData.originationFee} 
+                        onChange={handleInputChange}
+                        placeholder="3"
+                        type="number"
+                        step="0.25"
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="propertyType">Property Type</Label>
+                      <select 
+                        id="propertyType" 
+                        name="propertyType" 
+                        value={loanData.propertyType}
+                        onChange={handleInputChange}
+                        className="w-full h-10 px-3 py-2 border rounded-md"
+                      >
+                        <option value="single_family">Single Family</option>
+                        <option value="multi_family">Multi-Family</option>
+                        <option value="condo">Condo</option>
+                        <option value="townhouse">Townhouse</option>
+                        <option value="commercial">Commercial</option>
+                        <option value="mixed_use">Mixed Use</option>
+                        <option value="land">Land</option>
+                        <option value="industrial">Industrial</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
+                      <Input 
+                        id="purchasePrice" 
+                        name="purchasePrice" 
+                        value={loanData.purchasePrice} 
+                        onChange={handleInputChange}
+                        placeholder="300,000"
+                        type="number"
+                        min="0"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="afterRepairValue">After Repair Value ($)</Label>
+                      <Input 
+                        id="afterRepairValue" 
+                        name="afterRepairValue" 
+                        value={loanData.afterRepairValue} 
+                        onChange={handleInputChange}
+                        placeholder="400,000"
+                        type="number"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="rehabBudget">Rehab Budget ($)</Label>
+                      <Input 
+                        id="rehabBudget" 
+                        name="rehabBudget" 
+                        value={loanData.rehabBudget} 
+                        onChange={handleInputChange}
+                        placeholder="50,000"
+                        type="number"
+                        min="0"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="exitStrategy">Exit Strategy</Label>
+                      <select 
+                        id="exitStrategy" 
+                        name="exitStrategy" 
+                        value={loanData.exitStrategy}
+                        onChange={handleInputChange}
+                        className="w-full h-10 px-3 py-2 border rounded-md"
+                      >
+                        <option value="sale">Sale</option>
+                        <option value="refinance">Refinance</option>
+                        <option value="rental">Rental</option>
+                        <option value="development">Development</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div>
                     <Label htmlFor="propertyAddress">Property Address</Label>
                     <Input 
@@ -124,6 +272,7 @@ export default function NewLoanPage() {
                       value={loanData.propertyAddress} 
                       onChange={handleInputChange}
                       placeholder="123 Main St, City, State 12345"
+                      required
                     />
                   </div>
                 </div>
@@ -145,10 +294,10 @@ export default function NewLoanPage() {
             
             <Button 
               onClick={handleLoanCreation}
-              disabled={loading || !loanData.borrowerName}
+              disabled={loading || !loanData.borrowerName || !loanData.propertyAddress}
               className="w-full"
             >
-              {loading ? "Creating..." : "Create Loan"}
+              {loading ? "Creating..." : "Create Hard Money Loan"}
             </Button>
           </div>
         </div>
