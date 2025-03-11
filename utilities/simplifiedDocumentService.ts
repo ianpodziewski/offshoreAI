@@ -163,6 +163,75 @@ export const simpleDocumentService = {
     }
   },
   
+  // Transfer documents from temporary loan ID to actual loan ID
+  transferDocumentsToLoan: (tempLoanId: string, actualLoanId: string): SimpleDocument[] => {
+    try {
+      const allDocs = simpleDocumentService.getAllDocuments();
+      const transferredDocs: SimpleDocument[] = [];
+      
+      // Find documents with the temp ID
+      const docsToTransfer = allDocs.filter(doc => doc.loanId === tempLoanId);
+      
+      if (docsToTransfer.length === 0) {
+        return [];
+      }
+      
+      // Update the loan ID for each document
+      docsToTransfer.forEach(doc => {
+        const index = allDocs.findIndex(d => d.id === doc.id);
+        if (index !== -1) {
+          allDocs[index] = {
+            ...allDocs[index],
+            loanId: actualLoanId
+          };
+          transferredDocs.push(allDocs[index]);
+        }
+      });
+      
+      // Save the updated documents
+      localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+      
+      return transferredDocs;
+    } catch (error) {
+      console.error('Error transferring documents:', error);
+      return [];
+    }
+  },
+  
+  // Get document statistics for a loan
+  getDocumentStats: (loanId: string) => {
+    try {
+      const loanDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+      
+      const stats = {
+        total: loanDocs.length,
+        approved: loanDocs.filter(doc => doc.status === 'approved').length,
+        rejected: loanDocs.filter(doc => doc.status === 'rejected').length,
+        pending: loanDocs.filter(doc => doc.status === 'pending').length,
+        byCategory: {} as Record<string, number>,
+        byType: {} as Record<string, number>
+      };
+      
+      // Count by category
+      loanDocs.forEach(doc => {
+        stats.byCategory[doc.category] = (stats.byCategory[doc.category] || 0) + 1;
+        stats.byType[doc.docType] = (stats.byType[doc.docType] || 0) + 1;
+      });
+      
+      return stats;
+    } catch (error) {
+      console.error('Error getting document stats:', error);
+      return {
+        total: 0,
+        approved: 0,
+        rejected: 0,
+        pending: 0,
+        byCategory: {},
+        byType: {}
+      };
+    }
+  },
+  
   // Clear all documents (for testing)
   clearAllDocuments: (): void => {
     localStorage.removeItem(DOCUMENTS_STORAGE_KEY);

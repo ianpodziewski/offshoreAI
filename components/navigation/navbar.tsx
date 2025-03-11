@@ -8,8 +8,7 @@ import { FileText, MessageSquare, Upload, Home, BarChart2, DollarSign } from 'lu
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: BarChart2 },
   { href: '/loans', label: 'Loans', icon: DollarSign }, // New loans navigation item
-  { href: '/documents', label: 'Documents', icon: FileText },
-  { href: '/upload', label: 'Upload', icon: Upload },
+  { href: '/new-loan', label: 'New Loan', icon: FileText },
   { href: '/chat', label: 'Chat Assistant', icon: MessageSquare },
 ];
 
