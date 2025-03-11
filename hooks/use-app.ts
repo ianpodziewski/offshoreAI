@@ -14,6 +14,7 @@ import {
   StreamedError,
   streamedErrorSchema,
 } from "@/types";
+import { simpleDocumentService } from "@/utilities/simplifiedDocumentService";
 
 export default function useApp() {
   const initialAssistantMessage = useMemo<DisplayMessage>(() => ({
@@ -179,6 +180,19 @@ export default function useApp() {
     
     // Add user message
     addUserMessage(combinedInput, file);
+
+    // If a file is included, ensure it's saved to the document service
+    // We only do this as a fallback in case it wasn't already handled in the input component
+    if (file) {
+      try {
+        // Use a dedicated loanId for chat-related documents
+        const chatLoanId = 'chat-uploads';
+        const result = await simpleDocumentService.addDocument(file, chatLoanId);
+        console.log("✅ Document added to Recent Documents via useApp:", result);
+      } catch (error) {
+        console.error("❌ Error saving document to Recent Documents:", error);
+      }
+    }
 
     if (wordCount > WORD_CUTOFF) {
       addAssistantMessage(WORD_BREAK_MESSAGE, []);

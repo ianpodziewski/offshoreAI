@@ -1,4 +1,3 @@
-// components/chat/input.tsx
 "use client";
 
 import { useState, useRef } from "react";
@@ -7,12 +6,14 @@ import { Button } from "@/components/ui/button";
 import { ArrowUp, Plus, Paperclip } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
+import { simpleDocumentService } from "@/utilities/simplifiedDocumentService";
 
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (combinedInput: string, file?: File) => void;
   input: string;
   isLoading: boolean;
+  onUploadComplete?: () => Promise<void>;
 }
 
 export default function ChatInput({
@@ -20,9 +21,11 @@ export default function ChatInput({
   handleSubmit,
   input,
   isLoading,
+  onUploadComplete
 }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const form = useForm({
@@ -57,7 +60,7 @@ export default function ChatInput({
   };
 
   // Handle form submission
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     console.log("📤 Submitting chat input:", { input, file });
@@ -70,6 +73,27 @@ export default function ChatInput({
     // Capture the current file in a local variable
     const fileToSubmit = file;
 
+    // If there's a file, add it to the document service first
+    if (fileToSubmit) {
+      setIsUploadingDocument(true);
+      try {
+        // Use a generic loanId for chat-uploaded documents
+        const chatLoanId = 'chat-uploads';
+        const result = await simpleDocumentService.addDocument(fileToSubmit, chatLoanId);
+        console.log("✅ Document added to Recent Documents:", result);
+        
+        // Call the onUploadComplete callback if provided
+        if (onUploadComplete) {
+          await onUploadComplete();
+          console.log("🔄 Called onUploadComplete to refresh documents");
+        }
+      } catch (error) {
+        console.error("❌ Error saving document to Recent Documents:", error);
+      } finally {
+        setIsUploadingDocument(false);
+      }
+    }
+
     console.log("🚀 Calling handleSubmit with:", { message: input, file: fileToSubmit });
 
     if (typeof handleSubmit !== "function") {
@@ -80,9 +104,7 @@ export default function ChatInput({
     // Send data up to the parent with the captured file value
     handleSubmit(input, fileToSubmit || undefined);
 
-    // Clear out file state and the text input:
-    // 1) The local form (react-hook-form)
-    // 2) The parent component's `input` prop
+    // Clear out file state and the text input
     setFile(null);
     form.reset({ message: "" });
 
@@ -164,7 +186,7 @@ export default function ChatInput({
           <Button
             type="submit"
             className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
-            disabled={(input.trim() === "" && !file) || isLoading}
+            disabled={(input.trim() === "" && !file) || isLoading || isUploadingDocument}
           >
             <ArrowUp className="w-5 h-5" />
           </Button>

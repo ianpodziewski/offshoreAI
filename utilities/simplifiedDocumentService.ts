@@ -8,7 +8,7 @@ export interface SimpleDocument {
   fileType: string;
   fileSize: number;
   dateUploaded: string;
-  category: 'loan' | 'legal' | 'financial' | 'misc';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat';
   docType: string;
   status: 'pending' | 'approved' | 'rejected';
   content: string; // Base64 encoded content
@@ -22,9 +22,14 @@ const DOCUMENTS_STORAGE_KEY = 'simple_documents';
 // Helper function for document type classification
 function classifyDocument(filename: string): { 
   docType: string; 
-  category: 'loan' | 'legal' | 'financial' | 'misc';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat';
 } {
   const lowerName = filename.toLowerCase();
+  
+  // Check if it's a chat document first
+  if (lowerName.includes('hud') || lowerName.includes('example')) {
+    return { docType: 'chat_document', category: 'chat' };
+  }
   
   // Simple classification rules
   if (lowerName.includes('note') || lowerName.includes('promissory')) {
@@ -52,7 +57,15 @@ export const simpleDocumentService = {
   getAllDocuments: (): SimpleDocument[] => {
     try {
       const docsJson = localStorage.getItem(DOCUMENTS_STORAGE_KEY);
-      return docsJson ? JSON.parse(docsJson) : [];
+      const docs = docsJson ? JSON.parse(docsJson) : [];
+      
+      // Validate data structure
+      if (!Array.isArray(docs)) {
+        console.warn("Invalid document data structure detected");
+        return [];
+      }
+      
+      return docs;
     } catch (error) {
       console.error('Error getting documents:', error);
       return [];
@@ -70,6 +83,17 @@ export const simpleDocumentService = {
     }
   },
   
+  // Get chat documents
+  getChatDocuments: (): SimpleDocument[] => {
+    try {
+      const allDocs = simpleDocumentService.getAllDocuments();
+      return allDocs.filter(doc => doc.category === 'chat');
+    } catch (error) {
+      console.error('Error getting chat documents:', error);
+      return [];
+    }
+  },
+  
   // Get document by ID
   getDocumentById: (docId: string): SimpleDocument | null => {
     try {
@@ -82,7 +106,7 @@ export const simpleDocumentService = {
   },
   
   // Add a new document
-  addDocument: async (file: File, loanId: string, classification?: { docType: string; category: 'loan' | 'legal' | 'financial' | 'misc' }): Promise<SimpleDocument | null> => {
+  addDocument: async (file: File, loanId: string, classification?: { docType: string; category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' }): Promise<SimpleDocument | null> => {
     try {
       // Read file as base64
       const content = await readFileAsBase64(file);
@@ -94,21 +118,29 @@ export const simpleDocumentService = {
         formattedContent = `data:application/pdf;base64,${content.replace(/^data:.*?;base64,/, '')}`;
       }
       
-      // Use provided classification or classify automatically
-      const { docType, category } = classification || classifyDocument(file.name);
+      // Special handling for chat-uploads, mark them with the chat category
+      let docClassification = classification;
+      if (loanId === 'chat-uploads') {
+        docClassification = { 
+          docType: 'chat_document', 
+          category: 'chat' 
+        };
+      } else {
+        // Use provided classification or classify automatically
+        docClassification = classification || classifyDocument(file.name);
+      }
+      
+      const { docType, category } = docClassification;
       
       // Before creating a new document, check if one already exists for this docType
       const allDocs = simpleDocumentService.getAllDocuments();
-      const existingDocIndex = allDocs.findIndex(
-        doc => doc.loanId === loanId && doc.docType === docType
-      );
       
       // Create new document object
       const newDoc: SimpleDocument = {
-        id: existingDocIndex >= 0 ? allDocs[existingDocIndex].id : uuidv4(),
+        id: uuidv4(), // Always create a new ID for chat documents
         loanId,
         filename: file.name,
-        fileType: file.type,
+        fileType: file.type || 'application/pdf',
         fileSize: file.size,
         dateUploaded: new Date().toISOString(),
         category,
@@ -117,15 +149,11 @@ export const simpleDocumentService = {
         content: formattedContent
       };
       
-      // Replace existing document or add new one
-      if (existingDocIndex >= 0) {
-        allDocs[existingDocIndex] = newDoc;
-      } else {
-        allDocs.push(newDoc);
-      }
-      
+      // Add the new document
+      allDocs.push(newDoc);
       localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
       
+      console.log(`Document added successfully: ${newDoc.filename} (ID: ${newDoc.id}, Category: ${newDoc.category})`);
       return newDoc;
     } catch (error) {
       console.error('Error adding document:', error);
