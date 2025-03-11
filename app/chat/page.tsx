@@ -33,12 +33,24 @@ export default function ChatWithContext() {
   const fetchDocuments = useCallback(async () => {
     try {
       setLoadingDocs(true);
+      
+      // Force a direct check with the document service instead of relying on cached data
+      // This ensures we have the latest document state after deletions
       const allDocs = simpleDocumentService.getAllDocuments();
       
-      // No need to filter for deleted documents as they're already removed by the service
+      // Add debugging to help track why deleted documents might still appear
+      console.log('All documents fetched:', allDocs.map(d => ({ id: d.id, filename: d.filename, loanId: d.loanId })));
+      
+      // Double check for any documents that should have been deleted but weren't
+      // by ensuring we're seeing the most up-to-date localStorage data
+      const storageDocsRaw = localStorage.getItem('simple_documents');
+      const storageDocs = storageDocsRaw ? JSON.parse(storageDocsRaw) : [];
+      
+      // Use the freshest data possible
+      const freshDocs = Array.isArray(storageDocs) ? storageDocs : allDocs;
       
       // Sort by upload date (newest first)
-      const sortedDocs = allDocs.sort((a, b) => 
+      const sortedDocs = freshDocs.sort((a, b) => 
         new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
       );
       
@@ -156,7 +168,11 @@ export default function ChatWithContext() {
     
     return (
       <div className="mb-4">
-        <h3 className="text-xs font-medium text-gray-400 mb-2">{title}</h3>
+        {/* Section header with improved styling */}
+        <div className="bg-gray-800/70 px-3 py-2 rounded-md mb-3 border-l-2 border-blue-500">
+          <h3 className="text-xs font-medium text-gray-200">{title}</h3>
+        </div>
+        
         {displayDocs.length > 0 ? (
           <>
             <ul className="space-y-2">
@@ -165,7 +181,7 @@ export default function ChatWithContext() {
             {hasMore && (
               <button 
                 onClick={() => setShowAll(!showAll)}
-                className="text-xs text-blue-400 hover:underline mt-2 flex items-center"
+                className="text-xs text-blue-400 hover:underline mt-2 flex items-center justify-center w-full py-1 px-2 bg-gray-800/30 rounded-md"
               >
                 {showAll ? 'Show Less' : 'More +'}
                 <ChevronRight size={12} className={`ml-1 transition-transform ${showAll ? 'rotate-90' : ''}`} />
@@ -173,7 +189,7 @@ export default function ChatWithContext() {
             )}
           </>
         ) : (
-          <div className="text-center py-4 text-gray-500 text-xs">
+          <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
             <p>No {title.toLowerCase()} available</p>
           </div>
         )}
@@ -220,8 +236,11 @@ export default function ChatWithContext() {
           {/* Sidebar with Documents */}
           <div className="w-1/4">
             <Card className="shadow-lg border-gray-800 bg-gray-900 h-full">
-              <CardHeader className="bg-gray-800/50 border-b border-gray-800 py-3">
-                <CardTitle className="text-sm font-medium text-gray-200">Documents</CardTitle>
+              <CardHeader className="bg-gray-800/70 border-b border-gray-800 py-3">
+                <CardTitle className="text-sm font-medium text-gray-200 flex items-center">
+                  <FileText size={16} className="mr-2 text-blue-400" />
+                  Documents
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-3">
                 {loadingDocs ? (
@@ -260,9 +279,9 @@ export default function ChatWithContext() {
                   </>
                 )}
                 
-                <div className="mt-4 text-xs text-gray-400 p-2 bg-gray-800/50 rounded">
-                  <p className="font-medium mb-1">Ask the assistant about:</p>
-                  <ul className="list-disc pl-4 space-y-1">
+                <div className="mt-6 text-xs text-gray-400 p-3 bg-gray-800/50 rounded-md border-l-2 border-blue-500">
+                  <p className="font-medium mb-2">Ask the assistant about:</p>
+                  <ul className="list-disc pl-4 space-y-1.5">
                     <li>Document requirements</li>
                     <li>Common errors in loan documents</li>
                     <li>Regulatory guidelines</li>
