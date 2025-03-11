@@ -53,24 +53,24 @@ export default function ChatWithContext() {
 
   return (
     <LayoutWrapper>
-      <div className="flex flex-col">
+      <div className="flex flex-col h-screen">
         {/* Chat Header */}
         <ChatHeader clearMessages={clearMessages} />
         
         {/* Main Chat Area */}
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex gap-6">
+        <div className="container mx-auto px-4 py-6 flex-grow overflow-hidden">
+          <div className="flex gap-6 h-full">
             {/* Messages and Input Area */}
-            <div className="w-3/4 flex flex-col">
-              {/* Chat Messages - Fixed height with scrolling */}
-              <div className="bg-white rounded-lg border shadow-sm mb-4 overflow-y-auto" style={{ height: "calc(100vh - 250px)" }}>
-                <div className="p-4">
+            <div className="w-3/4 flex flex-col h-full">
+              {/* Chat Messages - Flexible height with scrolling */}
+              <div className="bg-white rounded-lg border shadow-sm mb-4 flex-grow overflow-hidden">
+                <div className="p-4 h-full overflow-y-auto">
                   <ChatMessages messages={messages} indicatorState={indicatorState} />
                 </div>
               </div>
               
               {/* Chat Input - Fixed at bottom with proper spacing */}
-              <div className="mb-8">
+              <div className="mb-4">
                 <ChatInput
                   handleInputChange={handleInputChange}
                   handleSubmit={handleSubmit}
@@ -81,7 +81,7 @@ export default function ChatWithContext() {
             </div>
             
             {/* Document Context Sidebar */}
-            <div className="w-1/4">
+            <div className="w-1/4 h-full overflow-y-auto">
               <Card className="shadow-sm sticky top-20">
                 <CardHeader className="bg-gray-50 border-b py-3">
                   <CardTitle className="text-sm font-medium">Recent Documents</CardTitle>

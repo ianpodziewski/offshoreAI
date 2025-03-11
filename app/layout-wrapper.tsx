@@ -12,10 +12,10 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="pt-16 flex-grow">
+      <main className="pt-16 flex-grow overflow-hidden">
         {children}
       </main>
-      <footer className="bg-gray-50 border-t py-6">
+      <footer className="bg-gray-50 border-t py-6 mt-auto">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">

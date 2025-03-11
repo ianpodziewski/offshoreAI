@@ -74,7 +74,7 @@ AssistantMessage.displayName = "AssistantMessage";
 // Memoize the EmptyMessages component
 const EmptyMessages = memo(() => {
   return (
-    <div className="flex flex-col flex-1 p-1 gap-3 justify-center items-center">
+    <div className="flex flex-col h-full justify-center items-center p-4">
       <p className="text-gray-500">Ask a question to start the conversation</p>
     </div>
   );
@@ -118,16 +118,16 @@ export default function ChatMessages({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col flex-1 p-1 gap-3"
+      className="flex flex-col w-full h-full p-1 gap-3 overflow-y-auto"
     >
-      <div className="h-[60px]"></div>
       {messages.length === 0 ? (
         <EmptyMessages />
       ) : (
-        renderedMessages
+        <div className="flex flex-col space-y-4 pt-2 pb-4">
+          {renderedMessages}
+          {showLoading && <Loading indicatorState={indicatorState} />}
+        </div>
       )}
-      {showLoading && <Loading indicatorState={indicatorState} />}
-      <div className="h-[225px]"></div>
     </motion.div>
   );
 }
