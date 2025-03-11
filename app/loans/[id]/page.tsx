@@ -5,13 +5,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Upload, FileText } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
-import SimpleDocumentList from '@/components/document/SimpleDocumentList';
 import SimpleDocumentUploader from '@/components/document/SimpleDocumentUploader';
 import SimpleDocumentViewer from '@/components/document/SimpleDocumentViewer';
 import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
+import DocumentSockets from '@/components/document/DocumentSockets';
 
 export default function LoanDetailPage() {
   const params = useParams();
@@ -59,10 +60,12 @@ export default function LoanDetailPage() {
         <div className="container mx-auto py-16 px-4 text-center">
           <h2 className="text-2xl font-bold text-gray-700 mb-4">Loan Not Found</h2>
           <p className="text-gray-600 mb-6">The loan you're looking for doesn't exist or has been removed.</p>
-          <Button onClick={() => router.push('/loans')}>
-            <ArrowLeft size={16} className="mr-2" />
-            Back to Loans
-          </Button>
+          <Link href="/loans">
+            <Button>
+              <ArrowLeft size={16} className="mr-2" />
+              Back to Loans
+            </Button>
+          </Link>
         </div>
       </LayoutWrapper>
     );
@@ -72,14 +75,12 @@ export default function LoanDetailPage() {
     <LayoutWrapper>
       <div className="container mx-auto py-8 px-4">
         <div className="mb-6">
-          <Button 
-            variant="ghost" 
-            onClick={() => router.push('/loans')}
-            className="mb-4"
-          >
-            <ArrowLeft size={16} className="mr-2" />
-            Back to Loans
-          </Button>
+          <Link href="/loans">
+            <Button variant="ghost" className="mb-4">
+              <ArrowLeft size={16} className="mr-2" />
+              Back to Loans
+            </Button>
+          </Link>
           
           <h1 className="text-3xl font-bold mb-2">{loan.borrowerName}'s Loan</h1>
           <p className="text-gray-600">
@@ -114,7 +115,7 @@ export default function LoanDetailPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                    <p className="font-medium">{loan.status.replace('_', ' ')}</p>
+                    <p className="font-medium capitalize">{loan.status.replace('_', ' ')}</p>
                   </div>
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Created Date</h3>
@@ -129,13 +130,13 @@ export default function LoanDetailPage() {
               </CardContent>
             </Card>
             
-            {/* Document List */}
+            {/* Document Sockets */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Loan Documents</CardTitle>
               </CardHeader>
               <CardContent>
-                <SimpleDocumentList 
+                <DocumentSockets
                   loanId={loan.id}
                   onViewDocument={setSelectedDocument}
                   refreshTrigger={refreshTrigger}
@@ -146,17 +147,24 @@ export default function LoanDetailPage() {
           
           {/* Document Uploader */}
           <div>
-            <SimpleDocumentUploader 
-              loanId={loan.id}
-              onUploadComplete={handleDocumentUploadComplete}
-            />
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Upload Loan Document</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SimpleDocumentUploader 
+                  loanId={loan.id}
+                  onUploadComplete={handleDocumentUploadComplete}
+                />
+              </CardContent>
+            </Card>
             
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-              <h3 className="font-medium flex items-center mb-2">
-                <FileText size={16} className="mr-2 text-blue-500" />
-                Required Documents
-              </h3>
-              <ul className="text-sm text-gray-700 space-y-2 ml-5 list-disc">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="flex items-start mb-2">
+                <AlertCircle size={18} className="text-blue-500 mr-2 mt-0.5" />
+                <h3 className="font-medium">Required Documents</h3>
+              </div>
+              <ul className="pl-6 space-y-1 text-sm text-gray-700">
                 <li>Promissory Note</li>
                 <li>Deed of Trust</li>
                 <li>Closing Disclosure</li>
