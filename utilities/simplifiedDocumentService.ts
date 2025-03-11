@@ -5,19 +5,19 @@ export interface SimpleDocument {
   id: string;
   loanId: string;
   filename: string;
-  fileType: string;
-  fileSize: number;
+  fileType?: string;
+  fileSize?: number;
   dateUploaded: string;
   category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat';
   docType: string;
   status: 'pending' | 'approved' | 'rejected';
-  content: string; // Base64 encoded content
+  content: string; // Base64 encoded content or HTML for generated documents
   notes?: string;
   assignedTo?: string;
 }
 
 // Constants for storage keys
-const DOCUMENTS_STORAGE_KEY = 'simple_documents';
+const STORAGE_KEY = 'simple_documents';
 
 // Helper function for document type classification
 function classifyDocument(filename: string): { 
@@ -47,6 +47,9 @@ function classifyDocument(filename: string): {
   if (lowerName.includes('insurance')) {
     return { docType: 'insurance_policy', category: 'legal' };
   }
+  if (lowerName.includes('appraisal')) {
+    return { docType: 'property_appraisal', category: 'financial' };
+  }
   
   // Default
   return { docType: 'general_document', category: 'misc' };
@@ -56,7 +59,7 @@ export const simpleDocumentService = {
   // Get all documents
   getAllDocuments: (): SimpleDocument[] => {
     try {
-      const docsJson = localStorage.getItem(DOCUMENTS_STORAGE_KEY);
+      const docsJson = localStorage.getItem(STORAGE_KEY);
       const docs = docsJson ? JSON.parse(docsJson) : [];
       
       // Validate data structure
@@ -105,6 +108,51 @@ export const simpleDocumentService = {
     }
   },
   
+  // Add a document directly (without file upload)
+  // This is used for pre-generated documents
+  addDocumentDirectly: (document: SimpleDocument): SimpleDocument => {
+    try {
+      // Get existing documents from storage
+      const existingDocs = simpleDocumentService.getAllDocuments();
+      
+      // Check if a document with the same docType already exists for this loan
+      const existingDoc = existingDocs.find(doc => 
+        doc.loanId === document.loanId && 
+        doc.docType === document.docType
+      );
+      
+      if (existingDoc) {
+        // Update existing document instead of creating new
+        const updatedDoc = {
+          ...existingDoc,
+          ...document,
+          id: existingDoc.id // Keep the original ID
+        };
+        
+        // Replace in array
+        const index = existingDocs.findIndex(doc => doc.id === existingDoc.id);
+        if (index >= 0) {
+          existingDocs[index] = updatedDoc;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
+          console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
+          return updatedDoc;
+        }
+      }
+      
+      // Add the new document
+      existingDocs.push(document);
+      
+      // Save back to storage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
+      
+      console.log(`✅ Document added directly: ${document.filename}`);
+      return document;
+    } catch (error) {
+      console.error('❌ Error adding document directly:', error);
+      throw error;
+    }
+  },
+  
   // Add a new document
   addDocument: async (file: File, loanId: string, classification?: { docType: string; category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' }): Promise<SimpleDocument | null> => {
     try {
@@ -135,34 +183,33 @@ export const simpleDocumentService = {
       // Get all existing documents
       const allDocs = simpleDocumentService.getAllDocuments();
       
-      // Check if a document with the same filename already exists for chat uploads
-      // This prevents duplicate documents appearing in the Recent Documents sidebar
-      if (loanId === 'chat-uploads') {
-        const existingDoc = allDocs.find(doc => 
-          doc.loanId === 'chat-uploads' && 
-          doc.filename === file.name
-        );
+      // Check if a document with the same docType already exists for this loan
+      // This ensures we replace by document type for document sockets
+      const existingDoc = allDocs.find(doc => 
+        doc.loanId === loanId && 
+        doc.docType === docType
+      );
+      
+      if (existingDoc) {
+        console.log(`Updating existing document: ${file.name} as ${docType}`);
         
-        if (existingDoc) {
-          console.log(`Updating existing chat document: ${file.name}`);
-          
-          // Update existing document instead of creating new
-          const updatedDoc = {
-            ...existingDoc,
-            fileType: file.type || 'application/pdf',
-            fileSize: file.size,
-            dateUploaded: new Date().toISOString(),
-            content: formattedContent
-          };
-          
-          // Replace in array
-          const index = allDocs.findIndex(doc => doc.id === existingDoc.id);
-          if (index >= 0) {
-            allDocs[index] = updatedDoc;
-            localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
-            console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
-            return updatedDoc;
-          }
+        // Update existing document instead of creating new
+        const updatedDoc = {
+          ...existingDoc,
+          filename: file.name,
+          fileType: file.type || 'application/pdf',
+          fileSize: file.size,
+          dateUploaded: new Date().toISOString(),
+          content: formattedContent
+        };
+        
+        // Replace in array
+        const index = allDocs.findIndex(doc => doc.id === existingDoc.id);
+        if (index >= 0) {
+          allDocs[index] = updatedDoc;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
+          console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
+          return updatedDoc;
         }
       }
       
@@ -182,7 +229,7 @@ export const simpleDocumentService = {
       
       // Add the new document
       allDocs.push(newDoc);
-      localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
       
       console.log(`Document added successfully: ${newDoc.filename} (ID: ${newDoc.id}, Category: ${newDoc.category})`);
       return newDoc;
@@ -207,7 +254,7 @@ export const simpleDocumentService = {
         assignedTo: assignedTo || allDocs[docIndex].assignedTo
       };
       
-      localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
       
       return allDocs[docIndex];
     } catch (error) {
@@ -224,7 +271,7 @@ export const simpleDocumentService = {
       
       if (filteredDocs.length === allDocs.length) return false;
       
-      localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredDocs));
       return true;
     } catch (error) {
       console.error('Error deleting document:', error);
@@ -258,7 +305,7 @@ export const simpleDocumentService = {
       });
       
       // Save the updated documents
-      localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
       
       return transferredDocs;
     } catch (error) {
@@ -311,7 +358,7 @@ export const simpleDocumentService = {
       );
       
       // Save back only the non-chat documents
-      localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(nonChatDocs));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nonChatDocs));
       console.log("Chat documents cleared successfully");
     } catch (error) {
       console.error('Error clearing chat documents:', error);
@@ -320,7 +367,7 @@ export const simpleDocumentService = {
   
   // Clear all documents (for testing)
   clearAllDocuments: (): void => {
-    localStorage.removeItem(DOCUMENTS_STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
   }
 };
 

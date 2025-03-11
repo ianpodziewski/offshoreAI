@@ -1,8 +1,10 @@
 // components/document/DocumentSockets.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, Upload, Check, X, Eye } from 'lucide-react';
+import { FileText, Upload, Check, X, Eye, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SimpleDocument, simpleDocumentService } from '@/utilities/simplifiedDocumentService';
+import { fakeDocumentService } from '@/utilities/fakeDocumentService';
+import { loanDatabase } from '@/utilities/loanDatabase';
 
 // Define the required document types for loans
 export const REQUIRED_DOCUMENT_TYPES: {
@@ -32,6 +34,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [generating, setGenerating] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDocuments = () => {
@@ -47,6 +50,55 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   // Get document for a specific docType if it exists
   const getDocumentForType = (docType: string): SimpleDocument | undefined => {
     return documents.find(doc => doc.docType === docType);
+  };
+
+  // Generate a fake document for a specific document type
+  const handleGenerateFakeDocument = async (docType: string) => {
+    setGenerating(docType);
+    
+    try {
+      // Get the loan data
+      const loan = loanDatabase.getLoanById(loanId);
+      
+      if (!loan) {
+        console.error('Loan not found');
+        return;
+      }
+      
+      // Generate the fake document
+      const fakeDocument = fakeDocumentService.generateFakeDocument(loan, docType);
+      
+      if (fakeDocument) {
+        // Update the documents list
+        setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), fakeDocument]);
+      }
+    } catch (error) {
+      console.error('Error generating fake document:', error);
+    } finally {
+      setGenerating(null);
+    }
+  };
+
+  // Generate all fake documents
+  const handleGenerateAllFakeDocuments = async () => {
+    try {
+      // Get the loan data
+      const loan = loanDatabase.getLoanById(loanId);
+      
+      if (!loan) {
+        console.error('Loan not found');
+        return;
+      }
+      
+      // Set all document types to generating state
+      REQUIRED_DOCUMENT_TYPES.forEach(docType => {
+        if (!getDocumentForType(docType.docType)) {
+          handleGenerateFakeDocument(docType.docType);
+        }
+      });
+    } catch (error) {
+      console.error('Error generating fake documents:', error);
+    }
   };
 
   // Get status badge styling
@@ -87,7 +139,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       
       setUploading(docType);
       
-      // Simulate progress (in a real implementation, you might have actual upload progress)
+      // Simulate progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -132,10 +184,23 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Add a button to generate all fake documents */}
+      <div className="mb-4 flex justify-end">
+        <Button
+          onClick={handleGenerateAllFakeDocuments}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+          size="sm"
+        >
+          <RefreshCw size={16} />
+          Generate Sample Documents
+        </Button>
+      </div>
+
       {REQUIRED_DOCUMENT_TYPES.map((docTypeInfo) => {
         const document = getDocumentForType(docTypeInfo.docType);
         const isDragging = dragTarget === docTypeInfo.docType;
         const isUploading = uploading === docTypeInfo.docType;
+        const isGenerating = generating === docTypeInfo.docType;
         
         return (
           <div 
@@ -175,15 +240,17 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                     View
                   </Button>
                 </div>
-              ) : isUploading ? (
+              ) : isUploading || isGenerating ? (
                 <div className="text-center py-2">
                   <div className="h-2 w-full bg-gray-200 rounded-full mb-2">
                     <div 
                       className="h-full bg-blue-600 rounded-full transition-all" 
-                      style={{ width: `${uploadProgress}%` }}
+                      style={{ width: isGenerating ? '100%' : `${uploadProgress}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500">Uploading document...</p>
+                  <p className="text-xs text-gray-500">
+                    {isGenerating ? 'Generating document...' : 'Uploading document...'}
+                  </p>
                 </div>
               ) : (
                 <div className={`text-center py-3 ${isDragging ? 'bg-blue-50' : ''}`}>
@@ -191,12 +258,12 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                   <p className={`text-sm ${isDragging ? 'text-blue-700' : 'text-gray-400'}`}>
                     {isDragging ? 'Drop to upload' : 'Drag & drop a PDF file here'}
                   </p>
-                  {!isDragging && (
+                  <div className="flex justify-center mt-2 space-x-2">
                     <label 
-                      className="text-xs text-blue-600 hover:underline cursor-pointer mt-1 block"
+                      className="text-xs text-blue-600 hover:underline cursor-pointer"
                       htmlFor={`file-upload-${docTypeInfo.docType}`}
                     >
-                      or click to browse
+                      Upload File
                       <input 
                         type="file" 
                         id={`file-upload-${docTypeInfo.docType}`}
@@ -246,7 +313,17 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                         }}
                       />
                     </label>
-                  )}
+                    <span className="text-xs text-gray-400">or</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-blue-600 hover:text-blue-800 underline p-0 h-auto"
+                      onClick={() => handleGenerateFakeDocument(docTypeInfo.docType)}
+                    >
+                      Generate Sample
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
