@@ -21,23 +21,33 @@ const formatStatus = (status?: string) => {
 };
 
 const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
-  // Get status color
-  const getStatusColor = (status?: string) => {
+  // Get status color and style
+  const getStatusStyle = (status?: string) => {
     switch (status) {
       case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'in_review':
-        return 'bg-yellow-100 text-yellow-800';
+        return {
+          bgColor: 'bg-green-900/50',
+          textColor: 'text-green-400',
+          pillColor: 'bg-green-500/20 text-green-400'
+        };
       case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'closed':
-        return 'bg-gray-100 text-gray-800';
-      case 'funded':
-        return 'bg-blue-100 text-blue-800';
-      case 'default':
-        return 'bg-red-100 text-red-800';
+        return {
+          bgColor: 'bg-red-900/50',
+          textColor: 'text-red-400',
+          pillColor: 'bg-red-500/20 text-red-400'
+        };
+      case 'pending':
+        return {
+          bgColor: 'bg-blue-900/50',
+          textColor: 'text-blue-400',
+          pillColor: 'bg-blue-500/20 text-blue-400'
+        };
       default:
-        return 'bg-blue-100 text-blue-800';
+        return {
+          bgColor: 'bg-gray-900/50',
+          textColor: 'text-gray-400',
+          pillColor: 'bg-gray-500/20 text-gray-400'
+        };
     }
   };
 
@@ -51,7 +61,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
   // Render placeholder if no loan
   if (!loan) {
     return (
-      <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200 opacity-50">
+      <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200 opacity-50 bg-gray-900 border-gray-800">
         <div className="p-4 text-center text-gray-500">
           Loan Not Available
         </div>
@@ -59,28 +69,30 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
     );
   }
 
+  const statusStyle = getStatusStyle(loan.status);
+
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <Card className={`overflow-hidden hover:shadow-md transition-shadow duration-200 bg-gray-900 border-gray-800 ${statusStyle.bgColor}`}>
       {/* Card Header with Loan Number and Status */}
-      <div className="flex justify-between items-center p-4 bg-gray-50 border-b">
+      <div className="flex justify-between items-center p-4 border-b border-gray-800">
         <div className="flex items-center">
-          <div className="text-blue-600 mr-2">
+          <div className={`mr-2 ${statusStyle.textColor}`}>
             <DollarSign size={16} />
           </div>
-          <h3 className="font-medium">Loan #{(loan.id || '').substring(0, 8)}</h3>
+          <h3 className="font-medium text-white">Loan #{(loan.id || '').substring(0, 8)}</h3>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(loan.status)}`}>
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.pillColor}`}>
           {formatStatus(loan.status)}
         </span>
       </div>
 
       {/* Property Address */}
-      <div className="p-4 border-b">
+      <div className="p-4 border-b border-gray-800">
         <div className="flex items-start">
           <Home size={16} className="text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
           <div>
-            <p className="text-xs text-gray-500 font-medium">Property Address</p>
-            <p className="text-sm">{loan.propertyAddress || 'No Address'}</p>
+            <p className="text-xs text-gray-400 font-medium">Property Address</p>
+            <p className="text-sm text-white">{loan.propertyAddress || 'No Address'}</p>
           </div>
         </div>
       </div>
@@ -88,17 +100,17 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
       {/* Card Footer with Loan Details */}
       <div className="p-4 flex justify-between items-center">
         <div>
-          <p className="text-xs text-gray-500 font-medium">Loan Type</p>
-          <p className="text-sm font-medium">{formatLoanType(loan.loanType)}</p>
+          <p className="text-xs text-gray-400 font-medium">Loan Type</p>
+          <p className="text-sm font-medium text-white">{formatLoanType(loan.loanType)}</p>
         </div>
         <div className="flex flex-col items-end">
-          <p className="text-xs text-gray-500 font-medium mb-1">Loan Amount</p>
-          <p className="text-sm font-medium mb-2">
+          <p className="text-xs text-gray-400 font-medium mb-1">Loan Amount</p>
+          <p className="text-sm font-medium mb-2 text-white">
             ${(loan.loanAmount ?? 0).toLocaleString()}
           </p>
           <Link 
             href={`/loans/${loan.id}`}
-            className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
+            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm font-medium"
           >
             View Details
             <ArrowRight size={14} />
