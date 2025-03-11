@@ -1,61 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { LoanData } from '@/utilities/loanGenerator';
 
-// Exact coordinate system for US states
+// Precise US map state coordinates
 const US_STATES_COORDINATES: Record<string, [number, number]> = {
-  AL: [32.7794, -86.8287],
-  AK: [64.0685, -152.2782],
-  AZ: [34.2744, -111.6602],
-  AR: [34.8938, -92.4426],
-  CA: [37.1841, -119.4696],
-  CO: [38.9972, -105.5478],
-  CT: [41.6219, -72.7273],
-  DE: [38.9896, -75.5050],
-  FL: [28.6305, -82.4497],
-  GA: [32.6415, -83.4426],
-  HI: [20.2927, -156.3737],
-  ID: [44.3509, -114.6130],
-  IL: [40.0417, -89.1965],
-  IN: [39.8942, -86.2816],
-  IA: [42.0751, -93.4960],
-  KS: [38.4937, -98.3804],
-  KY: [37.5347, -85.3021],
-  LA: [31.0689, -91.9968],
-  ME: [45.3695, -69.2428],
-  MD: [38.9784, -76.4922],
-  MA: [42.2596, -71.8083],
-  MI: [44.3467, -85.4102],
-  MN: [46.2807, -94.3053],
-  MS: [32.7364, -89.6678],
-  MO: [38.3566, -92.4580],
-  MT: [47.0527, -109.6333],
-  NE: [41.5378, -99.7951],
-  NV: [39.3289, -116.6312],
-  NH: [43.6805, -71.5811],
-  NJ: [40.1907, -74.6728],
-  NM: [34.4071, -106.1126],
-  NY: [42.9538, -75.5268],
-  NC: [35.5557, -79.3877],
-  ND: [47.4501, -100.4659],
-  OH: [40.2862, -82.7937],
-  OK: [35.5889, -97.4943],
-  OR: [43.9336, -120.5583],
-  PA: [40.8781, -77.7996],
-  RI: [41.6762, -71.5562],
-  SC: [33.9169, -80.8964],
-  SD: [44.4443, -100.2263],
-  TN: [35.8580, -86.3505],
-  TX: [31.4757, -99.3312],
-  UT: [39.3055, -111.6703],
-  VT: [44.0687, -72.6658],
-  VA: [37.5215, -78.8537],
-  WA: [47.3826, -120.4472],
-  WV: [38.6409, -80.6227],
-  WI: [44.6243, -89.9941],
-  WY: [42.9957, -107.5512]
+  AL: [-86.8287, 32.7794], WA: [-120.4472, 47.3826], AK: [-152.2782, 64.0685],
+  AZ: [-111.6602, 34.2744], CA: [-119.4696, 37.1841], CO: [-105.5478, 38.9972],
+  CT: [-72.7273, 41.6219], DE: [-75.5050, 38.9896], FL: [-82.4497, 28.6305],
+  GA: [-83.4426, 32.6415], HI: [-156.3737, 20.2927], ID: [-114.6130, 44.3509],
+  IL: [-89.1965, 40.0417], IN: [-86.2816, 39.8942], IA: [-93.4960, 42.0751],
+  KS: [-98.3804, 38.4937], KY: [-85.3021, 37.5347], LA: [-91.9968, 31.0689],
+  ME: [-69.2428, 45.3695], MD: [-76.4922, 38.9784], MA: [-71.8083, 42.2596],
+  MI: [-85.4102, 44.3467], MN: [-94.3053, 46.2807], MS: [-89.6678, 32.7364],
+  MO: [-92.4580, 38.3566], MT: [-109.6333, 47.0527], NE: [-99.7951, 41.5378],
+  NV: [-116.6312, 39.3289], NH: [-71.5811, 43.6805], NJ: [-74.6728, 40.1907],
+  NM: [-106.1126, 34.4071], NY: [-75.5268, 42.9538], NC: [-79.3877, 35.5557],
+  ND: [-100.4659, 47.4501], OH: [-82.7937, 40.2862], OK: [-97.4943, 35.5889],
+  OR: [-120.5583, 43.9336], PA: [-77.7996, 40.8781], RI: [-71.5562, 41.6762],
+  SC: [-80.8964, 33.9169], SD: [-100.2263, 44.4443], TN: [-86.3505, 35.8580],
+  TX: [-99.3312, 31.4757], UT: [-111.6703, 39.3055], VT: [-72.6658, 44.0687],
+  VA: [-78.8537, 37.5215], WV: [-80.6227, 38.6409], WI: [-89.9941, 44.6243],
+  WY: [-107.5512, 42.9957]
 };
 
-// Property type to color mapping
+// Color and size mapping functions
 const getMarkerColor = (propertyType: string): string => {
   const colorMap: Record<string, string> = {
     single_family: '#FF6347',    // Tomato red
@@ -68,7 +35,6 @@ const getMarkerColor = (propertyType: string): string => {
   return colorMap[propertyType] || '#888888'; // Default gray
 };
 
-// Loan type to marker size mapping
 const getMarkerSize = (loanAmount: number): number => {
   if (loanAmount > 500000) return 12;
   if (loanAmount > 250000) return 9;
@@ -76,11 +42,39 @@ const getMarkerSize = (loanAmount: number): number => {
   return 4;
 };
 
-// Extract state code from property address
+// State code extraction
 const extractStateCode = (address: string): string | null => {
-  // Look for 2-letter state code in address
   const stateCodeMatch = address.match(/\b([A-Z]{2})\b/);
   return stateCodeMatch ? stateCodeMatch[1] : null;
+};
+
+// Map projection function
+const projectCoordinates = (lon: number, lat: number) => {
+  // Albers USA projection parameters
+  const parallels = [29.5, 45.5];
+  const originLon = -96;
+  const originLat = 37.5;
+  
+  // Convert to radians
+  const toRad = (deg: number) => deg * (Math.PI / 180);
+  const lon_rad = toRad(lon);
+  const lat_rad = toRad(lat);
+  const origin_lon = toRad(originLon);
+  const origin_lat = toRad(originLat);
+  const lat1 = toRad(parallels[0]);
+  const lat2 = toRad(parallels[1]);
+  
+  // Projection calculations
+  const n = 0.5 * (Math.sin(lat1) + Math.sin(lat2));
+  const C = Math.cos(lat1) ** 2 + 2 * n * Math.sin(lat1);
+  const rho = Math.sqrt(C - 2 * n * Math.sin(lat_rad)) / n;
+  const theta = n * (lon_rad - origin_lon);
+  
+  // Scale and translate
+  const x = 600 + rho * Math.sin(theta);
+  const y = 300 - rho * Math.cos(theta);
+  
+  return [x, y];
 };
 
 interface PropertyMapProps {
@@ -105,17 +99,28 @@ const PropertyMap: React.FC<PropertyMapProps> = ({ loans }) => {
 
   return (
     <svg 
-      viewBox="0 0 1000 600" 
+      viewBox="0 0 800 500" 
       preserveAspectRatio="xMidYMid meet"
       className="w-full h-full"
     >
-      {/* US Background */}
-      <rect x="0" y="0" width="1000" height="600" fill="#f0f0f0" />
+      {/* Background */}
+      <rect x="0" y="0" width="800" height="500" fill="#f0f0f0" />
+      
+      {/* US Outline */}
+      <path 
+        d="M300,100 L500,100 L600,200 L700,250 L650,350 L500,400 L300,350 L200,250 Z" 
+        fill="none" 
+        stroke="#999" 
+        strokeWidth="2" 
+      />
       
       {/* Render state markers */}
       {Object.entries(loansByState).map(([stateCode, stateLoanData]) => {
         // Get state coordinates
-        const [lat, lng] = US_STATES_COORDINATES[stateCode] || [0, 0];
+        const [lon, lat] = US_STATES_COORDINATES[stateCode] || [0, 0];
+        
+        // Project coordinates
+        const [x, y] = projectCoordinates(lon, lat);
         
         // Calculate total loan amount for this state
         const totalLoanAmount = stateLoanData.reduce((sum, loan) => 
@@ -124,10 +129,6 @@ const PropertyMap: React.FC<PropertyMapProps> = ({ loans }) => {
         // Determine marker properties
         const markerColor = getMarkerColor(stateLoanData[0].propertyType || 'other');
         const markerSize = getMarkerSize(totalLoanAmount / stateLoanData.length);
-        
-        // Convert lat/lng to SVG coordinates
-        const x = (lng + 130) * 7; // Adjust for US map projection
-        const y = (50 - lat) * 10; // Invert latitude
         
         return (
           <g key={stateCode}>
@@ -159,14 +160,6 @@ const PropertyMap: React.FC<PropertyMapProps> = ({ loans }) => {
           </g>
         );
       })}
-      
-      {/* Optional: US Outline */}
-      <path
-        d="M100,100 L180,100 L210,150 L450,150 L510,180 L640,210 L750,200 L740,240 L640,270 L650,290 L640,380 L500,430 L300,410 L100,260 Z"
-        fill="none"
-        stroke="#999"
-        strokeWidth="2"
-      />
     </svg>
   );
 };
