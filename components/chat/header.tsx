@@ -18,16 +18,16 @@ export default function ChatHeader({
   clearMessages: () => void;
 }) {
   return (
-    <div className="border-b bg-white">
-      <div className="container mx-auto max-w-screen-xl">
-        <div className="flex items-center justify-between py-4">
+    <div className="mb-4">
+      <div className="bg-gray-100 rounded-lg p-3 shadow-sm">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AILogo />
-            <p className="font-medium">{CHAT_HEADER}</p>
+            <p className="font-medium">Loan Underwriting Assistant</p>
           </div>
           <Button
             onClick={clearMessages}
-            className="gap-2 shadow-sm"
+            className="gap-2"
             variant="outline"
             size="sm"
           >
