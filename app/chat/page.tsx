@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ChatInput from "@/components/chat/input";
 import ChatMessages from "@/components/chat/messages";
+import ChatContainer from "@/components/ChatContainer"; // Import the new ChatContainer
 import useApp from "@/hooks/use-app";
 import ChatHeader from "@/components/chat/header";
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -118,10 +119,10 @@ export default function ChatWithContext() {
             
             {/* Chat Container */}
             <div className="flex flex-col h-[calc(100vh-220px)] bg-white rounded-lg border shadow">
-              {/* Messages container */}
-              <div className="flex-grow overflow-y-auto p-4">
+              {/* Replace the simple overflow-y-auto div with the ChatContainer component */}
+              <ChatContainer messages={messages}>
                 <ChatMessages messages={messages} indicatorState={indicatorState} />
-              </div>
+              </ChatContainer>
               
               {/* Input area */}
               <div className="p-3 border-t">
