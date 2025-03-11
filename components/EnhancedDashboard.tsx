@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { documentService } from '@/utilities/documentService';
 import { LoanData } from '@/utilities/loanGenerator';
-import PropertyMap from '@/components/PropertyMap';  // Updated import
+import LoanMap from '@/components/LoanMap';  // Change from PropertyMap to LoanMap
 import { 
   BarChart2, 
   DollarSign, 
@@ -359,7 +359,7 @@ export default function EnhancedDashboard() {
             </CardHeader>
             <CardContent className="h-96 bg-white">
               {loans.length > 0 ? (
-                <PropertyMap loans={loans} />
+                <LoanMap loans={loans} />
               ) : (
                 <div className="h-full flex flex-col justify-center items-center bg-gray-50">
                   <Map size={48} className="text-gray-300 mb-4" />
