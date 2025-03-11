@@ -210,12 +210,153 @@ export default function EnhancedDashboard() {
         
         {/* Key Metrics Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* ... */}
+          {/* Total Loan Value */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Loan Value</CardTitle>
+              <DollarSign className="h-4 w-4 text-blue-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(totalLoanValue)}</div>
+              <p className="text-xs text-gray-500">Total value of active loans</p>
+            </CardContent>
+          </Card>
+          
+          {/* Average Loan Size */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Average Loan Size</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(averageLoanSize)}</div>
+              <p className="text-xs text-gray-500">Average per loan</p>
+            </CardContent>
+          </Card>
+          
+          {/* Total Loans */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Loans</CardTitle>
+              <FileText className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{loans.length}</div>
+              <p className="text-xs text-gray-500">Active loans in system</p>
+            </CardContent>
+          </Card>
+          
+          {/* Funded Loans */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Funded Loans</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{loanStatusCounts.funded}</div>
+              <p className="text-xs text-gray-500">Successfully funded loans</p>
+            </CardContent>
+          </Card>
         </div>
         
         {/* Visualizations Row 1 - Side by Side Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* ... */}
+          {/* Loan Status Pipeline */}
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center text-lg">
+                <BarChart2 className="h-5 w-5 mr-2 text-blue-600" />
+                Loan Status Pipeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={[
+                    { name: 'In Review', value: loanStatusCounts.in_review || 0, fill: '#FFB347' },
+                    { name: 'Approved', value: loanStatusCounts.approved || 0, fill: '#77DD77' },
+                    { name: 'Funded', value: loanStatusCounts.funded || 0, fill: '#59A5D8' },
+                    { name: 'Closed', value: loanStatusCounts.closed || 0, fill: '#B19CD9' },
+                    { name: 'Rejected', value: loanStatusCounts.rejected || 0, fill: '#FF6961' }
+                  ]}
+                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    tick={{ fontSize: 14 }} 
+                  />
+                  <Tooltip formatter={(value) => [`${value} loans`]} />
+                  <Bar 
+                    dataKey="value"
+                    radius={[0, 4, 4, 0]}
+                  >
+                    {[
+                      { name: 'In Review', fill: '#FFB347' },
+                      { name: 'Approved', fill: '#77DD77' },
+                      { name: 'Funded', fill: '#59A5D8' },
+                      { name: 'Closed', fill: '#B19CD9' },
+                      { name: 'Rejected', fill: '#FF6961' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+          
+          {/* Monthly Loan Origination Trend */}
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center text-lg">
+                <TrendingUp className="h-5 w-5 mr-2 text-blue-600" />
+                Monthly Loan Origination
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={monthlyLoanData}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="month" 
+                    angle={-45} 
+                    textAnchor="end" 
+                    height={60} 
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis yAxisId="left" orientation="left" stroke="#8884d8" />
+                  <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                  <Tooltip formatter={(value, name) => [
+                    name === 'volume' ? `$${value}k` : value,
+                    name === 'volume' ? 'Loan Volume (thousands)' : 'Loan Count'
+                  ]} />
+                  <Legend />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="count" 
+                    name="Loan Count"
+                    stroke="#8884d8" 
+                    activeDot={{ r: 8 }} 
+                  />
+                  <Line 
+                    yAxisId="right"
+                    type="monotone" 
+                    dataKey="volume" 
+                    name="Loan Volume ($k)"
+                    stroke="#82ca9d" 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         </div>
         
         {/* Property Map - Full Width */}
