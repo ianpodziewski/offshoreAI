@@ -323,13 +323,13 @@ export default function EnhancedDashboard() {
                 Active Loan Value
               </h2>
             </div>
-            <CardContent className="py-6 flex items-center justify-center">
+            <div className="w-full py-6 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {formatCurrency(totalLoanValue)}
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
@@ -338,13 +338,13 @@ export default function EnhancedDashboard() {
                 Average Loan Size
               </h2>
             </div>
-            <CardContent className="py-6 flex items-center justify-center">
+            <div className="w-full py-6 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {formatCurrency(averageLoanSize)}
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
@@ -353,13 +353,13 @@ export default function EnhancedDashboard() {
                 Total Loans
               </h2>
             </div>
-            <CardContent className="py-6 flex items-center justify-center">
+            <div className="w-full py-6 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {loans.length}
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
@@ -368,13 +368,13 @@ export default function EnhancedDashboard() {
                 Funded Loans
               </h2>
             </div>
-            <CardContent className="py-6 flex items-center justify-center">
+            <div className="w-full py-6 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {loanStatusCounts.funded}
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
         </div>
 
@@ -387,8 +387,8 @@ export default function EnhancedDashboard() {
                 Loan Status Pipeline
               </h2>
             </div>
-            <CardContent className="h-80 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="w-full h-80 flex items-center justify-center">
+              <ResponsiveContainer width="95%" height="90%">
                 <BarChart
                   layout="vertical"
                   data={[
@@ -418,7 +418,7 @@ export default function EnhancedDashboard() {
                       fill: COLORS.chart.rejected,
                     },
                   ]}
-                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                  margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={COLORS.chart.grid} />
                   <XAxis type="number" stroke={COLORS.textSecondary} />
@@ -435,7 +435,7 @@ export default function EnhancedDashboard() {
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
+            </div>
           </Card>
 
           {/* Monthly Loan Origination */}
@@ -508,10 +508,11 @@ export default function EnhancedDashboard() {
               Property Locations
             </h2>
           </div>
-          <CardContent className="h-96 flex items-center justify-center" style={{ backgroundColor: COLORS.bgDarker }}>
-            {/* 3) Now <LoanMap stateData={stateData} /> is valid */}
-            <LoanMap stateData={stateData} />
-          </CardContent>
+          <div className="w-full h-96 flex items-center justify-center" style={{ backgroundColor: COLORS.bgDarker }}>
+            <div className="w-11/12 h-5/6">
+              <LoanMap stateData={stateData} />
+            </div>
+          </div>
         </Card>
       </div>
     </LayoutWrapper>
