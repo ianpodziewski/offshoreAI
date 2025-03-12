@@ -6,15 +6,6 @@ import { loanDatabase } from "@/utilities/loanDatabase";
 import { LoanData } from "@/utilities/loanGenerator";
 import dynamic from "next/dynamic";
 import {
-  BarChart2,
-  DollarSign,
-  TrendingUp,
-  Map,
-  FileText,
-  CheckCircle,
-} from "lucide-react";
-import LayoutWrapper from "@/app/layout-wrapper";
-import {
   ResponsiveContainer,
   LineChart,
   Line,
@@ -25,55 +16,56 @@ import {
   Legend,
   BarChart,
   Bar,
-  Cell,
 } from "recharts";
+import LayoutWrapper from "@/app/layout-wrapper";
+import { Map } from "lucide-react";
 
 // Define a consistent color palette based on your chat interface
 const COLORS = {
   // Primary UI colors
-  primary: "#3B82F6",        // Blue primary accent (blue-500)
-  secondary: "#6B7280",      // Gray secondary accent (gray-500)
-  
+  primary: "#3B82F6", // Blue primary accent (blue-500)
+  secondary: "#6B7280", // Gray secondary accent (gray-500)
+
   // Background colors
-  bgDark: "#111827",         // Card/container background (gray-900)
-  bgDarker: "#0F1629",       // Map/chart background (darker than gray-900)
-  bgHeader: "rgba(31, 41, 55, 0.7)",  // Header background (gray-800/70)
-  bgHover: "rgba(31, 41, 55, 0.5)",   // Hover state (gray-800/50)
-  bgButton: "rgba(31, 41, 55, 0.3)",  // Button background (gray-800/30)
-  
+  bgDark: "#111827", // Card/container background (gray-900)
+  bgDarker: "#0F1629", // Map/chart background (darker than gray-900)
+  bgHeader: "rgba(31, 41, 55, 0.7)", // Header background (gray-800/70)
+  bgHover: "rgba(31, 41, 55, 0.5)", // Hover state (gray-800/50)
+  bgButton: "rgba(31, 41, 55, 0.3)", // Button background (gray-800/30)
+
   // Border colors
-  border: "#1F2937",         // Border color (gray-800)
-  borderAccent: "#3B82F6",   // Accent border (blue-500)
-  
+  border: "#1F2937", // Border color (gray-800)
+  borderAccent: "#3B82F6", // Accent border (blue-500)
+
   // Text colors
-  textPrimary: "#F3F4F6",    // Primary text (gray-200)
-  textSecondary: "#D1D5DB",  // Secondary text (gray-300)
-  textMuted: "#6B7280",      // Muted text (gray-500)
-  textAccent: "#60A5FA",     // Accent text (blue-400)
-  
+  textPrimary: "#F3F4F6", // Primary text (gray-200)
+  textSecondary: "#D1D5DB", // Secondary text (gray-300)
+  textMuted: "#6B7280", // Muted text (gray-500)
+  textAccent: "#60A5FA", // Accent text (blue-400)
+
   // Status colors matching your chat interface
   status: {
-    approved: "#10B981",     // Approved status (green-400)
+    approved: "#10B981", // Approved status (green-400)
     approvedBg: "rgba(6, 78, 59, 0.3)", // Approved bg (green-900/30)
-    pending: "#FBBF24",      // Pending/in-review status (yellow-400)
+    pending: "#FBBF24", // Pending/in-review status (yellow-400)
     pendingBg: "rgba(120, 53, 15, 0.3)", // Pending bg (yellow-900/30)
-    rejected: "#F87171",     // Rejected status (red-400)
+    rejected: "#F87171", // Rejected status (red-400)
     rejectedBg: "rgba(127, 29, 29, 0.3)" // Rejected bg (red-900/30)
   },
-  
+
   // Chart colors
   chart: {
-    primary: "#60A5FA",      // Primary line/bar color (blue-400)
-    secondary: "#94A3B8",    // Secondary line/bar color (now gray for monthly chart)
-    tertiary: "#F59E0B",     // Tertiary color (amber-500)
-    grid: "#374151",         // Grid lines (gray-700)
-    
+    primary: "#60A5FA", // Primary line/bar color (blue-400)
+    secondary: "#94A3B8", // Secondary line/bar color (gray for monthly chart)
+    tertiary: "#F59E0B", // Tertiary color (amber-500)
+    grid: "#374151", // Grid lines (gray-700)
+
     // Blue shades for status pipeline chart
-    inReview: "#93C5FD",     // Lightest blue (blue-300)
-    approved: "#60A5FA",     // Light blue (blue-400)
-    funded: "#3B82F6",       // Medium blue (blue-500)
-    closed: "#2563EB",       // Dark blue (blue-600)
-    rejected: "#1D4ED8"      // Darkest blue (blue-700)
+    inReview: "#93C5FD", // Lightest blue (blue-300)
+    approved: "#60A5FA", // Light blue (blue-400)
+    funded: "#3B82F6", // Medium blue (blue-500)
+    closed: "#2563EB", // Dark blue (blue-600)
+    rejected: "#1D4ED8" // Darkest blue (blue-700)
   }
 };
 
@@ -86,7 +78,7 @@ interface LoanStatusCounts {
   [key: string]: number;
 }
 
-// 1) Define the LoanMapProps interface exactly as in LoanMap.tsx
+// Define the LoanMapProps interface exactly as in LoanMap.tsx
 interface LoanMapProps {
   stateData: Record<string, number>;
 }
@@ -143,21 +135,29 @@ const usStateNames: Record<string, string> = {
   WV: "West Virginia",
   WI: "Wisconsin",
   WY: "Wyoming",
-  DC: "District of Columbia",
+  DC: "District of Columbia"
 };
 
-// 2) Dynamically import the default export from LoanMap
-//    Then cast it to React.FC<LoanMapProps> to satisfy TS
-const LoanMap = dynamic(() =>
-  import("@/components/LoanMap").then((mod) => mod.default),
+// Dynamically import the default export from LoanMap
+const LoanMap = dynamic(
+  () => import("@/components/LoanMap").then((mod) => mod.default),
   {
     ssr: false,
     loading: () => (
-      <div className="h-full flex flex-col justify-center items-center" style={{ backgroundColor: COLORS.bgDarker }}>
-        <Map size={48} style={{ color: COLORS.textSecondary }} className="mb-4" />
-        <p style={{ color: COLORS.textMuted }} className="text-center">Loading map...</p>
+      <div
+        className="h-full flex flex-col justify-center items-center"
+        style={{ backgroundColor: COLORS.bgDarker }}
+      >
+        <Map
+          size={48}
+          style={{ color: COLORS.textSecondary }}
+          className="mb-4"
+        />
+        <p style={{ color: COLORS.textMuted }} className="text-center">
+          Loading map...
+        </p>
       </div>
-    ),
+    )
   }
 ) as React.FC<LoanMapProps>;
 
@@ -172,7 +172,7 @@ export default function EnhancedDashboard() {
     in_review: 0,
     rejected: 0,
     funded: 0,
-    closed: 0,
+    closed: 0
   });
   const [monthlyLoanData, setMonthlyLoanData] = useState<any[]>([]);
 
@@ -187,7 +187,7 @@ export default function EnhancedDashboard() {
         const fetchedLoans = await loanDatabase.getLoans();
         setLoans(fetchedLoans);
 
-        // Normal existing metrics
+        // Calculate your metrics
         calculateMetrics(fetchedLoans);
 
         // Build dictionary from addresses => aggregated amounts
@@ -201,7 +201,6 @@ export default function EnhancedDashboard() {
     fetchData();
   }, []);
 
-  // Build up a record: { "California": totalAmount, "New York": totalAmount, ...}
   const buildStateData = (loanData: LoanData[]) => {
     const byState: Record<string, number> = {};
 
@@ -234,7 +233,7 @@ export default function EnhancedDashboard() {
       in_review: 0,
       rejected: 0,
       funded: 0,
-      closed: 0,
+      closed: 0
     };
     loanData.forEach((loan) => {
       const status = loan.status || "in_review";
@@ -268,7 +267,7 @@ export default function EnhancedDashboard() {
     const monthlyArray = Object.keys(monthlyData).map((key) => ({
       month: key,
       count: monthlyData[key].count,
-      volume: monthlyData[key].volume / 1000,
+      volume: monthlyData[key].volume / 1000
     }));
 
     // sort ascending
@@ -286,7 +285,7 @@ export default function EnhancedDashboard() {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 0
     }).format(value);
   };
 
@@ -295,12 +294,16 @@ export default function EnhancedDashboard() {
       <LayoutWrapper>
         <div className="container mx-auto py-8 px-4">
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin w-8 h-8 border-4 rounded-full" 
-              style={{ 
-                borderColor: COLORS.primary, 
-                borderTopColor: 'transparent' 
-              }}></div>
-            <p className="ml-3" style={{ color: COLORS.textSecondary }}>Loading dashboard data...</p>
+            <div
+              className="animate-spin w-8 h-8 border-4 rounded-full"
+              style={{
+                borderColor: COLORS.primary,
+                borderTopColor: "transparent"
+              }}
+            ></div>
+            <p className="ml-3" style={{ color: COLORS.textSecondary }}>
+              Loading dashboard data...
+            </p>
           </div>
         </div>
       </LayoutWrapper>
@@ -312,20 +315,34 @@ export default function EnhancedDashboard() {
       <div className="container mx-auto py-8 px-4">
         {/* MAIN HEADER */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>Loan Dashboard</h1>
+          <h1
+            className="text-2xl font-bold"
+            style={{ color: COLORS.textPrimary }}
+          >
+            Loan Dashboard
+          </h1>
         </div>
 
         {/* KPI SECTION (4 CARDS) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <div
+              className="px-4 pt-4 pb-3 text-center"
+              style={{ borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.textPrimary }}
+              >
                 Active Loan Value
               </h2>
             </div>
             <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                <div
+                  className="text-4xl font-bold"
+                  style={{ color: COLORS.textPrimary }}
+                >
                   {formatCurrency(totalLoanValue)}
                 </div>
               </div>
@@ -333,14 +350,23 @@ export default function EnhancedDashboard() {
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <div
+              className="px-4 pt-4 pb-3 text-center"
+              style={{ borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.textPrimary }}
+              >
                 Average Loan Size
               </h2>
             </div>
             <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                <div
+                  className="text-4xl font-bold"
+                  style={{ color: COLORS.textPrimary }}
+                >
                   {formatCurrency(averageLoanSize)}
                 </div>
               </div>
@@ -348,14 +374,23 @@ export default function EnhancedDashboard() {
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <div
+              className="px-4 pt-4 pb-3 text-center"
+              style={{ borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.textPrimary }}
+              >
                 Total Loans
               </h2>
             </div>
             <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                <div
+                  className="text-4xl font-bold"
+                  style={{ color: COLORS.textPrimary }}
+                >
                   {loans.length}
                 </div>
               </div>
@@ -363,14 +398,23 @@ export default function EnhancedDashboard() {
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <div
+              className="px-4 pt-4 pb-3 text-center"
+              style={{ borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.textPrimary }}
+              >
                 Funded Loans
               </h2>
             </div>
             <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                <div
+                  className="text-4xl font-bold"
+                  style={{ color: COLORS.textPrimary }}
+                >
                   {loanStatusCounts.funded}
                 </div>
               </div>
@@ -382,54 +426,73 @@ export default function EnhancedDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Loan Status Pipeline */}
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <div
+              className="px-4 pt-4 pb-3 text-center"
+              style={{ borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.textPrimary }}
+              >
                 Loan Status Pipeline
               </h2>
             </div>
-            <CardContent className="h-80 px-0 py-0">
-              <ResponsiveContainer width="100%" height="100%">
+            {/* Match the styling approach used for the line chart */}
+            <CardContent className="h-80 flex items-center justify-center">
+              <ResponsiveContainer width="90%" height="80%">
                 <BarChart
                   layout="vertical"
                   data={[
                     {
                       name: "In Review",
                       value: loanStatusCounts.in_review || 0,
-                      fill: COLORS.chart.inReview,
+                      fill: COLORS.chart.inReview
                     },
                     {
                       name: "Approved",
                       value: loanStatusCounts.approved || 0,
-                      fill: COLORS.chart.approved,
+                      fill: COLORS.chart.approved
                     },
                     {
                       name: "Funded",
                       value: loanStatusCounts.funded || 0,
-                      fill: COLORS.chart.funded,
+                      fill: COLORS.chart.funded
                     },
                     {
                       name: "Closed",
                       value: loanStatusCounts.closed || 0,
-                      fill: COLORS.chart.closed,
+                      fill: COLORS.chart.closed
                     },
                     {
                       name: "Rejected",
                       value: loanStatusCounts.rejected || 0,
-                      fill: COLORS.chart.rejected,
-                    },
+                      fill: COLORS.chart.rejected
+                    }
                   ]}
                   margin={{ top: 10, right: 40, left: 80, bottom: 10 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.chart.grid} />
-                  <XAxis type="number" stroke={COLORS.textSecondary} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={COLORS.chart.grid}
+                  />
+                  <XAxis
+                    type="number"
+                    stroke={COLORS.textSecondary}
+                  />
                   <YAxis
                     dataKey="name"
                     type="category"
-                    tick={{ fontSize: 14, fill: COLORS.textSecondary }}
+                    tick={{
+                      fontSize: 14,
+                      fill: COLORS.textSecondary
+                    }}
                   />
                   <Tooltip
                     formatter={(value: number) => [`${value} loans`]}
-                    contentStyle={{ backgroundColor: "#2D2D2D", border: "none" }}
+                    contentStyle={{
+                      backgroundColor: "#2D2D2D",
+                      border: "none"
+                    }}
                     itemStyle={{ color: COLORS.textPrimary }}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} />
@@ -452,11 +515,9 @@ export default function EnhancedDashboard() {
               </h2>
             </div>
             <CardContent className="h-80 flex items-center justify-center">
-              {/* Adjust the ResponsiveContainer to something like 80–90% width/height */}
               <ResponsiveContainer width="90%" height="80%">
                 <LineChart
                   data={monthlyLoanData}
-                  // You can tweak margins to add extra space at the top or bottom
                   margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
                 >
                   <CartesianGrid
@@ -468,7 +529,10 @@ export default function EnhancedDashboard() {
                     angle={-45}
                     textAnchor="end"
                     height={60}
-                    tick={{ fontSize: 12, fill: COLORS.textSecondary }}
+                    tick={{
+                      fontSize: 12,
+                      fill: COLORS.textSecondary
+                    }}
                   />
                   <YAxis
                     yAxisId="left"
@@ -487,7 +551,9 @@ export default function EnhancedDashboard() {
                     itemStyle={{ color: COLORS.textPrimary }}
                     formatter={(value: number, name: string) => [
                       name === "volume" ? `${value}k` : value,
-                      name === "volume" ? "Loan Volume (thousands)" : "Loan Count",
+                      name === "volume"
+                        ? "Loan Volume (thousands)"
+                        : "Loan Count"
                     ]}
                   />
                   <Legend wrapperStyle={{ color: COLORS.textPrimary }} />
@@ -514,12 +580,21 @@ export default function EnhancedDashboard() {
 
         {/* PROPERTY LOCATIONS */}
         <Card style={{ backgroundColor: COLORS.bgDark }}>
-          <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-            <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+          <div
+            className="px-4 pt-4 pb-3 text-center"
+            style={{ borderBottom: `1px solid ${COLORS.border}` }}
+          >
+            <h2
+              className="text-lg font-semibold"
+              style={{ color: COLORS.textPrimary }}
+            >
               Property Locations
             </h2>
           </div>
-          <CardContent className="h-[450px] px-4 py-4" style={{ backgroundColor: COLORS.bgDarker }}>
+          <CardContent
+            className="h-[450px] px-4 py-4"
+            style={{ backgroundColor: COLORS.bgDarker }}
+          >
             <div className="w-full h-full">
               <LoanMap stateData={stateData} />
             </div>
