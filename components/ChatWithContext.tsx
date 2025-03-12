@@ -272,105 +272,105 @@ export default function ChatWithContext() {
           
           // Sidebar with Documents - Updated version
           <div className="w-1/4">
-            <Card className="shadow-lg border-gray-800 bg-gray-900 h-full">
-              <CardHeader className="bg-gray-800/70 border-b border-gray-800 py-3">
-                <CardTitle className="text-sm font-medium text-gray-200 flex items-center">
-                  <FileText size={16} className="mr-2 text-blue-400" />
-                  Documents
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                {loadingDocs ? (
-                  <div className="py-8 text-center">
-                    <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                    <p className="text-xs text-gray-400">Loading documents...</p>
+          // Replace only the Card section in your existing code with this:
+
+          <Card className="shadow-lg border-gray-800 bg-gray-900 h-full">
+            <CardHeader className="bg-gray-800/70 border-b border-gray-800 py-3">
+              <CardTitle className="text-sm font-medium text-gray-200 flex items-center">
+                <FileText size={16} className="mr-2 text-blue-400" />
+                Documents
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              {loadingDocs ? (
+                <div className="py-8 text-center">
+                  <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                  <p className="text-xs text-gray-400">Loading documents...</p>
+                </div>
+              ) : (
+                <>
+                  {/* Chat Documents Section */}
+                  <div className="mb-5 mt-2">
+                    <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
+                      <h3 className="text-xs font-medium text-gray-200">Chat Uploads</h3>
+                    </div>
+                    
+                    {chatDocuments.length > 0 ? (
+                      <>
+                        <ul className="space-y-2.5">
+                          {(showAllChatDocs ? chatDocuments : chatDocuments.slice(0, 3)).map(renderDocumentItem)}
+                        </ul>
+                        {chatDocuments.length > 3 && (
+                          <button 
+                            onClick={() => setShowAllChatDocs(!showAllChatDocs)}
+                            className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
+                          >
+                            {showAllChatDocs ? 'Show Less' : 'More +'}
+                            <ChevronRight size={12} className={`ml-1 transition-transform ${showAllChatDocs ? 'rotate-90' : ''}`} />
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+                        <p>No chat uploads available</p>
+                      </div>
+                    )}
                   </div>
-                ) : (
-                  <>
-                    {/* Chat Documents Section - Improved spacing */}
-                    <div className="mb-5 mt-2">
-                      <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
-                        <h3 className="text-xs font-medium text-gray-200">Chat Uploads</h3>
+                  
+                  {/* Loan Documents Section */}
+                  <div className="mb-5">
+                    <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
+                      <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
+                    </div>
+                    
+                    {loanDocuments.length > 0 ? (
+                      <>
+                        <ul className="space-y-2.5">
+                          {(showAllLoanDocs ? loanDocuments : loanDocuments.slice(0, 3)).map(renderDocumentItem)}
+                        </ul>
+                        {loanDocuments.length > 3 && (
+                          <button 
+                            onClick={() => setShowAllLoanDocs(!showAllLoanDocs)}
+                            className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
+                          >
+                            {showAllLoanDocs ? 'Show Less' : 'More +'}
+                            <ChevronRight size={12} className={`ml-1 transition-transform ${showAllLoanDocs ? 'rotate-90' : ''}`} />
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+                        <p>No loan documents available</p>
                       </div>
-                      
-                      {chatDocuments.length > 0 ? (
-                        <>
-                          <ul className="space-y-2.5">
-                            {(showAllChatDocs ? chatDocuments : chatDocuments.slice(0, 3)).map(renderDocumentItem)}
-                          </ul>
-                          {chatDocuments.length > 3 && (
-                            <button 
-                              onClick={() => setShowAllChatDocs(!showAllChatDocs)}
-                              className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
-                            >
-                              {showAllChatDocs ? 'Show Less' : 'More +'}
-                              <ChevronRight size={12} className={`ml-1 transition-transform ${showAllChatDocs ? 'rotate-90' : ''}`} />
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
-                          <p>No chat uploads available</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Loan Documents Section - Improved spacing */}
-                    <div className="mb-5">
-                      <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
-                        <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
-                      </div>
-                      
-                      {loanDocuments.length > 0 ? (
-                        <>
-                          <ul className="space-y-2.5">
-                            {(showAllLoanDocs ? loanDocuments : loanDocuments.slice(0, 3)).map(renderDocumentItem)}
-                          </ul>
-                          {loanDocuments.length > 3 && (
-                            <button 
-                              onClick={() => setShowAllLoanDocs(!showAllLoanDocs)}
-                              className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
-                            >
-                              {showAllLoanDocs ? 'Show Less' : 'More +'}
-                              <ChevronRight size={12} className={`ml-1 transition-transform ${showAllLoanDocs ? 'rotate-90' : ''}`} />
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
-                          <p>No loan documents available</p>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* Removed the "No documents available Upload your first document" section as requested */}
-                    
-                    {/* Help section - Improved design */}
-                    <div className="mt-6 text-xs text-gray-400 p-4 bg-gray-800/50 rounded-md border-l-2 border-blue-500">
-                      <p className="font-medium mb-3">Ask the assistant about:</p>
-                      <ul className="space-y-2.5 pl-4">
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Document requirements
-                        </li>
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Common errors in loan documents
-                        </li>
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Regulatory guidelines
-                        </li>
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Review best practices
-                        </li>
-                      </ul>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                    )}
+                  </div>
+                  
+                  {/* Help section */}
+                  <div className="mt-6 text-xs text-gray-400 p-4 bg-gray-800/50 rounded-md border-l-2 border-blue-500">
+                    <p className="font-medium mb-3">Ask the assistant about:</p>
+                    <ul className="space-y-2.5 pl-4">
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Document requirements
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Common errors in loan documents
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Regulatory guidelines
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Review best practices
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
           </div>
         </div>
       </div>
