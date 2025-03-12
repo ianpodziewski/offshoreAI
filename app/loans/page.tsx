@@ -1,4 +1,3 @@
-// app/loans/page.tsx
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -8,6 +7,26 @@ import LayoutWrapper from '../layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import LoanCard from '@/components/loans/LoanCard';
 import { LoanData } from '@/utilities/loanGenerator';
+
+// Define color palette consistent with dashboard
+const COLORS = {
+  // Primary UI colors
+  primary: "#3B82F6", // Blue primary accent (blue-500)
+  secondary: "#6B7280", // Gray secondary accent (gray-500)
+
+  // Background colors
+  bgDark: "#111827", // Card/container background (gray-900)
+  bgDarker: "#0F1629", // Deeper background (darker than gray-900)
+
+  // Border colors
+  border: "#1F2937", // Border color (gray-800)
+
+  // Text colors
+  textPrimary: "#F3F4F6", // Primary text (gray-200)
+  textSecondary: "#D1D5DB", // Secondary text (gray-300)
+  textMuted: "#6B7280", // Muted text (gray-500)
+  textAccent: "#60A5FA", // Accent text (blue-400)
+};
 
 export default function LoansPage() {
   const [loans, setLoans] = useState<LoanData[]>([]);
@@ -61,9 +80,15 @@ export default function LoansPage() {
   if (error) {
     return (
       <LayoutWrapper>
-        <div className="container mx-auto py-8 px-4 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={resetDatabase}>
+        <div 
+          className="container mx-auto py-8 px-4 text-center"
+          style={{ backgroundColor: COLORS.bgDark, color: COLORS.textPrimary }}
+        >
+          <p className="mb-4" style={{ color: COLORS.textAccent }}>{error}</p>
+          <Button 
+            onClick={resetDatabase}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
             Reset Database
           </Button>
         </div>
@@ -73,16 +98,24 @@ export default function LoansPage() {
   
   return (
     <LayoutWrapper>
-      <div className="container mx-auto py-8 px-4">
+      <div 
+        className="container mx-auto py-8 px-4"
+        style={{ backgroundColor: COLORS.bgDarker }}
+      >
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold">Loan Management</h1>
+          <h1 
+            className="text-2xl font-bold"
+            style={{ color: COLORS.textPrimary }}
+          >
+            Loan Management
+          </h1>
           <div className="flex gap-3">
             <Button 
               onClick={resetDatabase} 
               variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
             >
-              <RefreshCw size={16} />
+              <RefreshCw size={16} className="text-gray-300" />
               Reset Database
             </Button>
             <Button 
@@ -97,12 +130,18 @@ export default function LoansPage() {
         
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Loading loans...</p>
+            <div 
+              className="animate-spin w-8 h-8 border-4 rounded-full mx-auto mb-4"
+              style={{
+                borderColor: COLORS.primary,
+                borderTopColor: 'transparent'
+              }}
+            ></div>
+            <p style={{ color: COLORS.textSecondary }}>Loading loans...</p>
           </div>
         ) : loans.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-600">No loans available. Please create a new loan.</p>
+            <p style={{ color: COLORS.textMuted }}>No loans available. Please create a new loan.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

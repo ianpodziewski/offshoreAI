@@ -4,6 +4,51 @@ import { Card } from '@/components/ui/card';
 import { ArrowRight, Home, DollarSign } from 'lucide-react';
 import { LoanData } from '@/utilities/loanGenerator';
 
+// Define a consistent color palette
+const COLORS = {
+  // Primary UI colors
+  primary: "#3B82F6", // Blue primary accent (blue-500)
+  secondary: "#6B7280", // Gray secondary accent (gray-500)
+
+  // Background colors
+  bgDark: "#111827", // Card/container background (gray-900)
+  bgDarker: "#0F1629", // Deeper background (darker than gray-900)
+  bgHeader: "rgba(31, 41, 55, 0.7)", // Header background (gray-800/70)
+
+  // Border colors
+  border: "#1F2937", // Border color (gray-800)
+
+  // Text colors
+  textPrimary: "#F3F4F6", // Primary text (gray-200)
+  textSecondary: "#D1D5DB", // Secondary text (gray-300)
+  textMuted: "#6B7280", // Muted text (gray-500)
+  textAccent: "#60A5FA", // Accent text (blue-400)
+
+  // Status colors
+  status: {
+    approved: {
+      bg: "rgba(6, 78, 59, 0.3)", // Green-900/30
+      text: "#10B981", // Green-400
+      pill: "bg-green-500/20 text-green-400"
+    },
+    rejected: {
+      bg: "rgba(127, 29, 29, 0.3)", // Red-900/30
+      text: "#F87171", // Red-400
+      pill: "bg-red-500/20 text-red-400"
+    },
+    pending: {
+      bg: "rgba(30, 64, 175, 0.3)", // Blue-900/30
+      text: "#60A5FA", // Blue-400
+      pill: "bg-blue-500/20 text-blue-400"
+    },
+    default: {
+      bg: "rgba(31, 41, 55, 0.5)", // Gray-900/50
+      text: "#6B7280", // Gray-500
+      pill: "bg-gray-500/20 text-gray-400"
+    }
+  }
+};
+
 interface LoanCardProps {
   loan?: LoanData | null;
 }
@@ -25,29 +70,13 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
   const getStatusStyle = (status?: string) => {
     switch (status) {
       case 'approved':
-        return {
-          bgColor: 'bg-green-900/50',
-          textColor: 'text-green-400',
-          pillColor: 'bg-green-500/20 text-green-400'
-        };
+        return COLORS.status.approved;
       case 'rejected':
-        return {
-          bgColor: 'bg-red-900/50',
-          textColor: 'text-red-400',
-          pillColor: 'bg-red-500/20 text-red-400'
-        };
+        return COLORS.status.rejected;
       case 'pending':
-        return {
-          bgColor: 'bg-blue-900/50',
-          textColor: 'text-blue-400',
-          pillColor: 'bg-blue-500/20 text-blue-400'
-        };
+        return COLORS.status.pending;
       default:
-        return {
-          bgColor: 'bg-gray-900/50',
-          textColor: 'text-gray-400',
-          pillColor: 'bg-gray-500/20 text-gray-400'
-        };
+        return COLORS.status.default;
     }
   };
 
@@ -61,8 +90,14 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
   // Render placeholder if no loan
   if (!loan) {
     return (
-      <Card className="overflow-hidden hover:shadow-md transition-shadow duration-200 opacity-50 bg-gray-900 border-gray-800">
-        <div className="p-4 text-center text-gray-500">
+      <Card 
+        className="overflow-hidden hover:shadow-md transition-shadow duration-200 opacity-50" 
+        style={{ 
+          backgroundColor: COLORS.bgDark,
+          borderColor: COLORS.border 
+        }}
+      >
+        <div className="p-4 text-center" style={{ color: COLORS.textMuted }}>
           Loan Not Available
         </div>
       </Card>
@@ -72,27 +107,50 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
   const statusStyle = getStatusStyle(loan.status);
 
   return (
-    <Card className={`overflow-hidden hover:shadow-md transition-shadow duration-200 bg-gray-900 border-gray-800 ${statusStyle.bgColor}`}>
+    <Card 
+      className="overflow-hidden hover:shadow-md transition-shadow duration-200" 
+      style={{ 
+        backgroundColor: COLORS.bgDark,
+        borderColor: COLORS.border 
+      }}
+    >
       {/* Card Header with Loan Number and Status */}
-      <div className="flex justify-between items-center p-4 border-b border-gray-800">
+      <div 
+        className="flex justify-between items-center p-4 border-b"
+        style={{ 
+          backgroundColor: COLORS.bgHeader,
+          borderColor: COLORS.border 
+        }}
+      >
         <div className="flex items-center">
-          <div className={`mr-2 ${statusStyle.textColor}`}>
+          <div className="mr-2" style={{ color: statusStyle.text }}>
             <DollarSign size={16} />
           </div>
-          <h3 className="font-medium text-white">Loan #{(loan.id || '').substring(0, 8)}</h3>
+          <h3 className="font-medium" style={{ color: COLORS.textPrimary }}>
+            Loan #{(loan.id || '').substring(0, 8)}
+          </h3>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.pillColor}`}>
+        <span 
+          className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.pill}`}
+        >
           {formatStatus(loan.status)}
         </span>
       </div>
 
       {/* Property Address */}
-      <div className="p-4 border-b border-gray-800">
+      <div 
+        className="p-4 border-b"
+        style={{ 
+          borderColor: COLORS.border 
+        }}
+      >
         <div className="flex items-start">
-          <Home size={16} className="text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
+          <Home size={16} className="mt-0.5 mr-2 flex-shrink-0" style={{ color: COLORS.textMuted }} />
           <div>
-            <p className="text-xs text-gray-400 font-medium">Property Address</p>
-            <p className="text-sm text-white">{loan.propertyAddress || 'No Address'}</p>
+            <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Property Address</p>
+            <p className="text-sm" style={{ color: COLORS.textPrimary }}>
+              {loan.propertyAddress || 'No Address'}
+            </p>
           </div>
         </div>
       </div>
@@ -100,17 +158,19 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
       {/* Card Footer with Loan Details */}
       <div className="p-4 flex justify-between items-center">
         <div>
-          <p className="text-xs text-gray-400 font-medium">Loan Type</p>
-          <p className="text-sm font-medium text-white">{formatLoanType(loan.loanType)}</p>
+          <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Loan Type</p>
+          <p className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
+            {formatLoanType(loan.loanType)}
+          </p>
         </div>
         <div className="flex flex-col items-end">
-          <p className="text-xs text-gray-400 font-medium mb-1">Loan Amount</p>
-          <p className="text-sm font-medium mb-2 text-white">
+          <p className="text-xs font-medium mb-1" style={{ color: COLORS.textMuted }}>Loan Amount</p>
+          <p className="text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
             ${(loan.loanAmount ?? 0).toLocaleString()}
           </p>
           <Link 
             href={`/loans/${loan.id}`}
-            className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm font-medium"
+            className="flex items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
           >
             View Details
             <ArrowRight size={14} />
