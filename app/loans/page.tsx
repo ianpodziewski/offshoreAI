@@ -118,13 +118,6 @@ export default function LoansPage() {
               <RefreshCw size={16} className="text-gray-300" />
               Reset Database
             </Button>
-            <Button 
-              onClick={createNewLoan}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus size={16} />
-              Create New Loan
-            </Button>
           </div>
         </div>
         
