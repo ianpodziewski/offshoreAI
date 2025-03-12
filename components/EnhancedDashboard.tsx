@@ -318,57 +318,59 @@ export default function EnhancedDashboard() {
         {/* KPI SECTION (4 CARDS) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6 space-y-3">
-              <div className="flex flex-row items-center space-x-2">
-                <DollarSign className="h-6 w-6" style={{ color: COLORS.primary }} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <CardContent className="flex flex-col items-center justify-center py-6">
+              {/* Put the main value first and make it larger */}
+              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
+                {formatCurrency(totalLoanValue)}
+              </div>
+              {/* Move the label below the value and style it less prominently */}
+              <div className="flex items-center space-x-2 mt-2">
+                <DollarSign className="h-5 w-5" style={{ color: COLORS.primary }} />
+                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
                   Active Loan Value
                 </span>
               </div>
-              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-                {formatCurrency(totalLoanValue)}
-              </div>
             </CardContent>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6 space-y-3">
-              <div className="flex flex-row items-center space-x-2">
-                <TrendingUp className="h-6 w-6" style={{ color: COLORS.primary }} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <CardContent className="flex flex-col items-center justify-center py-6">
+              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
+                {formatCurrency(averageLoanSize)}
+              </div>
+              <div className="flex items-center space-x-2 mt-2">
+                <TrendingUp className="h-5 w-5" style={{ color: COLORS.primary }} />
+                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
                   Average Loan Size
                 </span>
               </div>
-              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-                {formatCurrency(averageLoanSize)}
-              </div>
             </CardContent>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
-              <div className="flex flex-row items-center space-x-2">
-                <FileText className="h-6 w-6" style={{ color: COLORS.primary }} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <CardContent className="flex flex-col items-center justify-center py-6">
+              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
+                {loans.length}
+              </div>
+              <div className="flex items-center space-x-2 mt-2">
+                <FileText className="h-5 w-5" style={{ color: COLORS.primary }} />
+                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
                   Total Loans
                 </span>
               </div>
-              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-                {loans.length}
-              </div>
             </CardContent>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
-              <div className="flex flex-row items-center space-x-2">
-                <CheckCircle className="h-6 w-6" style={{ color: COLORS.primary }} />
-                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <CardContent className="flex flex-col items-center justify-center py-6">
+              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
+                {loanStatusCounts.funded}
+              </div>
+              <div className="flex items-center space-x-2 mt-2">
+                <CheckCircle className="h-5 w-5" style={{ color: COLORS.primary }} />
+                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
                   Funded Loans
                 </span>
-              </div>
-              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
-                {loanStatusCounts.funded}
               </div>
             </CardContent>
           </Card>
