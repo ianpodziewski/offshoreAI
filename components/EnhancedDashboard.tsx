@@ -440,18 +440,29 @@ export default function EnhancedDashboard() {
 
           {/* Monthly Loan Origination */}
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+            <div
+              className="px-4 pt-4 pb-3 text-center"
+              style={{ borderBottom: `1px solid ${COLORS.border}` }}
+            >
+              <h2
+                className="text-lg font-semibold"
+                style={{ color: COLORS.textPrimary }}
+              >
                 Monthly Loan Origination
               </h2>
             </div>
             <CardContent className="h-80 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
+              {/* Adjust the ResponsiveContainer to something like 80–90% width/height */}
+              <ResponsiveContainer width="90%" height="80%">
                 <LineChart
                   data={monthlyLoanData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
+                  // You can tweak margins to add extra space at the top or bottom
+                  margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.chart.grid} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={COLORS.chart.grid}
+                  />
                   <XAxis
                     dataKey="month"
                     angle={-45}
