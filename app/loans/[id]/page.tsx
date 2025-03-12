@@ -215,22 +215,6 @@ export default function LoanDetailPage() {
                 />
               </CardContent>
             </Card>
-            
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <div className="flex items-start mb-2">
-                <AlertCircle size={18} className="text-blue-500 mr-2 mt-0.5" />
-                <h3 className="font-medium">Required Documents</h3>
-              </div>
-              <ul className="pl-6 space-y-1 text-sm text-gray-700">
-                <li>Purchase Contract</li>
-                <li>Proof of Funds</li>
-                <li>Rehab Scope of Work</li>
-                <li>Personal Financial Statement</li>
-                <li>Promissory Note</li>
-                <li>Deed of Trust</li>
-                <li>Draw Schedule</li>
-              </ul>
-            </div>
           </div>
         </div>
         
