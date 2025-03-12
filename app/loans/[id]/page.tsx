@@ -259,13 +259,15 @@ export default function LoanDetailPage() {
                 backgroundColor: COLORS.bgDark,
                 borderColor: COLORS.border
               }}>
-                <CardHeader className="flex flex-row items-center justify-between" style={{ 
+                <div className="text-center py-4" style={{ 
                   backgroundColor: COLORS.bgHeader,
                   borderColor: COLORS.border,
                   borderBottomWidth: '1px',
                   borderBottomStyle: 'solid'
                 }}>
                   <CardTitle style={{ color: COLORS.textPrimary }}>Loan Documents</CardTitle>
+                </div>
+                <div className="flex justify-center py-4">
                   <Button
                     onClick={handleGenerateAllDocuments}
                     className="flex items-center gap-2"
@@ -287,7 +289,7 @@ export default function LoanDetailPage() {
                       </>
                     )}
                   </Button>
-                </CardHeader>
+                </div>
                 <CardContent className="rounded-lg" style={{ backgroundColor: COLORS.bgDarker }}>
                   <DocumentSockets
                     loanId={loan.id}
