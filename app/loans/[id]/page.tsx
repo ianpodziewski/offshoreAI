@@ -14,6 +14,18 @@ import DocumentSockets from '@/components/document/DocumentSockets';
 import { COLORS } from '@/app/theme/colors';
 import { fakeDocumentService } from '@/utilities/fakeDocumentService';
 
+/**
+ * Converts a string to title case (first letter of each word capitalized)
+ * @param str The string to convert
+ * @returns The string in title case
+ */
+const toTitleCase = (str: string): string => {
+  return str
+    .split('_')
+    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 export default function LoanDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -102,8 +114,8 @@ export default function LoanDetailPage() {
             <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
               {loan.borrowerName}'s Hard Money Loan
             </h1>
-            <p style={{ color: COLORS.textSecondary }}>
-              {loan.loanType.replace('_', ' ').toUpperCase()} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
+                          <p style={{ color: COLORS.textSecondary }}>
+              {toTitleCase(loan.loanType)} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
             </p>
           </div>
         
@@ -126,7 +138,9 @@ export default function LoanDetailPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Type</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.loanType.replace('_', ' ').toUpperCase()}</p>
+                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                        {toTitleCase(loan.loanType)}
+                      </p>
                     </div>
                     <div>
                       <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Amount</h3>
@@ -152,7 +166,7 @@ export default function LoanDetailPage() {
                                loan.status === 'in_review' ? COLORS.status.pending :
                                COLORS.textPrimary
                       }}>
-                        {loan.status.replace('_', ' ')}
+                        {toTitleCase(loan.status)}
                       </p>
                     </div>
                   </div>
@@ -168,7 +182,9 @@ export default function LoanDetailPage() {
                     </div>
                     <div>
                       <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Property Type</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.propertyType.replace('_', ' ')}</p>
+                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                        {toTitleCase(loan.propertyType)}
+                      </p>
                     </div>
                   </div>
 
@@ -191,7 +207,9 @@ export default function LoanDetailPage() {
                     </div>
                     <div>
                       <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Exit Strategy</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.exitStrategy.replace('_', ' ')}</p>
+                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>
+                        {toTitleCase(loan.exitStrategy)}
+                      </p>
                     </div>
                     <div>
                       <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>LTV</h3>
