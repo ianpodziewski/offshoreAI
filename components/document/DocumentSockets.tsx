@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { SimpleDocument, simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import { fakeDocumentService } from '@/utilities/fakeDocumentService';
 import { loanDatabase } from '@/utilities/loanDatabase';
+import { COLORS } from '@/app/theme/colors';
 
 // Define the required document types for loans
 export const REQUIRED_DOCUMENT_TYPES: {
@@ -106,11 +107,41 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
-        return <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Approved</span>;
+        return (
+          <span 
+            className="px-2 py-1 text-xs rounded-full" 
+            style={{ 
+              backgroundColor: COLORS.status.approvedBg, 
+              color: COLORS.status.approved 
+            }}
+          >
+            Approved
+          </span>
+        );
       case 'rejected':
-        return <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-800">Rejected</span>;
+        return (
+          <span 
+            className="px-2 py-1 text-xs rounded-full" 
+            style={{ 
+              backgroundColor: COLORS.status.rejectedBg, 
+              color: COLORS.status.rejected 
+            }}
+          >
+            Rejected
+          </span>
+        );
       default:
-        return <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">Pending</span>;
+        return (
+          <span 
+            className="px-2 py-1 text-xs rounded-full" 
+            style={{ 
+              backgroundColor: COLORS.status.pendingBg, 
+              color: COLORS.status.pending 
+            }}
+          >
+            Pending
+          </span>
+        );
     }
   };
 
@@ -177,8 +208,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   if (loading) {
     return (
       <div className="p-6 text-center">
-        <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-        <p className="text-gray-500 text-sm">Loading documents...</p>
+        <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto mb-2" 
+             style={{ borderColor: COLORS.primary }}></div>
+        <p style={{ color: COLORS.textSecondary }}>Loading documents...</p>
       </div>
     );
   }
@@ -189,9 +221,13 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       <div className="mb-4 flex justify-end">
         <Button
           onClick={handleGenerateAllSamples}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+          className="flex items-center gap-2"
           size="sm"
           disabled={generatingAll}
+          style={{ 
+            backgroundColor: COLORS.primary, 
+            color: COLORS.textPrimary
+          }}
         >
           {generatingAll ? (
             <>
@@ -215,17 +251,32 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         return (
           <div 
             key={docTypeInfo.docType} 
-            className={`border rounded-md overflow-hidden transition-all ${isDragging ? 'border-blue-500 shadow-md' : ''}`}
+            className={`rounded-md overflow-hidden transition-all ${isDragging ? 'shadow-md' : ''}`}
+            style={{ 
+              borderWidth: '1px', 
+              borderStyle: 'solid',
+              borderColor: isDragging ? COLORS.primary : COLORS.border
+            }}
           >
             {/* Document Type Header */}
-            <div className="bg-gray-50 px-4 py-3 border-b flex justify-between items-center">
-              <h3 className="font-medium">{docTypeInfo.label}</h3>
+            <div className="px-4 py-3 flex justify-between items-center" 
+                 style={{ 
+                   backgroundColor: COLORS.bgDark, 
+                   borderBottomWidth: '1px', 
+                   borderBottomStyle: 'solid',
+                   borderBottomColor: COLORS.border
+                 }}>
+              <h3 className="font-medium" style={{ color: COLORS.textPrimary }}>{docTypeInfo.label}</h3>
               {document && getStatusBadge(document.status)}
             </div>
             
             {/* Document or empty state */}
             <div 
               className={`p-4 ${!document ? 'cursor-pointer' : ''}`}
+              style={{ 
+                backgroundColor: COLORS.bgDarker,
+                borderColor: isDragging ? COLORS.primary : COLORS.border,
+              }}
               onDragOver={(e) => handleDragOver(e, docTypeInfo.docType)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, docTypeInfo.docType, docTypeInfo.category)}
@@ -233,10 +284,10 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
               {document ? (
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
-                    <FileText size={18} className="text-gray-500 mr-3" />
+                    <FileText size={18} style={{ color: COLORS.textMuted }} className="mr-3" />
                     <div>
-                      <p className="font-medium">{document.filename}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{document.filename}</p>
+                      <p className="text-xs" style={{ color: COLORS.textMuted }}>
                         {new Date(document.dateUploaded).toLocaleDateString()}
                       </p>
                     </div>
@@ -245,6 +296,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                     variant="ghost" 
                     size="sm"
                     onClick={() => onViewDocument(document)}
+                    style={{ color: COLORS.textAccent }}
                   >
                     <Eye size={16} className="mr-1" />
                     View
@@ -252,25 +304,35 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                 </div>
               ) : isUploading ? (
                 <div className="text-center py-2">
-                  <div className="h-2 w-full bg-gray-200 rounded-full mb-2">
+                  <div className="h-2 w-full rounded-full mb-2" style={{ backgroundColor: COLORS.bgHeader }}>
                     <div 
-                      className="h-full bg-blue-600 rounded-full transition-all" 
-                      style={{ width: `${uploadProgress}%` }}
+                      className="h-full rounded-full transition-all" 
+                      style={{ 
+                        width: `${uploadProgress}%`,
+                        backgroundColor: COLORS.primary 
+                      }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs" style={{ color: COLORS.textSecondary }}>
                     Uploading document...
                   </p>
                 </div>
               ) : (
-                <div className={`text-center py-3 ${isDragging ? 'bg-blue-50' : ''}`}>
-                  <Upload size={20} className={`mx-auto mb-2 ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} />
-                  <p className={`text-sm ${isDragging ? 'text-blue-700' : 'text-gray-400'}`}>
+                <div className={`text-center py-3 ${isDragging ? '' : ''}`} style={{ 
+                  backgroundColor: isDragging ? COLORS.bgButton : 'transparent' 
+                }}>
+                  <Upload size={20} className="mx-auto mb-2" style={{ 
+                    color: isDragging ? COLORS.primary : COLORS.textMuted 
+                  }} />
+                  <p className="text-sm" style={{ 
+                    color: isDragging ? COLORS.textAccent : COLORS.textSecondary 
+                  }}>
                     {isDragging ? 'Drop to upload' : 'Drag & drop a PDF file here'}
                   </p>
                   <div className="flex justify-center mt-2 space-x-2">
                     <label 
-                      className="text-xs text-blue-600 hover:underline cursor-pointer"
+                      className="text-xs cursor-pointer hover:underline"
+                      style={{ color: COLORS.textAccent }}
                       htmlFor={`file-upload-${docTypeInfo.docType}`}
                     >
                       Upload File
@@ -323,12 +385,13 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                         }}
                       />
                     </label>
-                    <span className="text-xs text-gray-400">or</span>
+                    <span className="text-xs" style={{ color: COLORS.textMuted }}>or</span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="text-xs text-blue-600 hover:text-blue-800 underline p-0 h-auto"
+                      className="text-xs hover:underline p-0 h-auto"
+                      style={{ color: COLORS.textAccent }}
                       onClick={() => handleGenerateSample(docTypeInfo.docType)}
                       disabled={generatingAll}
                     >
