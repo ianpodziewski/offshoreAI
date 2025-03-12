@@ -269,11 +269,7 @@ export default function ChatWithContext() {
               </div>
             </div>
           </div>
-          
-          // Sidebar with Documents - Updated version
           <div className="w-1/4">
-          // Replace only the Card section in your existing code with this:
-
           <Card className="shadow-lg border-gray-800 bg-gray-900 h-full">
             <CardHeader className="bg-gray-800/70 border-b border-gray-800 py-3">
               <CardTitle className="text-sm font-medium text-gray-200 flex items-center">
