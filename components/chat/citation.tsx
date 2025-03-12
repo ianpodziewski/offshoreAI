@@ -15,7 +15,7 @@ export function CitationCircle({
   // Log when this component renders
   console.log(`Citation ${number} rendering:`, citation);
   
-  // Ensure we have citation data
+  // Ensure we have citation data, use defaults if missing
   const description = citation?.source_description || `Reference ${number}`;
   
   return (

@@ -50,8 +50,9 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
   const components = {
     code: CodeBlock,
     
-    // Process each paragraph to find and replace citation markers
+    // Process citations in paragraph text
     p: ({ children }: { children: React.ReactNode }) => {
+      // Handle the case where children is a string
       if (typeof children === 'string') {
         return (
           <p className="text-gray-200 my-2">
@@ -62,41 +63,55 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
           </p>
         );
       }
+      // For non-string children, just render them directly
       return <p className="text-gray-200 my-2">{children}</p>;
     },
     
-    // All other components without citation processing
-    h1: ({ children }: { children: React.ReactNode }) => (
-      <h1 className="text-2xl font-bold text-white mt-6 mb-3">
-        {typeof children === 'string' 
-          ? <CitationProcessor text={children} citations={message.citations || []} />
-          : children}
-      </h1>
-    ),
+    // Process citations in list items
+    li: ({ children }: { children: React.ReactNode }) => {
+      if (typeof children === 'string') {
+        return (
+          <li className="text-gray-200 ml-6 my-1">
+            <CitationProcessor text={children} citations={message.citations || []} />
+          </li>
+        );
+      }
+      return <li className="text-gray-200 ml-6 my-1">{children}</li>;
+    },
     
-    h2: ({ children }: { children: React.ReactNode }) => (
-      <h2 className="text-xl font-bold text-white mt-5 mb-2">
-        {typeof children === 'string' 
-          ? <CitationProcessor text={children} citations={message.citations || []} />
-          : children}
-      </h2>
-    ),
+    // Process citations in headings
+    h1: ({ children }: { children: React.ReactNode }) => {
+      if (typeof children === 'string') {
+        return (
+          <h1 className="text-2xl font-bold text-white mt-6 mb-3">
+            <CitationProcessor text={children} citations={message.citations || []} />
+          </h1>
+        );
+      }
+      return <h1 className="text-2xl font-bold text-white mt-6 mb-3">{children}</h1>;
+    },
     
-    h3: ({ children }: { children: React.ReactNode }) => (
-      <h3 className="text-lg font-bold text-white mt-4 mb-2">
-        {typeof children === 'string' 
-          ? <CitationProcessor text={children} citations={message.citations || []} />
-          : children}
-      </h3>
-    ),
+    h2: ({ children }: { children: React.ReactNode }) => {
+      if (typeof children === 'string') {
+        return (
+          <h2 className="text-xl font-bold text-white mt-5 mb-2">
+            <CitationProcessor text={children} citations={message.citations || []} />
+          </h2>
+        );
+      }
+      return <h2 className="text-xl font-bold text-white mt-5 mb-2">{children}</h2>;
+    },
     
-    li: ({ children }: { children: React.ReactNode }) => (
-      <li className="text-gray-200 ml-6 my-1">
-        {typeof children === 'string' 
-          ? <CitationProcessor text={children} citations={message.citations || []} />
-          : children}
-      </li>
-    ),
+    h3: ({ children }: { children: React.ReactNode }) => {
+      if (typeof children === 'string') {
+        return (
+          <h3 className="text-lg font-bold text-white mt-4 mb-2">
+            <CitationProcessor text={children} citations={message.citations || []} />
+          </h3>
+        );
+      }
+      return <h3 className="text-lg font-bold text-white mt-4 mb-2">{children}</h3>;
+    },
     
     // Basic components without citation processing
     ul: ({ children }: { children: React.ReactNode }) => (
@@ -140,13 +155,16 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
       <th className="px-4 py-2 border-b border-gray-700 text-left">{children}</th>
     ),
     
-    td: ({ children }: { children: React.ReactNode }) => (
-      <td className="px-4 py-2 border-b border-gray-700">
-        {typeof children === 'string' 
-          ? <CitationProcessor text={children} citations={message.citations || []} />
-          : children}
-      </td>
-    ),
+    td: ({ children }: { children: React.ReactNode }) => {
+      if (typeof children === 'string') {
+        return (
+          <td className="px-4 py-2 border-b border-gray-700">
+            <CitationProcessor text={children} citations={message.citations || []} />
+          </td>
+        );
+      }
+      return <td className="px-4 py-2 border-b border-gray-700">{children}</td>;
+    },
     
     tr: ({ children }: { children: React.ReactNode }) => (
       <tr className="hover:bg-gray-800/70 transition-colors">{children}</tr>
@@ -156,13 +174,16 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
       <hr className="my-6 border-gray-700" />
     ),
     
-    strong: ({ children }: { children: React.ReactNode }) => (
-      <strong className="font-bold text-white">
-        {typeof children === 'string' 
-          ? <CitationProcessor text={children} citations={message.citations || []} />
-          : children}
-      </strong>
-    ),
+    strong: ({ children }: { children: React.ReactNode }) => {
+      if (typeof children === 'string') {
+        return (
+          <strong className="font-bold text-white">
+            <CitationProcessor text={children} citations={message.citations || []} />
+          </strong>
+        );
+      }
+      return <strong className="font-bold text-white">{children}</strong>;
+    },
     
     em: ({ children }: { children: React.ReactNode }) => (
       <em className="italic text-gray-300">{children}</em>

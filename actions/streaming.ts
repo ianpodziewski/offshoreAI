@@ -190,12 +190,38 @@ export async function handleOpenAIStream({
     responseBuffer += deltaContent;
     
     // TEST INJECTION: Add test citations once the response has enough content
-    if (!hasInjectedTestCitations && responseBuffer.length > 150) {
-      const { modifiedText, testCitations } = addTestCitations(responseBuffer);
-      responseBuffer = modifiedText;
-      currentCitations = [...currentCitations, ...testCitations];
+    if (!hasInjectedTestCitations && responseBuffer.length > 50) {
+      // Create hardcoded test citations that are guaranteed to work
+      const testCitations: Citation[] = [
+        {
+          source_url: "https://example.com/test1",
+          source_description: "Test Citation 1 - Very Visible"
+        },
+        {
+          source_url: "https://example.com/test2",
+          source_description: "Test Citation 2 - Extra Visible"
+        }
+      ];
+      
+      // Directly add citation markers to the text
+      if (!responseBuffer.includes('[1]')) {
+        // Find a period to add the first citation after
+        const firstPeriodIndex = responseBuffer.indexOf('. ');
+        if (firstPeriodIndex > 0) {
+          responseBuffer = 
+            responseBuffer.substring(0, firstPeriodIndex + 1) + 
+            " [1] " + 
+            responseBuffer.substring(firstPeriodIndex + 2);
+        } else {
+          // Just add it to the start if no period
+          responseBuffer = "[1] " + responseBuffer;
+        }
+      }
+      
+      // Force add the citations to the current list
+      currentCitations = testCitations;
       hasInjectedTestCitations = true;
-      console.log("TEST: Injected test citations");
+      console.log("TEST: Forcefully injected test citations:", testCitations);
     }
     
     // Look for citation patterns in the newly added content
@@ -225,6 +251,7 @@ export async function handleOpenAIStream({
   const streamDuration = endTime - startTime;
   console.log(`Done streaming OpenAI response in ${streamDuration / 1000}s`);
   console.log(`Final response has ${currentCitations.length} citations`);
+  console.log("Citation details:", JSON.stringify(currentCitations));
   
   const donePayload: StreamedDone = {
     type: "done",
@@ -278,12 +305,38 @@ export async function handleAnthropicStream({
       responseBuffer += textDelta;
       
       // TEST INJECTION: Add test citations once the response has enough content
-      if (!hasInjectedTestCitations && responseBuffer.length > 150) {
-        const { modifiedText, testCitations } = addTestCitations(responseBuffer);
-        responseBuffer = modifiedText;
-        currentCitations = [...currentCitations, ...testCitations];
+      if (!hasInjectedTestCitations && responseBuffer.length > 50) {
+        // Create hardcoded test citations that are guaranteed to work
+        const testCitations: Citation[] = [
+          {
+            source_url: "https://example.com/test1",
+            source_description: "Test Citation 1 - Very Visible"
+          },
+          {
+            source_url: "https://example.com/test2",
+            source_description: "Test Citation 2 - Extra Visible"
+          }
+        ];
+        
+        // Directly add citation markers to the text
+        if (!responseBuffer.includes('[1]')) {
+          // Find a period to add the first citation after
+          const firstPeriodIndex = responseBuffer.indexOf('. ');
+          if (firstPeriodIndex > 0) {
+            responseBuffer = 
+              responseBuffer.substring(0, firstPeriodIndex + 1) + 
+              " [1] " + 
+              responseBuffer.substring(firstPeriodIndex + 2);
+          } else {
+            // Just add it to the start if no period
+            responseBuffer = "[1] " + responseBuffer;
+          }
+        }
+        
+        // Force add the citations to the current list
+        currentCitations = testCitations;
         hasInjectedTestCitations = true;
-        console.log("TEST: Injected test citations into Anthropic response");
+        console.log("TEST: Forcefully injected test citations into Anthropic response:", testCitations);
       }
       
       // Look for citation patterns in the newly added content
@@ -309,6 +362,7 @@ export async function handleAnthropicStream({
       // One final extraction at the end to catch any citations
       currentCitations = extractCitationsFromText(responseBuffer, initialCitations);
       console.log(`Final Anthropic response has ${currentCitations.length} citations`);
+      console.log("Citation details:", JSON.stringify(currentCitations));
       
       const donePayload: StreamedDone = {
         type: "done",
