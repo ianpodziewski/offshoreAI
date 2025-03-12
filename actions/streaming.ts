@@ -56,6 +56,79 @@ export function extractCitationsFromText(
   );
 }
 
+/**
+ * Temporarily modifies the response to include test citations
+ * This helps verify if the citation display works correctly
+ */
+export function addTestCitations(text: string): {
+  modifiedText: string;
+  testCitations: Citation[];
+} {
+  // Create test citations
+  const testCitations: Citation[] = [
+    {
+      source_url: "https://example.com/doc1",
+      source_description: "Test Document 1"
+    },
+    {
+      source_url: "https://example.com/doc2",
+      source_description: "Test Document 2"
+    }
+  ];
+  
+  // Check if text already has citations
+  if (text.match(/\[(\d+)\]/)) {
+    // Text already has citations, just return with test citations data
+    return {
+      modifiedText: text,
+      testCitations
+    };
+  }
+  
+  // Add citation markers to the text
+  // First, split by paragraphs
+  const paragraphs = text.split("\n\n");
+  
+  // Add to first paragraph if it exists
+  if (paragraphs.length > 0) {
+    // Find a good spot to add citation in first paragraph
+    const firstPara = paragraphs[0];
+    const sentences = firstPara.split(". ");
+    
+    if (sentences.length > 1) {
+      // Add to the end of the first sentence
+      sentences[0] = sentences[0] + " [1]";
+      paragraphs[0] = sentences.join(". ");
+    } else {
+      // Just add to the end of paragraph
+      paragraphs[0] = paragraphs[0] + " [1]";
+    }
+    
+    // Add second citation to another paragraph if available
+    if (paragraphs.length > 2) {
+      const midIndex = Math.floor(paragraphs.length / 2);
+      
+      // Add citation to middle paragraph
+      const midPara = paragraphs[midIndex];
+      const midSentences = midPara.split(". ");
+      
+      if (midSentences.length > 1) {
+        // Add to end of first sentence of middle paragraph
+        midSentences[0] = midSentences[0] + " [2]";
+        paragraphs[midIndex] = midSentences.join(". ");
+      } else {
+        // Add to end of paragraph
+        paragraphs[midIndex] = paragraphs[midIndex] + " [2]";
+      }
+    }
+  }
+  
+  return {
+    modifiedText: paragraphs.join("\n\n"),
+    testCitations
+  };
+}
+
 export interface QueueAssistantResponseParams {
   controller: ReadableStreamDefaultController;
   providers: AIProviders;
@@ -110,10 +183,20 @@ export async function handleOpenAIStream({
   
   let responseBuffer: string = "";
   let currentCitations = [...initialCitations]; // Start with any initial citations
+  let hasInjectedTestCitations = false;
 
   for await (const chunk of streamedResponse) {
     const deltaContent = chunk.choices[0]?.delta.content ?? "";
     responseBuffer += deltaContent;
+    
+    // TEST INJECTION: Add test citations once the response has enough content
+    if (!hasInjectedTestCitations && responseBuffer.length > 150) {
+      const { modifiedText, testCitations } = addTestCitations(responseBuffer);
+      responseBuffer = modifiedText;
+      currentCitations = [...currentCitations, ...testCitations];
+      hasInjectedTestCitations = true;
+      console.log("TEST: Injected test citations");
+    }
     
     // Look for citation patterns in the newly added content
     if (deltaContent.includes('[') && deltaContent.includes(']')) {
@@ -174,6 +257,7 @@ export async function handleAnthropicStream({
   
   let responseBuffer: string = "";
   let currentCitations = [...initialCitations]; // Start with any initial citations
+  let hasInjectedTestCitations = false;
   
   console.log("Streaming Anthropic response...", {
     temperature,
@@ -192,6 +276,15 @@ export async function handleAnthropicStream({
     })
     .on("text", (textDelta) => {
       responseBuffer += textDelta;
+      
+      // TEST INJECTION: Add test citations once the response has enough content
+      if (!hasInjectedTestCitations && responseBuffer.length > 150) {
+        const { modifiedText, testCitations } = addTestCitations(responseBuffer);
+        responseBuffer = modifiedText;
+        currentCitations = [...currentCitations, ...testCitations];
+        hasInjectedTestCitations = true;
+        console.log("TEST: Injected test citations into Anthropic response");
+      }
       
       // Look for citation patterns in the newly added content
       if (textDelta.includes('[') && textDelta.includes(']')) {

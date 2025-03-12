@@ -2,13 +2,6 @@
 
 import { useState } from "react";
 import { Citation } from "@/types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@radix-ui/react-tooltip";
-import Link from "next/link";
-import { EMPTY_CITATION_MESSAGE } from "@/configuration/ui";
 
 export function CitationCircle({
   number,
@@ -17,55 +10,32 @@ export function CitationCircle({
   number: number;
   citation: Citation;
 }) {
-  const [open, setOpen] = useState(false);
-
-  // Debug logging - uncomment if needed for troubleshooting
-  // console.log(`Rendering citation ${number}:`, citation);
-
-  const isValidUrl = (url: string) => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
+  const [showTooltip, setShowTooltip] = useState(false);
   
-  // Safely access citation properties with fallbacks
-  const sourceUrl = citation?.source_url || "";
-  const sourceDescription = citation?.source_description || "Reference source";
+  // Log when this component renders
+  console.log(`Citation ${number} rendering:`, citation);
   
-  const hasSourceUrl = isValidUrl(sourceUrl);
-  const hasSourceDescription = sourceDescription && sourceDescription.trim() !== "";
-
+  // Ensure we have citation data
+  const description = citation?.source_description || `Reference ${number}`;
+  
   return (
-    <Tooltip open={open} onOpenChange={setOpen}>
-      <TooltipTrigger asChild>
-        <span
-          className="inline-flex items-center justify-center bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 mx-1 text-xs font-medium hover:bg-blue-200 cursor-pointer"
-          onClick={() => setOpen(true)}
-          data-testid={`citation-${number}`}
-        >
-          [{number}]
+    <span className="relative inline-block">
+      {/* The citation marker */}
+      <span
+        className="inline-flex items-center justify-center bg-blue-500 text-white rounded-full px-2 py-0.5 mx-1 text-xs font-medium cursor-pointer hover:bg-blue-600"
+        onClick={() => setShowTooltip(!showTooltip)}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+      >
+        [{number}]
+      </span>
+      
+      {/* Simple tooltip */}
+      {showTooltip && (
+        <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1 bg-white text-gray-900 px-3 py-1 rounded shadow-lg text-sm whitespace-nowrap z-50">
+          {description}
         </span>
-      </TooltipTrigger>
-      <TooltipContent>
-        <div className="bg-white p-3 rounded-md shadow-md flex flex-col justify-center border border-gray-200 max-w-xs">
-          <p className="text-sm">
-            {hasSourceUrl && (
-              <Link
-                href={sourceUrl}
-                target="_blank"
-                className="text-blue-500 hover:underline"
-              >
-                {sourceDescription}
-              </Link>
-            )}
-            {!hasSourceUrl && hasSourceDescription && sourceDescription}
-            {!hasSourceUrl && !hasSourceDescription && EMPTY_CITATION_MESSAGE}
-          </p>
-        </div>
-      </TooltipContent>
-    </Tooltip>
+      )}
+    </span>
   );
 }

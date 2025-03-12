@@ -1,15 +1,14 @@
 // /components/chat/formatting.tsx
-import React, { memo, useMemo } from "react";
+import React, { memo, useEffect } from "react";
 import { DisplayMessage } from "@/types";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
-import { preprocessLaTeX } from "@/utilities/formatting";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { CitationCircle } from "@/components/chat/citation";
+import { CitationProcessor } from "./CitationProcessor";
 
 // Memoized code component for syntax highlighting with dark theme
 const CodeBlock = memo(({ children, className, ...rest }: any) => {
@@ -38,120 +37,68 @@ const CodeBlock = memo(({ children, className, ...rest }: any) => {
 });
 CodeBlock.displayName = "CodeBlock";
 
-// Direct approach to process citations in text
-const processCitationsInText = (text: string, citations: any[]) => {
-  if (!citations || citations.length === 0 || !text) {
-    return text;
-  }
-
-  // Find all citation markers
-  const citationRegex = /\[(\d+)\]/g;
-  
-  let lastMatchEnd = 0;
-  const segments = [];
-  let match;
-  
-  // Using exec in a loop to find all matches and their positions
-  while ((match = citationRegex.exec(text)) !== null) {
-    // Add text before the match
-    if (match.index > lastMatchEnd) {
-      segments.push(text.substring(lastMatchEnd, match.index));
-    }
-    
-    // Add citation component
-    const citationNumber = parseInt(match[1], 10);
-    if (citationNumber > 0 && citationNumber <= citations.length) {
-      segments.push(
-        <CitationCircle 
-          key={`citation-${match.index}`} 
-          number={citationNumber} 
-          citation={citations[citationNumber - 1]} 
-        />
-      );
-    } else {
-      segments.push(match[0]); // Just add the text if citation number is invalid
-    }
-    
-    lastMatchEnd = match.index + match[0].length;
-  }
-  
-  // Add any remaining text
-  if (lastMatchEnd < text.length) {
-    segments.push(text.substring(lastMatchEnd));
-  }
-  
-  return segments;
-};
-
 export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
-  // Process LaTeX only once per message
-  const processedContent = useMemo(() => preprocessLaTeX(message.content), [message.content]);
-  
-  // Create components object with citation processing
-  const components = useMemo(() => ({
+  // Log the message for debugging
+  useEffect(() => {
+    console.log("Formatting message:", message);
+    console.log("Has citations?", message.citations?.length > 0);
+    console.log("Citations:", message.citations);
+    console.log("Citation markers in content:", message.content.match(/\[(\d+)\]/g));
+  }, [message]);
+
+  // Create components for ReactMarkdown
+  const components = {
     code: CodeBlock,
     
-    // Process citations in paragraph text
+    // Process each paragraph to find and replace citation markers
     p: ({ children }: { children: React.ReactNode }) => {
-      // Handle the case where children is a string
       if (typeof children === 'string') {
         return (
           <p className="text-gray-200 my-2">
-            {processCitationsInText(children, message.citations)}
+            <CitationProcessor 
+              text={children} 
+              citations={message.citations || []} 
+            />
           </p>
         );
       }
-      // For non-string children, just render them directly
       return <p className="text-gray-200 my-2">{children}</p>;
     },
     
-    // Process citations in list items
-    li: ({ children }: { children: React.ReactNode }) => {
-      if (typeof children === 'string') {
-        return (
-          <li className="text-gray-200 ml-6 my-1">
-            {processCitationsInText(children, message.citations)}
-          </li>
-        );
-      }
-      return <li className="text-gray-200 ml-6 my-1">{children}</li>;
-    },
+    // All other components without citation processing
+    h1: ({ children }: { children: React.ReactNode }) => (
+      <h1 className="text-2xl font-bold text-white mt-6 mb-3">
+        {typeof children === 'string' 
+          ? <CitationProcessor text={children} citations={message.citations || []} />
+          : children}
+      </h1>
+    ),
     
-    // Process citations in headings
-    h1: ({ children }: { children: React.ReactNode }) => {
-      if (typeof children === 'string') {
-        return (
-          <h1 className="text-2xl font-bold text-white mt-6 mb-3">
-            {processCitationsInText(children, message.citations)}
-          </h1>
-        );
-      }
-      return <h1 className="text-2xl font-bold text-white mt-6 mb-3">{children}</h1>;
-    },
+    h2: ({ children }: { children: React.ReactNode }) => (
+      <h2 className="text-xl font-bold text-white mt-5 mb-2">
+        {typeof children === 'string' 
+          ? <CitationProcessor text={children} citations={message.citations || []} />
+          : children}
+      </h2>
+    ),
     
-    h2: ({ children }: { children: React.ReactNode }) => {
-      if (typeof children === 'string') {
-        return (
-          <h2 className="text-xl font-bold text-white mt-5 mb-2">
-            {processCitationsInText(children, message.citations)}
-          </h2>
-        );
-      }
-      return <h2 className="text-xl font-bold text-white mt-5 mb-2">{children}</h2>;
-    },
+    h3: ({ children }: { children: React.ReactNode }) => (
+      <h3 className="text-lg font-bold text-white mt-4 mb-2">
+        {typeof children === 'string' 
+          ? <CitationProcessor text={children} citations={message.citations || []} />
+          : children}
+      </h3>
+    ),
     
-    h3: ({ children }: { children: React.ReactNode }) => {
-      if (typeof children === 'string') {
-        return (
-          <h3 className="text-lg font-bold text-white mt-4 mb-2">
-            {processCitationsInText(children, message.citations)}
-          </h3>
-        );
-      }
-      return <h3 className="text-lg font-bold text-white mt-4 mb-2">{children}</h3>;
-    },
+    li: ({ children }: { children: React.ReactNode }) => (
+      <li className="text-gray-200 ml-6 my-1">
+        {typeof children === 'string' 
+          ? <CitationProcessor text={children} citations={message.citations || []} />
+          : children}
+      </li>
+    ),
     
-    // Other components without citation processing
+    // Basic components without citation processing
     ul: ({ children }: { children: React.ReactNode }) => (
       <ul className="list-disc my-3 space-y-1">{children}</ul>
     ),
@@ -193,16 +140,13 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
       <th className="px-4 py-2 border-b border-gray-700 text-left">{children}</th>
     ),
     
-    td: ({ children }: { children: React.ReactNode }) => {
-      if (typeof children === 'string') {
-        return (
-          <td className="px-4 py-2 border-b border-gray-700">
-            {processCitationsInText(children, message.citations)}
-          </td>
-        );
-      }
-      return <td className="px-4 py-2 border-b border-gray-700">{children}</td>;
-    },
+    td: ({ children }: { children: React.ReactNode }) => (
+      <td className="px-4 py-2 border-b border-gray-700">
+        {typeof children === 'string' 
+          ? <CitationProcessor text={children} citations={message.citations || []} />
+          : children}
+      </td>
+    ),
     
     tr: ({ children }: { children: React.ReactNode }) => (
       <tr className="hover:bg-gray-800/70 transition-colors">{children}</tr>
@@ -212,16 +156,13 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
       <hr className="my-6 border-gray-700" />
     ),
     
-    strong: ({ children }: { children: React.ReactNode }) => {
-      if (typeof children === 'string') {
-        return (
-          <strong className="font-bold text-white">
-            {processCitationsInText(children, message.citations)}
-          </strong>
-        );
-      }
-      return <strong className="font-bold text-white">{children}</strong>;
-    },
+    strong: ({ children }: { children: React.ReactNode }) => (
+      <strong className="font-bold text-white">
+        {typeof children === 'string' 
+          ? <CitationProcessor text={children} citations={message.citations || []} />
+          : children}
+      </strong>
+    ),
     
     em: ({ children }: { children: React.ReactNode }) => (
       <em className="italic text-gray-300">{children}</em>
@@ -234,7 +175,7 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
         className="rounded-md max-w-full my-4 mx-auto border border-gray-700"
       />
     ),
-  }), [message.citations]);
+  };
 
   return (
     <>
@@ -244,7 +185,7 @@ export const Formatting = memo(({ message }: { message: DisplayMessage }) => {
         components={components as any}
         className="prose prose-invert max-w-none text-gray-200 py-2 leading-relaxed"
       >
-        {processedContent}
+        {message.content}
       </ReactMarkdown>
     </>
   );
