@@ -1,6 +1,6 @@
 // components/document/DocumentSockets.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, Upload, Check, X, Eye, RefreshCw } from 'lucide-react';
+import { FileText, Upload, Check, X, Eye, RefreshCw, FileCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SimpleDocument, simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import { fakeDocumentService } from '@/utilities/fakeDocumentService';
@@ -12,7 +12,7 @@ export const REQUIRED_DOCUMENT_TYPES: {
   label: string;
   category: 'loan' | 'legal' | 'financial' | 'misc';
 }[] = [
-  { docType: 'promissory_note', label: 'Promissory Note', category: 'loan' },
+  { docType: 'promissory_note', label: 'Promissory Note', category: 'legal' },
   { docType: 'deed_of_trust', label: 'Deed of Trust', category: 'legal' },
   { docType: 'closing_disclosure', label: 'Closing Disclosure', category: 'financial' },
   { docType: 'property_appraisal', label: 'Property Appraisal', category: 'financial' }
@@ -34,8 +34,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   const [dragTarget, setDragTarget] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [generating, setGenerating] = useState<string | null>(null);
-
+  const [generatingAll, setGeneratingAll] = useState(false);
+  
+  // Fetch documents when component mounts or refreshTrigger changes
   useEffect(() => {
     const fetchDocuments = () => {
       setLoading(true);
@@ -52,37 +53,29 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     return documents.find(doc => doc.docType === docType);
   };
 
-  // Generate a fake document for a specific document type
-  const handleGenerateFakeDocument = async (docType: string) => {
-    setGenerating(docType);
+  // Generate a single sample document
+  const handleGenerateSample = (docType: string) => {
+    const loan = loanDatabase.getLoanById(loanId);
     
-    try {
-      // Get the loan data
-      const loan = loanDatabase.getLoanById(loanId);
-      
-      if (!loan) {
-        console.error('Loan not found');
-        return;
-      }
-      
-      // Generate the fake document
-      const fakeDocument = fakeDocumentService.generateFakeDocument(loan, docType);
-      
-      if (fakeDocument) {
-        // Update the documents list
-        setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), fakeDocument]);
-      }
-    } catch (error) {
-      console.error('Error generating fake document:', error);
-    } finally {
-      setGenerating(null);
+    if (!loan) {
+      console.error('Loan not found');
+      return;
+    }
+    
+    // Generate the document
+    const document = fakeDocumentService.generateFakeDocument(loan, docType);
+    
+    if (document) {
+      // Update the documents list
+      setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), document]);
     }
   };
 
-  // Generate all fake documents
-  const handleGenerateAllFakeDocuments = async () => {
+  // Generate all sample documents
+  const handleGenerateAllSamples = () => {
+    setGeneratingAll(true);
+    
     try {
-      // Get the loan data
       const loan = loanDatabase.getLoanById(loanId);
       
       if (!loan) {
@@ -90,14 +83,22 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         return;
       }
       
-      // Set all document types to generating state
-      REQUIRED_DOCUMENT_TYPES.forEach(docType => {
-        if (!getDocumentForType(docType.docType)) {
-          handleGenerateFakeDocument(docType.docType);
-        }
-      });
+      // Generate all documents
+      const generatedDocs = fakeDocumentService.generateAllFakeDocuments(loan);
+      
+      // Update the state with new documents
+      if (generatedDocs.length > 0) {
+        setDocuments(prev => {
+          const existingDocTypes = new Set(generatedDocs.map(doc => doc.docType));
+          // Keep only documents that weren't regenerated
+          const filteredPrev = prev.filter(doc => !existingDocTypes.has(doc.docType));
+          return [...filteredPrev, ...generatedDocs];
+        });
+      }
     } catch (error) {
-      console.error('Error generating fake documents:', error);
+      console.error('Error generating sample documents:', error);
+    } finally {
+      setGeneratingAll(false);
     }
   };
 
@@ -154,7 +155,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         // Override document classification to ensure it goes into the correct socket
         const overrideClassification = {
           docType: docType,
-          category: category as 'loan' | 'legal' | 'financial' | 'misc'
+          category: category
         };
         
         // Upload the document with specific classification
@@ -184,15 +185,25 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Add a button to generate all fake documents */}
+      {/* Add a button to generate all sample documents */}
       <div className="mb-4 flex justify-end">
         <Button
-          onClick={handleGenerateAllFakeDocuments}
+          onClick={handleGenerateAllSamples}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
           size="sm"
+          disabled={generatingAll}
         >
-          <RefreshCw size={16} />
-          Generate Sample Documents
+          {generatingAll ? (
+            <>
+              <Clock size={16} className="animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              <FileCheck size={16} />
+              Generate Sample Documents
+            </>
+          )}
         </Button>
       </div>
 
@@ -200,7 +211,6 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         const document = getDocumentForType(docTypeInfo.docType);
         const isDragging = dragTarget === docTypeInfo.docType;
         const isUploading = uploading === docTypeInfo.docType;
-        const isGenerating = generating === docTypeInfo.docType;
         
         return (
           <div 
@@ -240,16 +250,16 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                     View
                   </Button>
                 </div>
-              ) : isUploading || isGenerating ? (
+              ) : isUploading ? (
                 <div className="text-center py-2">
                   <div className="h-2 w-full bg-gray-200 rounded-full mb-2">
                     <div 
                       className="h-full bg-blue-600 rounded-full transition-all" 
-                      style={{ width: isGenerating ? '100%' : `${uploadProgress}%` }}
+                      style={{ width: `${uploadProgress}%` }}
                     />
                   </div>
                   <p className="text-xs text-gray-500">
-                    {isGenerating ? 'Generating document...' : 'Uploading document...'}
+                    Uploading document...
                   </p>
                 </div>
               ) : (
@@ -294,7 +304,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                               const uploadedDoc = await simpleDocumentService.addDocument(
                                 file, 
                                 loanId,
-                                { docType: docTypeInfo.docType, category: docTypeInfo.category as 'loan' | 'legal' | 'financial' | 'misc' }
+                                { docType: docTypeInfo.docType, category: docTypeInfo.category }
                               );
                               
                               if (uploadedDoc) {
@@ -319,7 +329,8 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                       variant="ghost"
                       size="sm"
                       className="text-xs text-blue-600 hover:text-blue-800 underline p-0 h-auto"
-                      onClick={() => handleGenerateFakeDocument(docTypeInfo.docType)}
+                      onClick={() => handleGenerateSample(docTypeInfo.docType)}
+                      disabled={generatingAll}
                     >
                       Generate Sample
                     </Button>

@@ -47,15 +47,17 @@ export const fakeDocumentService = {
     const content = documentGenerators[docType](loan);
     
     // Create a SimpleDocument object with the generated content
+    // Note: We're not formatting the content as base64 because it's HTML, not a PDF
     const fakeDocument: SimpleDocument = {
       id: `fake-${docType}-${loan.id}`,
       loanId: loan.id,
-      filename: `${docType.replace(/_/g, '-')}.pdf`,
+      filename: `${docType.replace(/_/g, '-')}.html`, // Changed to .html to indicate it's HTML content
       docType: docType,
       category: documentCategories[docType] || 'misc',
-      content: content,
+      content: content, // Plain HTML content, not base64 encoded
       dateUploaded: new Date().toISOString(),
-      status: 'pending'
+      status: 'pending',
+      fileType: 'text/html' // Changed file type to HTML
     };
 
     // Store the document using the existing service
