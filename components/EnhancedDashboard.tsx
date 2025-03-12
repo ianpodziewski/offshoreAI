@@ -318,59 +318,61 @@ export default function EnhancedDashboard() {
         {/* KPI SECTION (4 CARDS) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6">
-              {/* Put the main value first and make it larger */}
-              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
-                {formatCurrency(totalLoanValue)}
-              </div>
-              {/* Move the label below the value and style it less prominently */}
-              <div className="flex items-center space-x-2 mt-2">
-                <DollarSign className="h-5 w-5" style={{ color: COLORS.primary }} />
-                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
-                  Active Loan Value
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6">
-              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
-                {formatCurrency(averageLoanSize)}
-              </div>
-              <div className="flex items-center space-x-2 mt-2">
-                <TrendingUp className="h-5 w-5" style={{ color: COLORS.primary }} />
-                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
-                  Average Loan Size
-                </span>
+            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                Active Loan Value
+              </h2>
+            </div>
+            <CardContent className="py-6 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                  {formatCurrency(totalLoanValue)}
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6">
-              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
-                {loans.length}
-              </div>
-              <div className="flex items-center space-x-2 mt-2">
-                <FileText className="h-5 w-5" style={{ color: COLORS.primary }} />
-                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
-                  Total Loans
-                </span>
+            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                Average Loan Size
+              </h2>
+            </div>
+            <CardContent className="py-6 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                  {formatCurrency(averageLoanSize)}
+                </div>
               </div>
             </CardContent>
           </Card>
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <CardContent className="flex flex-col items-center justify-center py-6">
-              <div className="text-4xl font-bold mb-1" style={{ color: COLORS.textPrimary }}>
-                {loanStatusCounts.funded}
+            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                Total Loans
+              </h2>
+            </div>
+            <CardContent className="py-6 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                  {loans.length}
+                </div>
               </div>
-              <div className="flex items-center space-x-2 mt-2">
-                <CheckCircle className="h-5 w-5" style={{ color: COLORS.primary }} />
-                <span className="text-sm" style={{ color: COLORS.textSecondary }}>
-                  Funded Loans
-                </span>
+            </CardContent>
+          </Card>
+
+          <Card style={{ backgroundColor: COLORS.bgDark }}>
+            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+                Funded Loans
+              </h2>
+            </div>
+            <CardContent className="py-6 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
+                  {loanStatusCounts.funded}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -380,15 +382,12 @@ export default function EnhancedDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Loan Status Pipeline */}
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <div className="flex items-center space-x-2">
-                <BarChart2 className="h-5 w-5" style={{ color: COLORS.primary }} />
-                <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
-                  Loan Status Pipeline
-                </h2>
-              </div>
+            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+                Loan Status Pipeline
+              </h2>
             </div>
-            <CardContent className="h-80">
+            <CardContent className="h-80 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
@@ -441,15 +440,12 @@ export default function EnhancedDashboard() {
 
           {/* Monthly Loan Origination */}
           <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div className="px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5" style={{ color: COLORS.primary }} />
-                <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
-                  Monthly Loan Origination
-                </h2>
-              </div>
+            <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+                Monthly Loan Origination
+              </h2>
             </div>
-            <CardContent className="h-80">
+            <CardContent className="h-80 flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={monthlyLoanData}
@@ -479,7 +475,7 @@ export default function EnhancedDashboard() {
                     contentStyle={{ backgroundColor: "#2D2D2D", border: "none" }}
                     itemStyle={{ color: COLORS.textPrimary }}
                     formatter={(value: number, name: string) => [
-                      name === "volume" ? `$${value}k` : value,
+                      name === "volume" ? `${value}k` : value,
                       name === "volume" ? "Loan Volume (thousands)" : "Loan Count",
                     ]}
                   />
@@ -507,15 +503,12 @@ export default function EnhancedDashboard() {
 
         {/* PROPERTY LOCATIONS */}
         <Card style={{ backgroundColor: COLORS.bgDark }}>
-          <div className="px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-            <div className="flex items-center space-x-2">
-              <Map className="h-5 w-5" style={{ color: COLORS.primary }} />
-              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
-                Property Locations
-              </h2>
-            </div>
+          <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+            <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
+              Property Locations
+            </h2>
           </div>
-          <CardContent className="h-96 relative" style={{ backgroundColor: COLORS.bgDarker }}>
+          <CardContent className="h-96 flex items-center justify-center" style={{ backgroundColor: COLORS.bgDarker }}>
             {/* 3) Now <LoanMap stateData={stateData} /> is valid */}
             <LoanMap stateData={stateData} />
           </CardContent>
