@@ -19,6 +19,9 @@ export function CitationCircle({
 }) {
   const [open, setOpen] = useState(false);
 
+  // Debug logging - uncomment if needed for troubleshooting
+  // console.log(`Rendering citation ${number}:`, citation);
+
   const isValidUrl = (url: string) => {
     try {
       new URL(url);
@@ -27,32 +30,38 @@ export function CitationCircle({
       return false;
     }
   };
-  const hasSourceUrl = isValidUrl(citation.source_url);
-  const hasSourceDescription = citation.source_description.trim() !== "";
+  
+  // Safely access citation properties with fallbacks
+  const sourceUrl = citation?.source_url || "";
+  const sourceDescription = citation?.source_description || "Reference source";
+  
+  const hasSourceUrl = isValidUrl(sourceUrl);
+  const hasSourceDescription = sourceDescription && sourceDescription.trim() !== "";
 
   return (
     <Tooltip open={open} onOpenChange={setOpen}>
-      <TooltipTrigger>
-        <div
-          className="bg-gray-50 rounded-full px-2 py-0.5 hover:cursor-pointer hover:scale-105 inline-block"
+      <TooltipTrigger asChild>
+        <span
+          className="inline-flex items-center justify-center bg-blue-100 text-blue-700 rounded-full px-2 py-0.5 mx-1 text-xs font-medium hover:bg-blue-200 cursor-pointer"
           onClick={() => setOpen(true)}
+          data-testid={`citation-${number}`}
         >
-          <span>{number}</span>
-        </div>
+          [{number}]
+        </span>
       </TooltipTrigger>
       <TooltipContent>
-        <div className="bg-white p-2 rounded-md shadow-sm flex flex-col justify-center border-[1px] border-gray-200">
-          <p>
+        <div className="bg-white p-3 rounded-md shadow-md flex flex-col justify-center border border-gray-200 max-w-xs">
+          <p className="text-sm">
             {hasSourceUrl && (
               <Link
-                href={citation.source_url}
+                href={sourceUrl}
                 target="_blank"
-                className="text-blue-500 hover:underline text-sm"
+                className="text-blue-500 hover:underline"
               >
-                {citation.source_description}
+                {sourceDescription}
               </Link>
             )}
-            {!hasSourceUrl && citation.source_description}
+            {!hasSourceUrl && hasSourceDescription && sourceDescription}
             {!hasSourceUrl && !hasSourceDescription && EMPTY_CITATION_MESSAGE}
           </p>
         </div>

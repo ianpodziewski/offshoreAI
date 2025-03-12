@@ -12,6 +12,50 @@ import {
 } from "@/types";
 import Anthropic from "@anthropic-ai/sdk";
 
+/**
+ * Extracts citation references from the text and creates citation objects
+ * @param text The text to process for citations
+ * @param existingCitations Any existing citations to include
+ * @returns An array of citation objects
+ */
+export function extractCitationsFromText(
+  text: string,
+  existingCitations: Citation[] = []
+): Citation[] {
+  // Find all citation markers like [1], [2], etc.
+  const citationRegex = /\[(\d+)\]/g;
+  const matches = Array.from(text.matchAll(citationRegex));
+  
+  // Create a map of existing citations by their index
+  const citationsMap = new Map<number, Citation>();
+  
+  // Add existing citations to the map
+  existingCitations.forEach((citation, index) => {
+    citationsMap.set(index + 1, citation);
+  });
+  
+  // Process all citation matches
+  matches.forEach(match => {
+    const citationNumber = parseInt(match[1], 10);
+    
+    // If this citation number doesn't exist yet, create a placeholder
+    if (!citationsMap.has(citationNumber)) {
+      citationsMap.set(citationNumber, {
+        source_url: "",
+        source_description: `Reference ${citationNumber}`
+      });
+    }
+  });
+  
+  // Convert the map back to an array
+  return Array.from({ length: citationsMap.size }, (_, i) => 
+    citationsMap.get(i + 1) || {
+      source_url: "",
+      source_description: `Reference ${i + 1}`
+    }
+  );
+}
+
 export interface QueueAssistantResponseParams {
   controller: ReadableStreamDefaultController;
   providers: AIProviders;
@@ -31,7 +75,7 @@ export async function handleOpenAIStream({
   messages,
   model_name,
   systemPrompt,
-  citations,
+  citations: initialCitations,
   temperature,
 }: QueueAssistantResponseParams) {
   let client: OpenAI = providers.openai;
@@ -51,6 +95,7 @@ export async function handleOpenAIStream({
       messages,
     });
   }
+  
   const startTime = Date.now();
   const streamedResponse = await client.chat.completions.create({
     model: model_name,
@@ -58,35 +103,55 @@ export async function handleOpenAIStream({
     stream: true,
     temperature,
   });
+  
   if (!streamedResponse) {
     throw new Error("No stream response");
   }
+  
   let responseBuffer: string = "";
+  let currentCitations = [...initialCitations]; // Start with any initial citations
 
   for await (const chunk of streamedResponse) {
-    responseBuffer += chunk.choices[0]?.delta.content ?? "";
+    const deltaContent = chunk.choices[0]?.delta.content ?? "";
+    responseBuffer += deltaContent;
+    
+    // Look for citation patterns in the newly added content
+    if (deltaContent.includes('[') && deltaContent.includes(']')) {
+      // Extract citations from the current buffer
+      currentCitations = extractCitationsFromText(responseBuffer, initialCitations);
+    }
+    
     const streamedMessage: StreamedMessage = {
       type: "message",
       message: {
         role: "assistant",
         content: responseBuffer,
-        citations,
+        citations: currentCitations,
       },
     };
+    
     controller.enqueue(
       new TextEncoder().encode(JSON.stringify(streamedMessage) + "\n")
     );
   }
+  
+  // One final extraction at the end to catch any citations
+  currentCitations = extractCitationsFromText(responseBuffer, initialCitations);
+  
   const endTime = Date.now();
   const streamDuration = endTime - startTime;
   console.log(`Done streaming OpenAI response in ${streamDuration / 1000}s`);
+  console.log(`Final response has ${currentCitations.length} citations`);
+  
   const donePayload: StreamedDone = {
     type: "done",
     final_message: responseBuffer,
   };
+  
   controller.enqueue(
     new TextEncoder().encode(JSON.stringify(donePayload) + "\n")
   );
+  
   controller.close();
 }
 
@@ -96,7 +161,7 @@ export async function handleAnthropicStream({
   messages,
   model_name,
   systemPrompt,
-  citations,
+  citations: initialCitations,
   temperature,
 }: QueueAssistantResponseParams) {
   let anthropicClient: Anthropic = providers.anthropic;
@@ -106,13 +171,17 @@ export async function handleAnthropicStream({
       content: msg.content,
     })
   );
+  
   let responseBuffer: string = "";
+  let currentCitations = [...initialCitations]; // Start with any initial citations
+  
   console.log("Streaming Anthropic response...", {
     temperature,
     model_name,
     systemPrompt,
     messages,
   });
+  
   await anthropicClient.messages
     .stream({
       messages: anthropicMessages,
@@ -123,26 +192,40 @@ export async function handleAnthropicStream({
     })
     .on("text", (textDelta) => {
       responseBuffer += textDelta;
+      
+      // Look for citation patterns in the newly added content
+      if (textDelta.includes('[') && textDelta.includes(']')) {
+        // Extract citations from the current buffer
+        currentCitations = extractCitationsFromText(responseBuffer, initialCitations);
+      }
+      
       const streamedMessage: StreamedMessage = {
         type: "message",
         message: {
           role: "assistant",
           content: responseBuffer,
-          citations,
+          citations: currentCitations,
         },
       };
+      
       controller.enqueue(
         new TextEncoder().encode(JSON.stringify(streamedMessage) + "\n")
       );
     })
     .on("end", () => {
+      // One final extraction at the end to catch any citations
+      currentCitations = extractCitationsFromText(responseBuffer, initialCitations);
+      console.log(`Final Anthropic response has ${currentCitations.length} citations`);
+      
       const donePayload: StreamedDone = {
         type: "done",
         final_message: responseBuffer,
       };
+      
       controller.enqueue(
         new TextEncoder().encode(JSON.stringify(donePayload) + "\n")
       );
+      
       controller.close();
     });
 }
