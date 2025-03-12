@@ -128,25 +128,59 @@ export function renderCitations(
   children: React.ReactNode | string,
   citations: Citation[]
 ): React.ReactNode {
-  const matchRegex = /(\[\d+\])/g;
+  // Check if there are any citations to process
+  if (!citations || citations.length === 0) {
+    return <span className="text-base">{children}</span>;
+  }
+
+  // Improved regex to better match citation patterns [1], [2], etc.
+  const matchRegex = /\[(\d+)\]/g;
 
   // Helper function to process string content
   const processString = (text: string) => {
-    const parts = text.split(matchRegex);
-    return parts.map((part, index) => {
-      const match = part.match(matchRegex);
-      if (match) {
-        const number = parseInt(part.replace(/[\[\]]/g, ""), 10);
-        return (
+    if (!text) return null;
+    
+    // Find all citation matches in the text
+    const matches = Array.from(text.matchAll(matchRegex));
+    if (matches.length === 0) return text;
+    
+    // Split the text by the citation markers
+    const parts = [];
+    let lastIndex = 0;
+    
+    matches.forEach((match) => {
+      const [fullMatch, numberStr] = match;
+      const matchIndex = match.index as number;
+      
+      // Add text before the citation
+      if (matchIndex > lastIndex) {
+        parts.push(text.substring(lastIndex, matchIndex));
+      }
+      
+      // Process the citation
+      const number = parseInt(numberStr, 10);
+      if (number > 0 && number <= citations.length) {
+        parts.push(
           <CitationCircle
-            key={index}
+            key={`citation-${matchIndex}`}
             number={number}
             citation={citations[number - 1]}
           />
         );
+      } else {
+        // If citation number is invalid, just keep the original text
+        parts.push(fullMatch);
       }
-      return part;
+      
+      lastIndex = matchIndex + fullMatch.length;
     });
+    
+    // Add any remaining text after the last citation
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
+    
+    return parts;
   };
 
   // Recursively process children
@@ -172,5 +206,6 @@ export function renderCitations(
     return node;
   };
 
-  return <p className="text-base">{processChildren(children)}</p>;
+  // Wrap in a span instead of p to avoid nesting paragraph issues
+  return <span className="text-base">{processChildren(children)}</span>;
 }
