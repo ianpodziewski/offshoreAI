@@ -319,11 +319,11 @@ export default function EnhancedDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card style={{ backgroundColor: COLORS.bgDark }}>
             <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                 Active Loan Value
               </h2>
             </div>
-            <div className="w-full py-6 flex items-center justify-center">
+            <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {formatCurrency(totalLoanValue)}
@@ -334,11 +334,11 @@ export default function EnhancedDashboard() {
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
             <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                 Average Loan Size
               </h2>
             </div>
-            <div className="w-full py-6 flex items-center justify-center">
+            <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {formatCurrency(averageLoanSize)}
@@ -349,11 +349,11 @@ export default function EnhancedDashboard() {
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
             <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                 Total Loans
               </h2>
             </div>
-            <div className="w-full py-6 flex items-center justify-center">
+            <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {loans.length}
@@ -364,11 +364,11 @@ export default function EnhancedDashboard() {
 
           <Card style={{ backgroundColor: COLORS.bgDark }}>
             <div className="px-4 pt-4 pb-3 text-center" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-              <h2 className="text-sm font-semibold" style={{ color: COLORS.textPrimary }}>
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                 Funded Loans
               </h2>
             </div>
-            <div className="w-full py-6 flex items-center justify-center">
+            <div className="w-full py-4 flex items-center justify-center">
               <div className="text-center">
                 <div className="text-4xl font-bold" style={{ color: COLORS.textPrimary }}>
                   {loanStatusCounts.funded}
