@@ -3,7 +3,7 @@ import { LoanData, generateLoan, generateLoans } from './loanGenerator';
 import { documentService } from './documentService';
 
 const STORAGE_KEY = 'simulated_loans_db';
-const DEFAULT_LOAN_COUNT = 10;
+const DEFAULT_LOAN_COUNT = 9;
 
 export const loanDatabase = {
   generateLoan,
