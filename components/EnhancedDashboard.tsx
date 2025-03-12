@@ -64,16 +64,16 @@ const COLORS = {
   // Chart colors
   chart: {
     primary: "#60A5FA",      // Primary line/bar color (blue-400)
-    secondary: "#10B981",    // Secondary line/bar color (green-400)
+    secondary: "#94A3B8",    // Secondary line/bar color (now gray for monthly chart)
     tertiary: "#F59E0B",     // Tertiary color (amber-500)
     grid: "#374151",         // Grid lines (gray-700)
     
-    // Status-based chart colors
-    approved: "#10B981",     // Green for approved/funded
-    inReview: "#F59E0B",     // Amber for in-review/pending
-    funded: "#60A5FA",       // Blue for funded
-    closed: "#8B5CF6",       // Purple for closed
-    rejected: "#EF4444"      // Red for rejected
+    // Blue shades for status pipeline chart
+    inReview: "#93C5FD",     // Lightest blue (blue-300)
+    approved: "#60A5FA",     // Light blue (blue-400)
+    funded: "#3B82F6",       // Medium blue (blue-500)
+    closed: "#2563EB",       // Dark blue (blue-600)
+    rejected: "#1D4ED8"      // Darkest blue (blue-700)
   }
 };
 
@@ -334,7 +334,7 @@ export default function EnhancedDashboard() {
           <Card style={{ backgroundColor: COLORS.bgDark }}>
             <CardContent className="flex flex-col items-center justify-center py-6 space-y-3">
               <div className="flex flex-row items-center space-x-2">
-                <TrendingUp className="h-6 w-6" style={{ color: COLORS.chart.secondary }} />
+                <TrendingUp className="h-6 w-6" style={{ color: COLORS.primary }} />
                 <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Average Loan Size
                 </span>
@@ -348,7 +348,7 @@ export default function EnhancedDashboard() {
           <Card style={{ backgroundColor: COLORS.bgDark }}>
             <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
               <div className="flex flex-row items-center space-x-2">
-                <FileText className="h-6 w-6" style={{ color: COLORS.chart.tertiary }} />
+                <FileText className="h-6 w-6" style={{ color: COLORS.primary }} />
                 <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Total Loans
                 </span>
@@ -362,7 +362,7 @@ export default function EnhancedDashboard() {
           <Card style={{ backgroundColor: COLORS.bgDark }}>
             <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
               <div className="flex flex-row items-center space-x-2">
-                <CheckCircle className="h-6 w-6" style={{ color: COLORS.chart.secondary }} />
+                <CheckCircle className="h-6 w-6" style={{ color: COLORS.primary }} />
                 <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Funded Loans
                 </span>
