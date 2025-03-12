@@ -217,31 +217,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Add a button to generate all sample documents */}
-      <div className="mb-4 flex justify-end">
-        <Button
-          onClick={handleGenerateAllSamples}
-          className="flex items-center gap-2"
-          size="sm"
-          disabled={generatingAll}
-          style={{ 
-            backgroundColor: COLORS.primary, 
-            color: COLORS.textPrimary
-          }}
-        >
-          {generatingAll ? (
-            <>
-              <Clock size={16} className="animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <FileCheck size={16} />
-              Generate Sample Documents
-            </>
-          )}
-        </Button>
-      </div>
+      {/* We're removing the button from here as it appears to be handled elsewhere */}
 
       {REQUIRED_DOCUMENT_TYPES.map((docTypeInfo) => {
         const document = getDocumentForType(docTypeInfo.docType);
