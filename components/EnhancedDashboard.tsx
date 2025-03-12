@@ -28,6 +28,55 @@ import {
   Cell,
 } from "recharts";
 
+// Define a consistent color palette based on your chat interface
+const COLORS = {
+  // Primary UI colors
+  primary: "#3B82F6",        // Blue primary accent (blue-500)
+  secondary: "#6B7280",      // Gray secondary accent (gray-500)
+  
+  // Background colors
+  bgDark: "#111827",         // Card/container background (gray-900)
+  bgDarker: "#0F1629",       // Map/chart background (darker than gray-900)
+  bgHeader: "rgba(31, 41, 55, 0.7)",  // Header background (gray-800/70)
+  bgHover: "rgba(31, 41, 55, 0.5)",   // Hover state (gray-800/50)
+  bgButton: "rgba(31, 41, 55, 0.3)",  // Button background (gray-800/30)
+  
+  // Border colors
+  border: "#1F2937",         // Border color (gray-800)
+  borderAccent: "#3B82F6",   // Accent border (blue-500)
+  
+  // Text colors
+  textPrimary: "#F3F4F6",    // Primary text (gray-200)
+  textSecondary: "#D1D5DB",  // Secondary text (gray-300)
+  textMuted: "#6B7280",      // Muted text (gray-500)
+  textAccent: "#60A5FA",     // Accent text (blue-400)
+  
+  // Status colors matching your chat interface
+  status: {
+    approved: "#10B981",     // Approved status (green-400)
+    approvedBg: "rgba(6, 78, 59, 0.3)", // Approved bg (green-900/30)
+    pending: "#FBBF24",      // Pending/in-review status (yellow-400)
+    pendingBg: "rgba(120, 53, 15, 0.3)", // Pending bg (yellow-900/30)
+    rejected: "#F87171",     // Rejected status (red-400)
+    rejectedBg: "rgba(127, 29, 29, 0.3)" // Rejected bg (red-900/30)
+  },
+  
+  // Chart colors
+  chart: {
+    primary: "#60A5FA",      // Primary line/bar color (blue-400)
+    secondary: "#10B981",    // Secondary line/bar color (green-400)
+    tertiary: "#F59E0B",     // Tertiary color (amber-500)
+    grid: "#374151",         // Grid lines (gray-700)
+    
+    // Status-based chart colors
+    approved: "#10B981",     // Green for approved/funded
+    inReview: "#F59E0B",     // Amber for in-review/pending
+    funded: "#60A5FA",       // Blue for funded
+    closed: "#8B5CF6",       // Purple for closed
+    rejected: "#EF4444"      // Red for rejected
+  }
+};
+
 interface LoanStatusCounts {
   approved: number;
   in_review: number;
@@ -104,9 +153,9 @@ const LoanMap = dynamic(() =>
   {
     ssr: false,
     loading: () => (
-      <div className="h-full flex flex-col justify-center items-center bg-gray-900">
-        <Map size={48} className="text-gray-300 mb-4" />
-        <p className="text-gray-400 text-center">Loading map...</p>
+      <div className="h-full flex flex-col justify-center items-center" style={{ backgroundColor: COLORS.bgDarker }}>
+        <Map size={48} style={{ color: COLORS.textSecondary }} className="mb-4" />
+        <p style={{ color: COLORS.textMuted }} className="text-center">Loading map...</p>
       </div>
     ),
   }
@@ -246,8 +295,12 @@ export default function EnhancedDashboard() {
       <LayoutWrapper>
         <div className="container mx-auto py-8 px-4">
           <div className="flex justify-center items-center h-64">
-            <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-            <p className="ml-3 text-gray-300">Loading dashboard data...</p>
+            <div className="animate-spin w-8 h-8 border-4 rounded-full" 
+              style={{ 
+                borderColor: COLORS.primary, 
+                borderTopColor: 'transparent' 
+              }}></div>
+            <p className="ml-3" style={{ color: COLORS.textSecondary }}>Loading dashboard data...</p>
           </div>
         </div>
       </LayoutWrapper>
@@ -259,62 +312,62 @@ export default function EnhancedDashboard() {
       <div className="container mx-auto py-8 px-4">
         {/* MAIN HEADER */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">Loan Dashboard</h1>
+          <h1 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>Loan Dashboard</h1>
         </div>
 
         {/* KPI SECTION (4 CARDS) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gray-800">
+          <Card style={{ backgroundColor: COLORS.bgDark }}>
             <CardContent className="flex flex-col items-center justify-center py-6 space-y-3">
               <div className="flex flex-row items-center space-x-2">
-                <DollarSign className="h-6 w-6 text-blue-500" />
-                <span className="text-lg font-semibold text-gray-200">
+                <DollarSign className="h-6 w-6" style={{ color: COLORS.primary }} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Active Loan Value
                 </span>
               </div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
                 {formatCurrency(totalLoanValue)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800">
+          <Card style={{ backgroundColor: COLORS.bgDark }}>
             <CardContent className="flex flex-col items-center justify-center py-6 space-y-3">
               <div className="flex flex-row items-center space-x-2">
-                <TrendingUp className="h-6 w-6 text-green-500" />
-                <span className="text-lg font-semibold text-gray-200">
+                <TrendingUp className="h-6 w-6" style={{ color: COLORS.chart.secondary }} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Average Loan Size
                 </span>
               </div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
                 {formatCurrency(averageLoanSize)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800">
+          <Card style={{ backgroundColor: COLORS.bgDark }}>
             <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
               <div className="flex flex-row items-center space-x-2">
-                <FileText className="h-6 w-6 text-orange-500" />
-                <span className="text-lg font-semibold text-gray-200">
+                <FileText className="h-6 w-6" style={{ color: COLORS.chart.tertiary }} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Total Loans
                 </span>
               </div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
                 {loans.length}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800">
+          <Card style={{ backgroundColor: COLORS.bgDark }}>
             <CardContent className="flex flex-col items-center justify-center py-6 space-y=3">
               <div className="flex flex-row items-center space-x-2">
-                <CheckCircle className="h-6 w-6 text-green-500" />
-                <span className="text-lg font-semibold text-gray-200">
+                <CheckCircle className="h-6 w-6" style={{ color: COLORS.chart.secondary }} />
+                <span className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Funded Loans
                 </span>
               </div>
-              <div className="text-3xl font-bold text-white">
+              <div className="text-3xl font-bold" style={{ color: COLORS.textPrimary }}>
                 {loanStatusCounts.funded}
               </div>
             </CardContent>
@@ -324,11 +377,11 @@ export default function EnhancedDashboard() {
         {/* 2 SIDE-BY-SIDE CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Loan Status Pipeline */}
-          <Card className="bg-gray-800">
-            <div className="px-4 pt-4 pb-2 border-b border-gray-700">
+          <Card style={{ backgroundColor: COLORS.bgDark }}>
+            <div className="px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
               <div className="flex items-center space-x-2">
-                <BarChart2 className="h-5 w-5 text-blue-500" />
-                <h2 className="text-lg font-semibold text-gray-200">
+                <BarChart2 className="h-5 w-5" style={{ color: COLORS.primary }} />
+                <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Loan Status Pipeline
                 </h2>
               </div>
@@ -341,42 +394,42 @@ export default function EnhancedDashboard() {
                     {
                       name: "In Review",
                       value: loanStatusCounts.in_review || 0,
-                      fill: "#FFB347",
+                      fill: COLORS.chart.inReview,
                     },
                     {
                       name: "Approved",
                       value: loanStatusCounts.approved || 0,
-                      fill: "#77DD77",
+                      fill: COLORS.chart.approved,
                     },
                     {
                       name: "Funded",
                       value: loanStatusCounts.funded || 0,
-                      fill: "#59A5D8",
+                      fill: COLORS.chart.funded,
                     },
                     {
                       name: "Closed",
                       value: loanStatusCounts.closed || 0,
-                      fill: "#B19CD9",
+                      fill: COLORS.chart.closed,
                     },
                     {
                       name: "Rejected",
                       value: loanStatusCounts.rejected || 0,
-                      fill: "#FF6961",
+                      fill: COLORS.chart.rejected,
                     },
                   ]}
                   margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#444" />
-                  <XAxis type="number" stroke="#ccc" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.chart.grid} />
+                  <XAxis type="number" stroke={COLORS.textSecondary} />
                   <YAxis
                     dataKey="name"
                     type="category"
-                    tick={{ fontSize: 14, fill: "#ccc" }}
+                    tick={{ fontSize: 14, fill: COLORS.textSecondary }}
                   />
                   <Tooltip
                     formatter={(value: number) => [`${value} loans`]}
                     contentStyle={{ backgroundColor: "#2D2D2D", border: "none" }}
-                    itemStyle={{ color: "#fff" }}
+                    itemStyle={{ color: COLORS.textPrimary }}
                   />
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -385,11 +438,11 @@ export default function EnhancedDashboard() {
           </Card>
 
           {/* Monthly Loan Origination */}
-          <Card className="bg-gray-800">
-            <div className="px-4 pt-4 pb-2 border-b border-gray-700">
+          <Card style={{ backgroundColor: COLORS.bgDark }}>
+            <div className="px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
               <div className="flex items-center space-x-2">
-                <TrendingUp className="h-5 w-5 text-blue-500" />
-                <h2 className="text-lg font-semibold text-gray-200">
+                <TrendingUp className="h-5 w-5" style={{ color: COLORS.primary }} />
+                <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                   Monthly Loan Origination
                 </h2>
               </div>
@@ -400,41 +453,41 @@ export default function EnhancedDashboard() {
                   data={monthlyLoanData}
                   margin={{ top: 5, right: 30, left: 20, bottom: 25 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.chart.grid} />
                   <XAxis
                     dataKey="month"
                     angle={-45}
                     textAnchor="end"
                     height={60}
-                    tick={{ fontSize: 12, fill: "#ccc" }}
+                    tick={{ fontSize: 12, fill: COLORS.textSecondary }}
                   />
                   <YAxis
                     yAxisId="left"
                     orientation="left"
-                    stroke="#8884d8"
-                    tick={{ fill: "#ccc" }}
+                    stroke={COLORS.chart.primary}
+                    tick={{ fill: COLORS.textSecondary }}
                   />
                   <YAxis
                     yAxisId="right"
                     orientation="right"
-                    stroke="#82ca9d"
-                    tick={{ fill: "#ccc" }}
+                    stroke={COLORS.chart.secondary}
+                    tick={{ fill: COLORS.textSecondary }}
                   />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#2D2D2D", border: "none" }}
-                    itemStyle={{ color: "#fff" }}
+                    itemStyle={{ color: COLORS.textPrimary }}
                     formatter={(value: number, name: string) => [
                       name === "volume" ? `$${value}k` : value,
                       name === "volume" ? "Loan Volume (thousands)" : "Loan Count",
                     ]}
                   />
-                  <Legend wrapperStyle={{ color: "#fff" }} />
+                  <Legend wrapperStyle={{ color: COLORS.textPrimary }} />
                   <Line
                     yAxisId="left"
                     type="monotone"
                     dataKey="count"
                     name="Loan Count"
-                    stroke="#8884d8"
+                    stroke={COLORS.chart.primary}
                     activeDot={{ r: 8 }}
                   />
                   <Line
@@ -442,7 +495,7 @@ export default function EnhancedDashboard() {
                     type="monotone"
                     dataKey="volume"
                     name="Loan Volume ($k)"
-                    stroke="#82ca9d"
+                    stroke={COLORS.chart.secondary}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -451,16 +504,16 @@ export default function EnhancedDashboard() {
         </div>
 
         {/* PROPERTY LOCATIONS */}
-        <Card className="bg-gray-800">
-          <div className="px-4 pt-4 pb-2 border-b border-gray-700">
+        <Card style={{ backgroundColor: COLORS.bgDark }}>
+          <div className="px-4 pt-4 pb-2" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
             <div className="flex items-center space-x-2">
-              <Map className="h-5 w-5 text-blue-500" />
-              <h2 className="text-lg font-semibold text-gray-200">
+              <Map className="h-5 w-5" style={{ color: COLORS.primary }} />
+              <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>
                 Property Locations
               </h2>
             </div>
           </div>
-          <CardContent className="h-96 bg-gray-900 relative">
+          <CardContent className="h-96 relative" style={{ backgroundColor: COLORS.bgDarker }}>
             {/* 3) Now <LoanMap stateData={stateData} /> is valid */}
             <LoanMap stateData={stateData} />
           </CardContent>
