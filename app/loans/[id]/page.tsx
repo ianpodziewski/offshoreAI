@@ -8,7 +8,6 @@ import { ArrowLeft, Upload, FileText, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
-import SimpleDocumentUploader from '@/components/document/SimpleDocumentUploader';
 import SimpleDocumentViewer from '@/components/document/SimpleDocumentViewer';
 import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
 import DocumentSockets from '@/components/document/DocumentSockets';
@@ -32,10 +31,6 @@ export default function LoanDetailPage() {
       setLoading(false);
     }
   }, [params?.id]);
-  
-  const handleDocumentUploadComplete = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
   
   const handleDocumentStatusChange = () => {
     setSelectedDocument(null);
@@ -81,20 +76,21 @@ export default function LoanDetailPage() {
             </Button>
           </Link>
           
-          <h1 className="text-3xl font-bold mb-2">{loan.borrowerName}'s Hard Money Loan</h1>
-          <p className="text-gray-600">
-            {loan.loanType.replace('_', ' ').toUpperCase()} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
-          </p>
-        </div>
+          <div className="bg-gray-100 p-4 rounded-lg mb-6">
+            <h1 className="text-3xl font-bold mb-2">{loan.borrowerName}'s Hard Money Loan</h1>
+            <p className="text-gray-600">
+              {loan.loanType.replace('_', ' ').toUpperCase()} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
+            </p>
+          </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Loan Details */}
-          <div className="lg:col-span-2">
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Loan Information</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Loan Details */}
+            <div className="lg:col-span-3">
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Loan Information</CardTitle>
+                </CardHeader>
+                <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Loan Type</h3>
@@ -192,26 +188,11 @@ export default function LoanDetailPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Loan Documents</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="bg-gray-50 rounded-lg">
                 <DocumentSockets
                   loanId={loan.id}
                   onViewDocument={setSelectedDocument}
                   refreshTrigger={refreshTrigger}
-                />
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Document Uploader */}
-          <div>
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Upload Loan Document</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <SimpleDocumentUploader 
-                  loanId={loan.id}
-                  onUploadComplete={handleDocumentUploadComplete}
                 />
               </CardContent>
             </Card>
@@ -230,7 +211,8 @@ export default function LoanDetailPage() {
             }}
           />
         )}
-      </div>
-    </LayoutWrapper>
+          </div>
+        </div>
+      </LayoutWrapper>
   );
 }
