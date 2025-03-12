@@ -11,6 +11,7 @@ import { loanDatabase } from '@/utilities/loanDatabase';
 import SimpleDocumentViewer from '@/components/document/SimpleDocumentViewer';
 import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
 import DocumentSockets from '@/components/document/DocumentSockets';
+import { COLORS } from '@/app/theme/colors';
 
 export default function LoanDetailPage() {
   const params = useParams();
@@ -41,8 +42,11 @@ export default function LoanDetailPage() {
     return (
       <LayoutWrapper>
         <div className="container mx-auto py-16 px-4 text-center">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
-          <p>Loading loan details...</p>
+          <div className="animate-spin w-8 h-8 border-4 rounded-full mx-auto mb-4" style={{
+            borderColor: COLORS.primary,
+            borderTopColor: "transparent"
+          }}></div>
+          <p style={{ color: COLORS.textSecondary }}>Loading loan details...</p>
         </div>
       </LayoutWrapper>
     );
@@ -52,10 +56,10 @@ export default function LoanDetailPage() {
     return (
       <LayoutWrapper>
         <div className="container mx-auto py-16 px-4 text-center">
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">Loan Not Found</h2>
-          <p className="text-gray-600 mb-6">The loan you're looking for doesn't exist or has been removed.</p>
+          <h2 className="text-2xl font-bold mb-4" style={{ color: COLORS.textPrimary }}>Loan Not Found</h2>
+          <p className="mb-6" style={{ color: COLORS.textSecondary }}>The loan you're looking for doesn't exist or has been removed.</p>
           <Link href="/loans">
-            <Button>
+            <Button style={{ backgroundColor: COLORS.primary }}>
               <ArrowLeft size={16} className="mr-2" />
               Back to Loans
             </Button>
@@ -70,15 +74,17 @@ export default function LoanDetailPage() {
       <div className="container mx-auto py-8 px-4">
         <div className="mb-6">
           <Link href="/loans">
-            <Button variant="ghost" className="mb-4">
+            <Button variant="ghost" className="mb-4" style={{ color: COLORS.textSecondary }}>
               <ArrowLeft size={16} className="mr-2" />
               Back to Loans
             </Button>
           </Link>
           
-          <div className="bg-gray-100 p-4 rounded-lg mb-6">
-            <h1 className="text-3xl font-bold mb-2">{loan.borrowerName}'s Hard Money Loan</h1>
-            <p className="text-gray-600">
+          <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: COLORS.bgDark }}>
+            <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+              {loan.borrowerName}'s Hard Money Loan
+            </h1>
+            <p style={{ color: COLORS.textSecondary }}>
               {loan.loanType.replace('_', ' ').toUpperCase()} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
             </p>
           </div>
@@ -86,97 +92,124 @@ export default function LoanDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Loan Details */}
             <div className="lg:col-span-3">
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Loan Information</CardTitle>
+              <Card className="mb-6" style={{ 
+                backgroundColor: COLORS.bgDark,
+                borderColor: COLORS.border
+              }}>
+                <CardHeader style={{ 
+                  backgroundColor: COLORS.bgHeader,
+                  borderColor: COLORS.border,
+                  borderBottomWidth: '1px',
+                  borderBottomStyle: 'solid'
+                }}>
+                  <CardTitle style={{ color: COLORS.textPrimary }}>Loan Information</CardTitle>
                 </CardHeader>
                 <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Loan Type</h3>
-                    <p className="font-medium">{loan.loanType.replace('_', ' ').toUpperCase()}</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Type</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.loanType.replace('_', ' ').toUpperCase()}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Loan Amount</h3>
-                    <p className="font-medium">${loan.loanAmount.toLocaleString()}</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Amount</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.loanAmount.toLocaleString()}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Interest Rate</h3>
-                    <p className="font-medium">{loan.interestRate}%</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Interest Rate</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.interestRate}%</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Origination Fee</h3>
-                    <p className="font-medium">{loan.originationFee}%</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Origination Fee</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.originationFee}%</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Loan Term</h3>
-                    <p className="font-medium">{loan.loanTerm} months</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Term</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.loanTerm} months</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                    <p className="font-medium capitalize">{loan.status.replace('_', ' ')}</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Status</h3>
+                    <p className="font-medium capitalize" style={{
+                      color: loan.status === 'approved' ? COLORS.status.approved : 
+                             loan.status === 'rejected' ? COLORS.status.rejected :
+                             loan.status === 'in_review' ? COLORS.status.pending :
+                             COLORS.textPrimary
+                    }}>
+                      {loan.status.replace('_', ' ')}
+                    </p>
                   </div>
                 </div>
                 
-                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+                <div className="mt-4 pt-4 grid grid-cols-2 gap-4" style={{
+                  borderTopWidth: '1px',
+                  borderTopStyle: 'solid',
+                  borderColor: COLORS.border
+                }}>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Property Address</h3>
-                    <p className="font-medium">{loan.propertyAddress}</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Property Address</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.propertyAddress}</p>
                   </div>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Property Type</h3>
-                    <p className="font-medium">{loan.propertyType.replace('_', ' ')}</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Purchase Price</h3>
-                    <p className="font-medium">${loan.purchasePrice.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">After Repair Value</h3>
-                    <p className="font-medium">${loan.afterRepairValue.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Rehab Budget</h3>
-                    <p className="font-medium">${loan.rehabBudget.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Exit Strategy</h3>
-                    <p className="font-medium">{loan.exitStrategy.replace('_', ' ')}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">LTV</h3>
-                    <p className="font-medium">{loan.ltv}%</p>
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">ARV LTV</h3>
-                    <p className="font-medium">{loan.arv_ltv}%</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Property Type</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.propertyType.replace('_', ' ')}</p>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t grid grid-cols-2 gap-4">
+                <div className="mt-4 pt-4 grid grid-cols-2 gap-4" style={{
+                  borderTopWidth: '1px',
+                  borderTopStyle: 'solid',
+                  borderColor: COLORS.border
+                }}>
                   <div>
-                    <h3 className="text-sm font-medium text-gray-500">Borrower Experience</h3>
-                    <p className="font-medium">{loan.borrowerExperience}</p>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Purchase Price</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.purchasePrice.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>After Repair Value</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.afterRepairValue.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Rehab Budget</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.rehabBudget.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Exit Strategy</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.exitStrategy.replace('_', ' ')}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>LTV</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.ltv}%</p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>ARV LTV</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.arv_ltv}%</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 grid grid-cols-2 gap-4" style={{
+                  borderTopWidth: '1px',
+                  borderTopStyle: 'solid',
+                  borderColor: COLORS.border
+                }}>
+                  <div>
+                    <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Borrower Experience</h3>
+                    <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.borrowerExperience}</p>
                   </div>
                   {loan.lender && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-500">Lender</h3>
-                      <p className="font-medium">{loan.lender}</p>
+                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Lender</h3>
+                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.lender}</p>
                     </div>
                   )}
                   {loan.fundingDate && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-500">Funding Date</h3>
-                      <p className="font-medium">{new Date(loan.fundingDate).toLocaleDateString()}</p>
+                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Funding Date</h3>
+                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{new Date(loan.fundingDate).toLocaleDateString()}</p>
                     </div>
                   )}
                   {loan.maturityDate && (
                     <div>
-                      <h3 className="text-sm font-medium text-gray-500">Maturity Date</h3>
-                      <p className="font-medium">{new Date(loan.maturityDate).toLocaleDateString()}</p>
+                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Maturity Date</h3>
+                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{new Date(loan.maturityDate).toLocaleDateString()}</p>
                     </div>
                   )}
                 </div>
@@ -184,11 +217,19 @@ export default function LoanDetailPage() {
             </Card>
             
             {/* Document Sockets */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Loan Documents</CardTitle>
+            <Card style={{ 
+              backgroundColor: COLORS.bgDark,
+              borderColor: COLORS.border
+            }}>
+              <CardHeader className="flex flex-row items-center justify-between" style={{ 
+                backgroundColor: COLORS.bgHeader,
+                borderColor: COLORS.border,
+                borderBottomWidth: '1px',
+                borderBottomStyle: 'solid'
+              }}>
+                <CardTitle style={{ color: COLORS.textPrimary }}>Loan Documents</CardTitle>
               </CardHeader>
-              <CardContent className="bg-gray-50 rounded-lg">
+              <CardContent className="rounded-lg" style={{ backgroundColor: COLORS.bgDarker }}>
                 <DocumentSockets
                   loanId={loan.id}
                   onViewDocument={setSelectedDocument}
