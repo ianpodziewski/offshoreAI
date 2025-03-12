@@ -508,9 +508,10 @@ export default function EnhancedDashboard() {
               Property Locations
             </h2>
           </div>
-          <CardContent className="h-96" style={{ backgroundColor: COLORS.bgDarker }}>
-            {/* 3) Now <LoanMap stateData={stateData} /> is valid */}
-            <LoanMap stateData={stateData} />
+          <CardContent className="h-[450px] px-4 py-4" style={{ backgroundColor: COLORS.bgDarker }}>
+            <div className="w-full h-full">
+              <LoanMap stateData={stateData} />
+            </div>
           </CardContent>
         </Card>
       </div>
