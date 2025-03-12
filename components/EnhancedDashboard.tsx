@@ -387,8 +387,8 @@ export default function EnhancedDashboard() {
                 Loan Status Pipeline
               </h2>
             </div>
-            <div className="w-full h-80 flex items-center justify-center">
-              <ResponsiveContainer width="95%" height="90%">
+            <div className="p-4 h-80">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
                   data={[
@@ -508,11 +508,10 @@ export default function EnhancedDashboard() {
               Property Locations
             </h2>
           </div>
-          <div className="w-full h-96 flex items-center justify-center" style={{ backgroundColor: COLORS.bgDarker }}>
-            <div className="w-11/12 h-5/6">
-              <LoanMap stateData={stateData} />
-            </div>
-          </div>
+          <CardContent className="h-96" style={{ backgroundColor: COLORS.bgDarker }}>
+            {/* 3) Now <LoanMap stateData={stateData} /> is valid */}
+            <LoanMap stateData={stateData} />
+          </CardContent>
         </Card>
       </div>
     </LayoutWrapper>
