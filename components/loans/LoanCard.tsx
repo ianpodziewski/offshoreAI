@@ -108,7 +108,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
 
   return (
     <Card 
-      className="overflow-hidden hover:shadow-md transition-shadow duration-200" 
+      className="overflow-hidden hover:shadow-md transition-shadow duration-200 flex flex-col" 
       style={{ 
         backgroundColor: COLORS.bgDark,
         borderColor: COLORS.border 
@@ -139,12 +139,12 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
 
       {/* Property Address */}
       <div 
-        className="p-4 border-b"
+        className="p-4 border-b flex-grow"
         style={{ 
           borderColor: COLORS.border 
         }}
       >
-        <div className="flex items-start">
+        <div className="flex items-start mb-4">
           <Home size={16} className="mt-0.5 mr-2 flex-shrink-0" style={{ color: COLORS.textMuted }} />
           <div>
             <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Property Address</p>
@@ -153,29 +153,33 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
             </p>
           </div>
         </div>
+
+        {/* Loan Type and Loan Amount on the same line */}
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Loan Type</p>
+            <p className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
+              {formatLoanType(loan.loanType)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Loan Amount</p>
+            <p className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
+              ${(loan.loanAmount ?? 0).toLocaleString()}
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* Card Footer with Loan Details */}
-      <div className="p-4 flex justify-between items-center">
-        <div>
-          <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Loan Type</p>
-          <p className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
-            {formatLoanType(loan.loanType)}
-          </p>
-        </div>
-        <div className="flex flex-col items-end">
-          <p className="text-xs font-medium mb-1" style={{ color: COLORS.textMuted }}>Loan Amount</p>
-          <p className="text-sm font-medium mb-2" style={{ color: COLORS.textPrimary }}>
-            ${(loan.loanAmount ?? 0).toLocaleString()}
-          </p>
-          <Link 
-            href={`/loans/${loan.id}`}
-            className="flex items-center gap-1 text-sm font-medium text-blue-400 hover:text-blue-300"
-          >
-            View Details
-            <ArrowRight size={14} />
-          </Link>
-        </div>
+      {/* View Details Button */}
+      <div className="p-4 flex justify-center">
+        <Link 
+          href={`/loans/${loan.id}`}
+          className="flex items-center gap-1 text-sm font-medium px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200"
+        >
+          View Details
+          <ArrowRight size={14} />
+        </Link>
       </div>
     </Card>
   );
