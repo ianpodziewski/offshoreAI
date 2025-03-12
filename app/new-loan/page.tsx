@@ -84,7 +84,7 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="borrowerName">Borrower Name</Label>
-                                              <Input
+                      <Input
                         id="borrowerName"
                         name="borrowerName"
                         value={loanData.borrowerName}
@@ -96,7 +96,7 @@ export default function NewLoanPage() {
 
                     <div>
                       <Label htmlFor="borrowerEmail">Borrower Email</Label>
-                                              <Input
+                      <Input
                         id="borrowerEmail"
                         name="borrowerEmail"
                         value={loanData.borrowerEmail}
@@ -117,7 +117,7 @@ export default function NewLoanPage() {
                         }
                       >
                         <SelectTrigger id="borrowerExperience" className="w-full">
-                          <SelectValue placeholder="Select experience" />
+                          <SelectValue placeholder="" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Beginner (0-1 projects)">Beginner (0-1 projects)</SelectItem>
@@ -137,7 +137,7 @@ export default function NewLoanPage() {
                         }
                       >
                         <SelectTrigger id="loanType" className="w-full">
-                          <SelectValue placeholder="Select loan type" />
+                          <SelectValue placeholder="" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="fix_and_flip">Fix and Flip</SelectItem>
@@ -155,7 +155,7 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="loanAmount">Loan Amount ($)</Label>
-                                              <Input
+                      <Input
                         id="loanAmount"
                         name="loanAmount"
                         value={loanData.loanAmount}
@@ -168,7 +168,7 @@ export default function NewLoanPage() {
 
                     <div>
                       <Label htmlFor="interestRate">Interest Rate (%)</Label>
-                                              <Input
+                      <Input
                         id="interestRate"
                         name="interestRate"
                         value={loanData.interestRate}
@@ -184,7 +184,7 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="originationFee">Origination Fee (%)</Label>
-                                              <Input
+                      <Input
                         id="originationFee"
                         name="originationFee"
                         value={loanData.originationFee}
@@ -205,7 +205,7 @@ export default function NewLoanPage() {
                         }
                       >
                         <SelectTrigger id="propertyType" className="w-full">
-                          <SelectValue placeholder="Select property type" />
+                          <SelectValue placeholder="" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="single_family">Single Family</SelectItem>
@@ -224,7 +224,7 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
-                                              <Input
+                      <Input
                         id="purchasePrice"
                         name="purchasePrice"
                         value={loanData.purchasePrice}
@@ -237,7 +237,7 @@ export default function NewLoanPage() {
 
                     <div>
                       <Label htmlFor="afterRepairValue">After Repair Value ($)</Label>
-                                              <Input
+                      <Input
                         id="afterRepairValue"
                         name="afterRepairValue"
                         value={loanData.afterRepairValue}
@@ -252,7 +252,7 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="rehabBudget">Rehab Budget ($)</Label>
-                                              <Input
+                      <Input
                         id="rehabBudget"
                         name="rehabBudget"
                         value={loanData.rehabBudget}
@@ -272,7 +272,7 @@ export default function NewLoanPage() {
                         }
                       >
                         <SelectTrigger id="exitStrategy" className="w-full">
-                          <SelectValue placeholder="Select exit strategy" />
+                          <SelectValue placeholder="" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="sale">Sale</SelectItem>
@@ -292,7 +292,7 @@ export default function NewLoanPage() {
                       name="propertyAddress"
                       value={loanData.propertyAddress}
                       onChange={handleInputChange}
-                      placeholder="123 Main St, City, State 12345"
+                      placeholder=""
                       required
                     />
                   </div>
