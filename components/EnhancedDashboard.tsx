@@ -387,7 +387,7 @@ export default function EnhancedDashboard() {
                 Loan Status Pipeline
               </h2>
             </div>
-            <div className="p-4 h-80">
+            <CardContent className="h-80 px-0 py-0">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   layout="vertical"
@@ -418,7 +418,7 @@ export default function EnhancedDashboard() {
                       fill: COLORS.chart.rejected,
                     },
                   ]}
-                  margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
+                  margin={{ top: 10, right: 40, left: 80, bottom: 10 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke={COLORS.chart.grid} />
                   <XAxis type="number" stroke={COLORS.textSecondary} />
@@ -435,7 +435,7 @@ export default function EnhancedDashboard() {
                   <Bar dataKey="value" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </CardContent>
           </Card>
 
           {/* Monthly Loan Origination */}
