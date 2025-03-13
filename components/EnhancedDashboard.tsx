@@ -670,13 +670,12 @@ export default function EnhancedDashboard() {
               </h2>
             </div>
             <CardContent
-              className="h-[450px] p-0"
+              className="h-[450px] p-0 relative"
               style={{ 
-                backgroundColor: COLORS.bgDarker,
-                position: 'relative'
+                backgroundColor: COLORS.bgDarker
               }}
             >
-              <div className="w-full h-full">
+              <div className="w-full h-full absolute inset-0">
                 <LoanMap stateData={stateData} />
               </div>
             </CardContent>

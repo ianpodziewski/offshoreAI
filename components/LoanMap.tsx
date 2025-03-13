@@ -16,6 +16,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
   const [MapContainer, setMapContainer] = useState<any>(null);
   const [TileLayer, setTileLayer] = useState<any>(null);
   const [GeoJSON, setGeoJSON] = useState<any>(null);
+  const [ZoomControl, setZoomControl] = useState<any>(null);
 
   const [isClient, setIsClient] = useState(false);
   const [usStatesData, setUsStatesData] = useState<any>(null);
@@ -32,6 +33,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
         setMapContainer(() => RL.MapContainer);
         setTileLayer(() => RL.TileLayer);
         setGeoJSON(() => RL.GeoJSON);
+        setZoomControl(() => RL.ZoomControl);
         
         // Fix for Leaflet icon issues - using a safer approach
         if (L.Icon && L.Icon.Default) {
@@ -140,7 +142,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
     });
   };
 
-  if (!isClient || !MapContainer || !TileLayer || !GeoJSON) {
+  if (!isClient || !MapContainer || !TileLayer || !GeoJSON || !ZoomControl) {
     return (
       <div className="h-full w-full flex items-center justify-center text-gray-500">
         Loading map...
@@ -153,12 +155,14 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       <MapContainer
         center={[39.8283, -98.5795]}
         zoom={4}
+        zoomControl={false} // We'll add ZoomControl separately
         scrollWheelZoom={false}
         style={{ 
           height: '100%', 
           width: '100%',
           margin: '0 auto'
         }}
+        className="leaflet-map"
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
@@ -171,6 +175,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
             onEachFeature={onEachFeature}
           />
         )}
+        <ZoomControl position="topleft" />
       </MapContainer>
 
       {/* Popup in the top-right corner with improved visibility */}
