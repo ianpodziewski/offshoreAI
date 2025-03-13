@@ -167,7 +167,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       {hoveredState && (
         <div className="absolute top-4 right-4 z-[9999] bg-gray-800 text-white p-4 rounded shadow-lg border border-gray-600">
           <div className="font-bold text-lg">{hoveredState.name}</div>
-          <div className="mt-1">Value: ${hoveredState.value.toLocaleString()}</div>
+          <div className="mt-1">TLA: ${hoveredState.value.toLocaleString()}</div>
         </div>
       )}
     </div>
