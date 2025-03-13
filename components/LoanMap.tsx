@@ -32,6 +32,16 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
         setMapContainer(() => RL.MapContainer);
         setTileLayer(() => RL.TileLayer);
         setGeoJSON(() => RL.GeoJSON);
+        
+        // Fix for Leaflet icon issues - using a safer approach
+        if (L.Icon && L.Icon.Default) {
+          // Use the merge options method directly
+          L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+          });
+        }
       })
       .catch((error) => {
         console.error("Failed to load Leaflet:", error);
@@ -139,36 +149,29 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
   }
 
   return (
-    // Using absolute positioning to ensure the map is centered in its container
-    <div className="h-full w-full relative flex justify-center items-center">
-      <div className="h-full w-full absolute inset-0 flex items-center justify-center">
-        <MapContainer
-          center={[39.8283, -98.5795]}
-          zoom={4}
-          scrollWheelZoom={false}
-          className="h-full w-full"
-          style={{ 
-            margin: '0 auto',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0
-          }}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    <div className="h-full w-full" style={{ position: 'relative' }}>
+      <MapContainer
+        center={[39.8283, -98.5795]}
+        zoom={4}
+        scrollWheelZoom={false}
+        style={{ 
+          height: '100%', 
+          width: '100%',
+          margin: '0 auto'
+        }}
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        />
+        {usStatesData && (
+          <GeoJSON
+            data={usStatesData}
+            style={styleFeature}
+            onEachFeature={onEachFeature}
           />
-          {usStatesData && (
-            <GeoJSON
-              data={usStatesData}
-              style={styleFeature}
-              onEachFeature={onEachFeature}
-            />
-          )}
-        </MapContainer>
-      </div>
+        )}
+      </MapContainer>
 
       {/* Popup in the top-right corner with improved visibility */}
       {hoveredState && (
