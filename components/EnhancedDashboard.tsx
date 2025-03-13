@@ -325,281 +325,346 @@ export default function EnhancedDashboard() {
 
         {/* KPI SECTION (4 CARDS) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div
-              className="px-4 pt-4 pb-3 text-center"
-              style={{ borderBottom: `1px solid ${COLORS.border}` }}
-            >
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: COLORS.textPrimary }}
+          {/* Active Loan Value */}
+          <div className="transform transition-all duration-200 hover:scale-105">
+            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+              backgroundColor: COLORS.bgDarker,
+              borderColor: COLORS.chart.primary,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}>
+              <div
+                className="px-4 pt-4 pb-3"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
               >
-                Active Loan Value
-              </h2>
-            </div>
-            <div className="w-full py-4 flex items-center justify-center">
-              <div className="text-center">
-                <div
-                  className="text-4xl font-bold"
-                  style={{ color: COLORS.textPrimary }}
+                <h2
+                  className="text-lg font-semibold text-center"
+                  style={{ color: COLORS.chart.primary }}
                 >
-                  {formatCurrency(totalLoanValue)}
+                  Active Loan Value
+                </h2>
+              </div>
+              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+                <div className="text-center">
+                  <div
+                    className="text-4xl font-bold"
+                    style={{ color: COLORS.textPrimary }}
+                  >
+                    {formatCurrency(totalLoanValue)}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
-          <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div
-              className="px-4 pt-4 pb-3 text-center"
-              style={{ borderBottom: `1px solid ${COLORS.border}` }}
-            >
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: COLORS.textPrimary }}
+          {/* Average Loan Size */}
+          <div className="transform transition-all duration-200 hover:scale-105">
+            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+              backgroundColor: COLORS.bgDarker,
+              borderColor: COLORS.chart.secondary,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}>
+              <div
+                className="px-4 pt-4 pb-3"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
               >
-                Average Loan Size
-              </h2>
-            </div>
-            <div className="w-full py-4 flex items-center justify-center">
-              <div className="text-center">
-                <div
-                  className="text-4xl font-bold"
-                  style={{ color: COLORS.textPrimary }}
+                <h2
+                  className="text-lg font-semibold text-center"
+                  style={{ color: COLORS.chart.secondary }}
                 >
-                  {formatCurrency(averageLoanSize)}
+                  Average Loan Size
+                </h2>
+              </div>
+              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+                <div className="text-center">
+                  <div
+                    className="text-4xl font-bold"
+                    style={{ color: COLORS.textPrimary }}
+                  >
+                    {formatCurrency(averageLoanSize)}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
-          <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div
-              className="px-4 pt-4 pb-3 text-center"
-              style={{ borderBottom: `1px solid ${COLORS.border}` }}
-            >
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: COLORS.textPrimary }}
+          {/* Total Loans */}
+          <div className="transform transition-all duration-200 hover:scale-105">
+            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+              backgroundColor: COLORS.bgDarker,
+              borderColor: COLORS.chart.tertiary,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}>
+              <div
+                className="px-4 pt-4 pb-3"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
               >
-                Total Loans
-              </h2>
-            </div>
-            <div className="w-full py-4 flex items-center justify-center">
-              <div className="text-center">
-                <div
-                  className="text-4xl font-bold"
-                  style={{ color: COLORS.textPrimary }}
+                <h2
+                  className="text-lg font-semibold text-center"
+                  style={{ color: COLORS.chart.tertiary }}
                 >
-                  {loans.length}
+                  Total Loans
+                </h2>
+              </div>
+              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+                <div className="text-center">
+                  <div
+                    className="text-4xl font-bold"
+                    style={{ color: COLORS.textPrimary }}
+                  >
+                    {loans.length}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
-          <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div
-              className="px-4 pt-4 pb-3 text-center"
-              style={{ borderBottom: `1px solid ${COLORS.border}` }}
-            >
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: COLORS.textPrimary }}
+          {/* Funded Loans */}
+          <div className="transform transition-all duration-200 hover:scale-105">
+            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+              backgroundColor: COLORS.bgDarker,
+              borderColor: COLORS.chart.funded,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}>
+              <div
+                className="px-4 pt-4 pb-3"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
               >
-                Funded Loans
-              </h2>
-            </div>
-            <div className="w-full py-4 flex items-center justify-center">
-              <div className="text-center">
-                <div
-                  className="text-4xl font-bold"
-                  style={{ color: COLORS.textPrimary }}
+                <h2
+                  className="text-lg font-semibold text-center"
+                  style={{ color: COLORS.chart.funded }}
                 >
-                  {loanStatusCounts.funded}
+                  Funded Loans
+                </h2>
+              </div>
+              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+                <div className="text-center">
+                  <div
+                    className="text-4xl font-bold"
+                    style={{ color: COLORS.textPrimary }}
+                  >
+                    {loanStatusCounts.funded}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
         </div>
 
         {/* 2 SIDE-BY-SIDE CHARTS */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Loan Status Pipeline */}
-          <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div
-              className="px-4 pt-4 pb-3 text-center"
-              style={{ borderBottom: `1px solid ${COLORS.border}` }}
-            >
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: COLORS.textPrimary }}
+          <div className="transform transition-all duration-200 hover:scale-[1.02]">
+            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+              backgroundColor: COLORS.bgDarker,
+              borderColor: COLORS.border,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}>
+              <div
+                className="px-4 pt-4 pb-3"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
               >
-                Loan Status Pipeline
-              </h2>
-            </div>
-            {/* Match the styling approach used for the line chart */}
-            <CardContent className="h-80 flex items-center justify-center">
-              <ResponsiveContainer width="90%" height="80%">
-                <BarChart
-                  layout="vertical"
-                  data={[
-                    {
-                      name: "In Review",
-                      value: loanStatusCounts.in_review || 0,
-                      fill: COLORS.chart.inReview
-                    },
-                    {
-                      name: "Approved",
-                      value: loanStatusCounts.approved || 0,
-                      fill: COLORS.chart.approved
-                    },
-                    {
-                      name: "Funded",
-                      value: loanStatusCounts.funded || 0,
-                      fill: COLORS.chart.funded
-                    },
-                    {
-                      name: "Closed",
-                      value: loanStatusCounts.closed || 0,
-                      fill: COLORS.chart.closed
-                    },
-                    {
-                      name: "Rejected",
-                      value: loanStatusCounts.rejected || 0,
-                      fill: COLORS.chart.rejected
-                    }
-                  ]}
-                  margin={{ top: 10, right: 40, left: 80, bottom: 10 }}
+                <h2
+                  className="text-lg font-semibold text-center"
+                  style={{ color: COLORS.textPrimary }}
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={COLORS.chart.grid}
-                  />
-                  <XAxis
-                    type="number"
-                    stroke={COLORS.textSecondary}
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tick={{
-                      fontSize: 14,
-                      fill: COLORS.textSecondary
-                    }}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => [`${value} loans`]}
-                    contentStyle={{
-                      backgroundColor: "#2D2D2D",
-                      border: "none"
-                    }}
-                    itemStyle={{ color: COLORS.textPrimary }}
-                  />
-                  <Bar dataKey="value" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+                  Loan Status Pipeline
+                </h2>
+              </div>
+              <CardContent className="h-80 flex items-center justify-center p-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    layout="vertical"
+                    data={[
+                      {
+                        name: "In Review",
+                        value: loanStatusCounts.in_review || 0,
+                        fill: COLORS.chart.inReview
+                      },
+                      {
+                        name: "Approved",
+                        value: loanStatusCounts.approved || 0,
+                        fill: COLORS.chart.approved
+                      },
+                      {
+                        name: "Funded",
+                        value: loanStatusCounts.funded || 0,
+                        fill: COLORS.chart.funded
+                      },
+                      {
+                        name: "Closed",
+                        value: loanStatusCounts.closed || 0,
+                        fill: COLORS.chart.closed
+                      },
+                      {
+                        name: "Rejected",
+                        value: loanStatusCounts.rejected || 0,
+                        fill: COLORS.chart.rejected
+                      }
+                    ]}
+                    margin={{ top: 10, right: 40, left: 80, bottom: 10 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={COLORS.chart.grid}
+                      opacity={0.3}
+                    />
+                    <XAxis
+                      type="number"
+                      stroke={COLORS.textSecondary}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      dataKey="name"
+                      type="category"
+                      tick={{
+                        fontSize: 14,
+                        fill: COLORS.textSecondary
+                      }}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      formatter={(value: number) => [`${value} loans`]}
+                      contentStyle={{
+                        backgroundColor: COLORS.bgDarker,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: '8px'
+                      }}
+                      itemStyle={{ color: COLORS.textPrimary }}
+                    />
+                    <Bar dataKey="value" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Monthly Loan Origination */}
-          <Card style={{ backgroundColor: COLORS.bgDark }}>
-            <div
-              className="px-4 pt-4 pb-3 text-center"
-              style={{ borderBottom: `1px solid ${COLORS.border}` }}
-            >
-              <h2
-                className="text-lg font-semibold"
-                style={{ color: COLORS.textPrimary }}
+          <div className="transform transition-all duration-200 hover:scale-[1.02]">
+            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+              backgroundColor: COLORS.bgDarker,
+              borderColor: COLORS.border,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+            }}>
+              <div
+                className="px-4 pt-4 pb-3"
+                style={{ borderBottom: `2px solid ${COLORS.border}` }}
               >
-                Monthly Loan Origination
-              </h2>
-            </div>
-            <CardContent className="h-80 flex items-center justify-center">
-              <ResponsiveContainer width="90%" height="80%">
-                <LineChart
-                  data={monthlyLoanData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
+                <h2
+                  className="text-lg font-semibold text-center"
+                  style={{ color: COLORS.textPrimary }}
                 >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke={COLORS.chart.grid}
-                  />
-                  <XAxis
-                    dataKey="month"
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                    tick={{
-                      fontSize: 12,
-                      fill: COLORS.textSecondary
-                    }}
-                  />
-                  <YAxis
-                    yAxisId="left"
-                    orientation="left"
-                    stroke={COLORS.chart.primary}
-                    tick={{ fill: COLORS.textSecondary }}
-                  />
-                  <YAxis
-                    yAxisId="right"
-                    orientation="right"
-                    stroke={COLORS.chart.secondary}
-                    tick={{ fill: COLORS.textSecondary }}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#2D2D2D", border: "none" }}
-                    itemStyle={{ color: COLORS.textPrimary }}
-                    formatter={(value: number, name: string) => [
-                      name === "volume" ? `${value}k` : value,
-                      name === "volume"
-                        ? "Loan Volume (thousands)"
-                        : "Loan Count"
-                    ]}
-                  />
-                  <Legend wrapperStyle={{ color: COLORS.textPrimary }} />
-                  <Line
-                    yAxisId="left"
-                    type="monotone"
-                    dataKey="count"
-                    name="Loan Count"
-                    stroke={COLORS.chart.primary}
-                    activeDot={{ r: 8 }}
-                  />
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="volume"
-                    name="Loan Volume ($k)"
-                    stroke={COLORS.chart.secondary}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+                  Monthly Loan Origination
+                </h2>
+              </div>
+              <CardContent className="h-80 flex items-center justify-center p-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={monthlyLoanData}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={COLORS.chart.grid}
+                      opacity={0.3}
+                    />
+                    <XAxis
+                      dataKey="month"
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      tick={{
+                        fontSize: 12,
+                        fill: COLORS.textSecondary
+                      }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      yAxisId="left"
+                      orientation="left"
+                      stroke={COLORS.chart.primary}
+                      tick={{ fill: COLORS.textSecondary }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      yAxisId="right"
+                      orientation="right"
+                      stroke={COLORS.chart.secondary}
+                      tick={{ fill: COLORS.textSecondary }}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{ 
+                        backgroundColor: COLORS.bgDarker,
+                        border: `1px solid ${COLORS.border}`,
+                        borderRadius: '8px'
+                      }}
+                      itemStyle={{ color: COLORS.textPrimary }}
+                      formatter={(value: number, name: string) => [
+                        name === "volume" ? `${value}k` : value,
+                        name === "volume"
+                          ? "Loan Volume (thousands)"
+                          : "Loan Count"
+                      ]}
+                    />
+                    <Legend 
+                      wrapperStyle={{ color: COLORS.textPrimary }}
+                      verticalAlign="top"
+                      height={36}
+                    />
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="count"
+                      name="Loan Count"
+                      stroke={COLORS.chart.primary}
+                      strokeWidth={2}
+                      dot={{ fill: COLORS.chart.primary }}
+                      activeDot={{ r: 8 }}
+                    />
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="volume"
+                      name="Loan Volume ($k)"
+                      stroke={COLORS.chart.secondary}
+                      strokeWidth={2}
+                      dot={{ fill: COLORS.chart.secondary }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* PROPERTY LOCATIONS */}
-        <Card style={{ backgroundColor: COLORS.bgDark }}>
-          <div
-            className="px-4 pt-4 pb-3 text-center"
-            style={{ borderBottom: `1px solid ${COLORS.border}` }}
-          >
-            <h2
-              className="text-lg font-semibold"
-              style={{ color: COLORS.textPrimary }}
+        <div className="transform transition-all duration-200 hover:scale-[1.01]">
+          <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+            backgroundColor: COLORS.bgDarker,
+            borderColor: COLORS.border,
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+          }}>
+            <div
+              className="px-4 pt-4 pb-3"
+              style={{ borderBottom: `2px solid ${COLORS.border}` }}
             >
-              Property Locations
-            </h2>
-          </div>
-          <CardContent
-            className="h-[450px] px-4 py-4"
-            style={{ backgroundColor: COLORS.bgDarker }}
-          >
-            <div className="w-full h-full">
-              <LoanMap stateData={stateData} />
+              <h2
+                className="text-lg font-semibold text-center"
+                style={{ color: COLORS.textPrimary }}
+              >
+                Property Locations
+              </h2>
             </div>
-          </CardContent>
-        </Card>
+            <CardContent
+              className="h-[450px] p-4"
+              style={{ backgroundColor: COLORS.bgDarker }}
+            >
+              <div className="w-full h-full">
+                <LoanMap stateData={stateData} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </LayoutWrapper>
   );
