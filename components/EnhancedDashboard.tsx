@@ -335,7 +335,7 @@ export default function EnhancedDashboard() {
                 className="px-4 pt-4 pb-3"
                 style={{ 
                   borderBottom: `1px solid ${COLORS.border}`,
-                  background: `linear-gradient(to right, ${COLORS.chart.primary}20, ${COLORS.chart.primary}40)`
+                  background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
                 }}
               >
                 <h2
@@ -358,7 +358,7 @@ export default function EnhancedDashboard() {
             </Card>
           </div>
 
-          {/* Average Loan Size */}
+          {/* Average Loan Size - This styling will be used as the template for all headers */}
           <div className="transform transition-all duration-200 hover:scale-105">
             <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
               backgroundColor: COLORS.bgDarker,
@@ -401,7 +401,7 @@ export default function EnhancedDashboard() {
                 className="px-4 pt-4 pb-3"
                 style={{ 
                   borderBottom: `1px solid ${COLORS.border}`,
-                  background: `linear-gradient(to right, ${COLORS.chart.tertiary}20, ${COLORS.chart.tertiary}40)`
+                  background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
                 }}
               >
                 <h2
@@ -434,7 +434,7 @@ export default function EnhancedDashboard() {
                 className="px-4 pt-4 pb-3"
                 style={{ 
                   borderBottom: `1px solid ${COLORS.border}`,
-                  background: `linear-gradient(to right, ${COLORS.chart.funded}20, ${COLORS.chart.funded}40)`
+                  background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
                 }}
               >
                 <h2
@@ -470,7 +470,7 @@ export default function EnhancedDashboard() {
                 className="px-4 pt-4 pb-3"
                 style={{ 
                   borderBottom: `1px solid ${COLORS.border}`,
-                  backgroundColor: `${COLORS.bgHeader}`
+                  background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
                 }}
               >
                 <h2
@@ -558,7 +558,7 @@ export default function EnhancedDashboard() {
                 className="px-4 pt-4 pb-3"
                 style={{ 
                   borderBottom: `1px solid ${COLORS.border}`,
-                  backgroundColor: `${COLORS.bgHeader}`
+                  background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
                 }}
               >
                 <h2
@@ -659,7 +659,7 @@ export default function EnhancedDashboard() {
               className="px-4 pt-4 pb-3"
               style={{ 
                 borderBottom: `1px solid ${COLORS.border}`,
-                backgroundColor: `${COLORS.bgHeader}`
+                background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
               }}
             >
               <h2
