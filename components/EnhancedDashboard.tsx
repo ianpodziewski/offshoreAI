@@ -670,7 +670,7 @@ export default function EnhancedDashboard() {
               </h2>
             </div>
             <CardContent
-              className="h-[450px] p-4"
+              className="h-[450px] p-4 flex justify-center items-center"
               style={{ backgroundColor: COLORS.bgDarker }}
             >
               <div className="w-full h-full">

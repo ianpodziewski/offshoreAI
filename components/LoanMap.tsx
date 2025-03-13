@@ -22,7 +22,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
 
   // Keep track of which state the user last hovered (or clicked).
   const [hoveredState, setHoveredState] = useState<{ name: string; value: number } | null>(null);
-  // Add debug state to track if hover events are firing
+  // Debug state is now only used internally for logging
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -134,45 +134,40 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
     return (
       <div className="h-full flex items-center justify-center text-gray-500">
         Loading map...
-        {debugInfo && <div className="mt-2 text-xs text-gray-400">{debugInfo}</div>}
       </div>
     );
   }
 
   return (
     // "relative" ensures the absolute popup is positioned relative to this container
-    <div className="h-full w-full relative">
-      <MapContainer
-        center={[39.8283, -98.5795]}
-        zoom={4}
-        scrollWheelZoom={false}
-        className="h-full w-full"
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-        />
-        {usStatesData && (
-          <GeoJSON
-            data={usStatesData}
-            style={styleFeature}
-            onEachFeature={onEachFeature}
+    <div className="h-full w-full relative flex justify-center items-center">
+      <div className="h-full w-full">
+        <MapContainer
+          center={[39.8283, -98.5795]}
+          zoom={4}
+          scrollWheelZoom={false}
+          className="h-full w-full"
+          style={{ margin: '0 auto' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
-        )}
-      </MapContainer>
+          {usStatesData && (
+            <GeoJSON
+              data={usStatesData}
+              style={styleFeature}
+              onEachFeature={onEachFeature}
+            />
+          )}
+        </MapContainer>
+      </div>
 
       {/* Popup in the top-right corner with improved visibility */}
       {hoveredState && (
         <div className="absolute top-4 right-4 z-[9999] bg-gray-800 text-white p-4 rounded shadow-lg border border-gray-600">
           <div className="font-bold text-lg">{hoveredState.name}</div>
           <div className="mt-1">Value: ${hoveredState.value.toLocaleString()}</div>
-        </div>
-      )}
-
-      {/* Debug info */}
-      {debugInfo && (
-        <div className="absolute bottom-2 left-2 z-[9999] bg-gray-800 bg-opacity-75 text-white p-2 rounded text-xs">
-          {debugInfo}
         </div>
       )}
     </div>
