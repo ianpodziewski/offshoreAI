@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Home, DollarSign, Calendar, User, Briefcase, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Home, DollarSign, Calendar, User, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
@@ -31,8 +30,8 @@ interface SectionProps {
 }
 
 const Section: React.FC<SectionProps> = ({ title, icon, children }) => (
-  <div className="mb-6">
-    <div className="flex items-center mb-3 pb-2" style={{ 
+  <div className="mb-8">
+    <div className="flex items-center mb-4 pb-2" style={{ 
       borderBottom: `1px solid ${COLORS.border}`,
     }}>
       <span className="mr-2" style={{ color: COLORS.primary }}>{icon}</span>
@@ -49,16 +48,20 @@ interface InfoItemProps {
   label: string;
   value: React.ReactNode;
   highlight?: boolean;
+  dark?: boolean;
 }
 
-const InfoItem: React.FC<InfoItemProps> = ({ label, value, highlight = false }) => (
-  <div className="p-3 rounded-md" style={{ 
-    backgroundColor: highlight ? `${COLORS.primary}15` : COLORS.bgDarker,
+const InfoItem: React.FC<InfoItemProps> = ({ label, value, highlight = false, dark = false }) => (
+  <div className="p-4 rounded-md" style={{ 
+    backgroundColor: dark ? COLORS.bgDark : (highlight ? `${COLORS.primary}15` : '#f0f4f8'),
   }}>
-    <p className="text-xs font-medium mb-1" style={{ color: COLORS.textSecondary }}>{label}</p>
-    <p className="font-medium" style={{ 
-      color: highlight ? COLORS.primary : COLORS.textPrimary,
-      fontSize: '0.95rem'
+    <p className="text-xs font-medium mb-1" style={{ 
+      color: dark ? COLORS.textSecondary : '#64748b'
+    }}>
+      {label}
+    </p>
+    <p className="font-medium text-lg" style={{ 
+      color: highlight ? COLORS.primary : (dark ? COLORS.textPrimary : '#1e293b'),
     }}>
       {value}
     </p>
@@ -162,33 +165,39 @@ export default function LoanDetailPage() {
             </div>
           </div>
         
-          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+          <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
             {/* Key Loan Details */}
             <Section title="Key Loan Details" icon={<DollarSign size={20} />}>
               <InfoItem 
                 label="Loan Amount" 
                 value={`$${loan.loanAmount.toLocaleString()}`} 
                 highlight={true}
+                dark={false}
               />
               <InfoItem 
                 label="Interest Rate" 
                 value={`${loan.interestRate}%`}
+                dark={true}
               />
               <InfoItem 
                 label="Loan Term" 
                 value={`${loan.loanTerm} months`}
+                dark={true}
               />
               <InfoItem 
                 label="Origination Fee" 
                 value={`${loan.originationFee}%`}
+                dark={true}
               />
               <InfoItem 
                 label="Loan Type" 
                 value={toTitleCase(loan.loanType)}
+                dark={true}
               />
               <InfoItem 
                 label="Exit Strategy" 
                 value={toTitleCase(loan.exitStrategy)}
+                dark={true}
               />
             </Section>
 
@@ -198,22 +207,27 @@ export default function LoanDetailPage() {
                 label="Property Address" 
                 value={loan.propertyAddress}
                 highlight={true}
+                dark={false}
               />
               <InfoItem 
                 label="Property Type" 
                 value={toTitleCase(loan.propertyType)}
+                dark={true}
               />
               <InfoItem 
                 label="Purchase Price" 
                 value={`$${loan.purchasePrice.toLocaleString()}`}
+                dark={true}
               />
               <InfoItem 
                 label="After Repair Value" 
                 value={`$${loan.afterRepairValue.toLocaleString()}`}
+                dark={true}
               />
               <InfoItem 
                 label="Rehab Budget" 
                 value={`$${loan.rehabBudget.toLocaleString()}`}
+                dark={true}
               />
             </Section>
 
@@ -222,10 +236,12 @@ export default function LoanDetailPage() {
               <InfoItem 
                 label="Loan-to-Value (LTV)" 
                 value={`${loan.ltv}%`}
+                dark={true}
               />
               <InfoItem 
                 label="After-Repair LTV" 
                 value={`${loan.arv_ltv}%`}
+                dark={true}
               />
             </Section>
 
@@ -235,15 +251,18 @@ export default function LoanDetailPage() {
                 label="Borrower" 
                 value={loan.borrowerName}
                 highlight={true}
+                dark={false}
               />
               <InfoItem 
                 label="Borrower Experience" 
                 value={loan.borrowerExperience}
+                dark={true}
               />
               {loan.lender && (
                 <InfoItem 
                   label="Lender" 
                   value={loan.lender}
+                  dark={true}
                 />
               )}
             </Section>
@@ -255,12 +274,14 @@ export default function LoanDetailPage() {
                   <InfoItem 
                     label="Funding Date" 
                     value={new Date(loan.fundingDate).toLocaleDateString()}
+                    dark={true}
                   />
                 )}
                 {loan.maturityDate && (
                   <InfoItem 
                     label="Maturity Date" 
                     value={new Date(loan.maturityDate).toLocaleDateString()}
+                    dark={true}
                   />
                 )}
               </Section>
