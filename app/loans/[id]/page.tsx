@@ -47,21 +47,20 @@ const Section: React.FC<SectionProps> = ({ title, icon, children }) => (
 interface InfoItemProps {
   label: string;
   value: React.ReactNode;
-  highlight?: boolean;
-  dark?: boolean;
 }
 
-const InfoItem: React.FC<InfoItemProps> = ({ label, value, highlight = false, dark = false }) => (
-  <div className="p-4 rounded-md" style={{ 
-    backgroundColor: dark ? COLORS.bgDark : (highlight ? `${COLORS.primary}15` : '#f0f4f8'),
+const InfoItem: React.FC<InfoItemProps> = ({ label, value }) => (
+  <div className="p-4 rounded-md shadow-sm" style={{ 
+    backgroundColor: '#1a2234',
+    borderLeft: `3px solid ${COLORS.primary}`,
   }}>
     <p className="text-xs font-medium mb-1" style={{ 
-      color: dark ? COLORS.textSecondary : '#64748b'
+      color: COLORS.textSecondary
     }}>
       {label}
     </p>
     <p className="font-medium text-lg" style={{ 
-      color: highlight ? COLORS.primary : (dark ? COLORS.textPrimary : '#1e293b'),
+      color: COLORS.textPrimary,
     }}>
       {value}
     </p>
@@ -171,33 +170,26 @@ export default function LoanDetailPage() {
               <InfoItem 
                 label="Loan Amount" 
                 value={`$${loan.loanAmount.toLocaleString()}`} 
-                highlight={true}
-                dark={false}
               />
               <InfoItem 
                 label="Interest Rate" 
                 value={`${loan.interestRate}%`}
-                dark={true}
               />
               <InfoItem 
                 label="Loan Term" 
                 value={`${loan.loanTerm} months`}
-                dark={true}
               />
               <InfoItem 
                 label="Origination Fee" 
                 value={`${loan.originationFee}%`}
-                dark={true}
               />
               <InfoItem 
                 label="Loan Type" 
                 value={toTitleCase(loan.loanType)}
-                dark={true}
               />
               <InfoItem 
                 label="Exit Strategy" 
                 value={toTitleCase(loan.exitStrategy)}
-                dark={true}
               />
             </Section>
 
@@ -206,28 +198,22 @@ export default function LoanDetailPage() {
               <InfoItem 
                 label="Property Address" 
                 value={loan.propertyAddress}
-                highlight={true}
-                dark={false}
               />
               <InfoItem 
                 label="Property Type" 
                 value={toTitleCase(loan.propertyType)}
-                dark={true}
               />
               <InfoItem 
                 label="Purchase Price" 
                 value={`$${loan.purchasePrice.toLocaleString()}`}
-                dark={true}
               />
               <InfoItem 
                 label="After Repair Value" 
                 value={`$${loan.afterRepairValue.toLocaleString()}`}
-                dark={true}
               />
               <InfoItem 
                 label="Rehab Budget" 
                 value={`$${loan.rehabBudget.toLocaleString()}`}
-                dark={true}
               />
             </Section>
 
@@ -236,12 +222,10 @@ export default function LoanDetailPage() {
               <InfoItem 
                 label="Loan-to-Value (LTV)" 
                 value={`${loan.ltv}%`}
-                dark={true}
               />
               <InfoItem 
                 label="After-Repair LTV" 
                 value={`${loan.arv_ltv}%`}
-                dark={true}
               />
             </Section>
 
@@ -250,19 +234,15 @@ export default function LoanDetailPage() {
               <InfoItem 
                 label="Borrower" 
                 value={loan.borrowerName}
-                highlight={true}
-                dark={false}
               />
               <InfoItem 
                 label="Borrower Experience" 
                 value={loan.borrowerExperience}
-                dark={true}
               />
               {loan.lender && (
                 <InfoItem 
                   label="Lender" 
                   value={loan.lender}
-                  dark={true}
                 />
               )}
             </Section>
@@ -274,14 +254,12 @@ export default function LoanDetailPage() {
                   <InfoItem 
                     label="Funding Date" 
                     value={new Date(loan.fundingDate).toLocaleDateString()}
-                    dark={true}
                   />
                 )}
                 {loan.maturityDate && (
                   <InfoItem 
                     label="Maturity Date" 
                     value={new Date(loan.maturityDate).toLocaleDateString()}
-                    dark={true}
                   />
                 )}
               </Section>
