@@ -13,6 +13,7 @@ export const REQUIRED_DOCUMENT_TYPES: {
   label: string;
   category: 'loan' | 'legal' | 'financial' | 'misc';
 }[] = [
+  { docType: 'executed_package', label: 'Executed Documents Package', category: 'loan' },
   { docType: 'promissory_note', label: 'Promissory Note', category: 'legal' },
   { docType: 'deed_of_trust', label: 'Deed of Trust', category: 'legal' },
   { docType: 'closing_disclosure', label: 'Closing Disclosure', category: 'financial' },
@@ -183,17 +184,53 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       }, 200);
       
       try {
-        // Override document classification to ensure it goes into the correct socket
-        const overrideClassification = {
-          docType: docType,
-          category: category
-        };
-        
-        // Upload the document with specific classification
-        const uploadedDoc = await simpleDocumentService.addDocument(file, loanId, overrideClassification);
-        
-        if (uploadedDoc) {
-          setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), uploadedDoc]);
+        // If this is the executed package, handle it differently
+        if (docType === 'executed_package') {
+          // First upload the package itself
+          const uploadedDoc = await simpleDocumentService.addDocument(
+            file, 
+            loanId,
+            { docType: docType, category: category }
+          );
+
+          if (uploadedDoc) {
+            setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), uploadedDoc]);
+            
+            // Then trigger the split process
+            const response = await fetch('/api/split-document', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                documentId: uploadedDoc.id,
+                loanId: loanId,
+              }),
+            });
+            
+            const result = await response.json();
+            
+            if (result.success && result.splitDocuments) {
+              // Update the documents list with the split documents
+              setDocuments(prev => {
+                const withoutSplitTypes = prev.filter(doc => 
+                  !result.splitDocuments.some((splitDoc: any) => splitDoc.docType === doc.docType)
+                );
+                return [...withoutSplitTypes, ...result.splitDocuments];
+              });
+            }
+          }
+        } else {
+          // Handle normal document upload
+          const uploadedDoc = await simpleDocumentService.addDocument(
+            file, 
+            loanId,
+            { docType: docType, category: category }
+          );
+          
+          if (uploadedDoc) {
+            setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), uploadedDoc]);
+          }
         }
       } catch (error) {
         console.error("Error uploading document:", error);
