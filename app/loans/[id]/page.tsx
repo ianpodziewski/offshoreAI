@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Home, DollarSign, Calendar, User, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Home, DollarSign, Calendar, User, TrendingUp, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
@@ -151,12 +151,9 @@ export default function LoanDetailPage() {
               <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
                 Loan #{loan.id}
               </h1>
-              <div className="flex flex-wrap items-center gap-2">
-                <span style={{ color: COLORS.textSecondary }}>{toTitleCase(loan.loanType)}</span>
-                <span style={{ color: COLORS.textMuted }}>•</span>
-                <span style={{ color: COLORS.textSecondary }}>${loan.loanAmount.toLocaleString()}</span>
-                <span style={{ color: COLORS.textMuted }}>•</span>
-                <span style={{ color: COLORS.textSecondary }}>{loan.interestRate}% Interest</span>
+              <div className="flex items-center">
+                <MapPin size={16} className="mr-2" style={{ color: COLORS.textSecondary }} />
+                <span style={{ color: COLORS.textSecondary }}>{loan.propertyAddress}</span>
               </div>
             </div>
             <div className="mt-4 md:mt-0">
@@ -195,10 +192,6 @@ export default function LoanDetailPage() {
 
             {/* Property Information */}
             <Section title="Property Information" icon={<Home size={20} />}>
-              <InfoItem 
-                label="Property Address" 
-                value={loan.propertyAddress}
-              />
               <InfoItem 
                 label="Property Type" 
                 value={toTitleCase(loan.propertyType)}
