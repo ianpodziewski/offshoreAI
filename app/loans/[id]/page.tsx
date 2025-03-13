@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Home, DollarSign, Calendar, User, Briefcase, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
@@ -22,6 +22,48 @@ const toTitleCase = (str: string): string => {
     .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 };
+
+// Section component for grouping related loan information
+interface SectionProps {
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}
+
+const Section: React.FC<SectionProps> = ({ title, icon, children }) => (
+  <div className="mb-6">
+    <div className="flex items-center mb-3 pb-2" style={{ 
+      borderBottom: `1px solid ${COLORS.border}`,
+    }}>
+      <span className="mr-2" style={{ color: COLORS.primary }}>{icon}</span>
+      <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>{title}</h2>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {children}
+    </div>
+  </div>
+);
+
+// Info item component for displaying individual data points
+interface InfoItemProps {
+  label: string;
+  value: React.ReactNode;
+  highlight?: boolean;
+}
+
+const InfoItem: React.FC<InfoItemProps> = ({ label, value, highlight = false }) => (
+  <div className="p-3 rounded-md" style={{ 
+    backgroundColor: highlight ? `${COLORS.primary}15` : COLORS.bgDarker,
+  }}>
+    <p className="text-xs font-medium mb-1" style={{ color: COLORS.textSecondary }}>{label}</p>
+    <p className="font-medium" style={{ 
+      color: highlight ? COLORS.primary : COLORS.textPrimary,
+      fontSize: '0.95rem'
+    }}>
+      {value}
+    </p>
+  </div>
+);
 
 export default function LoanDetailPage() {
   const params = useParams();
@@ -72,6 +114,24 @@ export default function LoanDetailPage() {
     );
   }
   
+  // Format status with appropriate styling
+  const getStatusDisplay = (status: string) => {
+    const statusColor = 
+      status === 'approved' ? COLORS.status.approved : 
+      status === 'rejected' ? COLORS.status.rejected :
+      status === 'in_review' ? COLORS.status.pending :
+      COLORS.textPrimary;
+    
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={{
+        backgroundColor: `${statusColor}25`,
+        color: statusColor
+      }}>
+        {toTitleCase(status)}
+      </span>
+    );
+  };
+  
   return (
     <LayoutWrapper>
       <div className="container mx-auto py-8 px-4">
@@ -83,148 +143,128 @@ export default function LoanDetailPage() {
             </Button>
           </Link>
           
-          <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: COLORS.bgDark }}>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
-              {loan.borrowerName}'s Hard Money Loan
-            </h1>
-            <p style={{ color: COLORS.textSecondary }}>
-              {toTitleCase(loan.loanType)} • ${loan.loanAmount.toLocaleString()} • {loan.interestRate}%
-            </p>
+          <div className="p-6 rounded-lg mb-6 flex flex-col md:flex-row justify-between items-start md:items-center" 
+               style={{ backgroundColor: COLORS.bgDark }}>
+            <div>
+              <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+                Loan #{loan.id}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <span style={{ color: COLORS.textSecondary }}>{toTitleCase(loan.loanType)}</span>
+                <span style={{ color: COLORS.textMuted }}>•</span>
+                <span style={{ color: COLORS.textSecondary }}>${loan.loanAmount.toLocaleString()}</span>
+                <span style={{ color: COLORS.textMuted }}>•</span>
+                <span style={{ color: COLORS.textSecondary }}>{loan.interestRate}% Interest</span>
+              </div>
+            </div>
+            <div className="mt-4 md:mt-0">
+              {getStatusDisplay(loan.status)}
+            </div>
           </div>
         
-          <div className="grid grid-cols-1 gap-6">
-            {/* Loan Details */}
-            <div>
-              <Card className="mb-6" style={{ 
-                backgroundColor: COLORS.bgDark,
-                borderColor: COLORS.border
-              }}>
-                <CardHeader style={{ 
-                  backgroundColor: COLORS.bgHeader,
-                  borderColor: COLORS.border,
-                  borderBottomWidth: '1px',
-                  borderBottomStyle: 'solid'
-                }}>
-                  <CardTitle style={{ color: COLORS.textPrimary }}>Loan Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Type</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>
-                        {toTitleCase(loan.loanType)}
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Amount</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.loanAmount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Interest Rate</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.interestRate}%</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Origination Fee</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.originationFee}%</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Loan Term</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.loanTerm} months</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Status</h3>
-                      <p className="font-medium capitalize" style={{
-                        color: loan.status === 'approved' ? COLORS.status.approved : 
-                               loan.status === 'rejected' ? COLORS.status.rejected :
-                               loan.status === 'in_review' ? COLORS.status.pending :
-                               COLORS.textPrimary
-                      }}>
-                        {toTitleCase(loan.status)}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 grid grid-cols-2 gap-4" style={{
-                    borderTopWidth: '1px',
-                    borderTopStyle: 'solid',
-                    borderColor: COLORS.border
-                  }}>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Property Address</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.propertyAddress}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Property Type</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>
-                        {toTitleCase(loan.propertyType)}
-                      </p>
-                    </div>
-                  </div>
+          <div className="bg-white dark:bg-gray-900 rounded-lg p-6 shadow-sm">
+            {/* Key Loan Details */}
+            <Section title="Key Loan Details" icon={<DollarSign size={20} />}>
+              <InfoItem 
+                label="Loan Amount" 
+                value={`$${loan.loanAmount.toLocaleString()}`} 
+                highlight={true}
+              />
+              <InfoItem 
+                label="Interest Rate" 
+                value={`${loan.interestRate}%`}
+              />
+              <InfoItem 
+                label="Loan Term" 
+                value={`${loan.loanTerm} months`}
+              />
+              <InfoItem 
+                label="Origination Fee" 
+                value={`${loan.originationFee}%`}
+              />
+              <InfoItem 
+                label="Loan Type" 
+                value={toTitleCase(loan.loanType)}
+              />
+              <InfoItem 
+                label="Exit Strategy" 
+                value={toTitleCase(loan.exitStrategy)}
+              />
+            </Section>
 
-                  <div className="mt-4 pt-4 grid grid-cols-2 gap-4" style={{
-                    borderTopWidth: '1px',
-                    borderTopStyle: 'solid',
-                    borderColor: COLORS.border
-                  }}>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Purchase Price</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.purchasePrice.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>After Repair Value</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.afterRepairValue.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Rehab Budget</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>${loan.rehabBudget.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Exit Strategy</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>
-                        {toTitleCase(loan.exitStrategy)}
-                      </p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>LTV</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.ltv}%</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>ARV LTV</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.arv_ltv}%</p>
-                    </div>
-                  </div>
+            {/* Property Information */}
+            <Section title="Property Information" icon={<Home size={20} />}>
+              <InfoItem 
+                label="Property Address" 
+                value={loan.propertyAddress}
+                highlight={true}
+              />
+              <InfoItem 
+                label="Property Type" 
+                value={toTitleCase(loan.propertyType)}
+              />
+              <InfoItem 
+                label="Purchase Price" 
+                value={`$${loan.purchasePrice.toLocaleString()}`}
+              />
+              <InfoItem 
+                label="After Repair Value" 
+                value={`$${loan.afterRepairValue.toLocaleString()}`}
+              />
+              <InfoItem 
+                label="Rehab Budget" 
+                value={`$${loan.rehabBudget.toLocaleString()}`}
+              />
+            </Section>
 
-                  <div className="mt-4 pt-4 grid grid-cols-2 gap-4" style={{
-                    borderTopWidth: '1px',
-                    borderTopStyle: 'solid',
-                    borderColor: COLORS.border
-                  }}>
-                    <div>
-                      <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Borrower Experience</h3>
-                      <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.borrowerExperience}</p>
-                    </div>
-                    {loan.lender && (
-                      <div>
-                        <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Lender</h3>
-                        <p className="font-medium" style={{ color: COLORS.textPrimary }}>{loan.lender}</p>
-                      </div>
-                    )}
-                    {loan.fundingDate && (
-                      <div>
-                        <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Funding Date</h3>
-                        <p className="font-medium" style={{ color: COLORS.textPrimary }}>{new Date(loan.fundingDate).toLocaleDateString()}</p>
-                      </div>
-                    )}
-                    {loan.maturityDate && (
-                      <div>
-                        <h3 className="text-sm font-medium" style={{ color: COLORS.textSecondary }}>Maturity Date</h3>
-                        <p className="font-medium" style={{ color: COLORS.textPrimary }}>{new Date(loan.maturityDate).toLocaleDateString()}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Loan Metrics */}
+            <Section title="Loan Metrics" icon={<TrendingUp size={20} />}>
+              <InfoItem 
+                label="Loan-to-Value (LTV)" 
+                value={`${loan.ltv}%`}
+              />
+              <InfoItem 
+                label="After-Repair LTV" 
+                value={`${loan.arv_ltv}%`}
+              />
+            </Section>
+
+            {/* Parties */}
+            <Section title="Parties" icon={<User size={20} />}>
+              <InfoItem 
+                label="Borrower" 
+                value={loan.borrowerName}
+                highlight={true}
+              />
+              <InfoItem 
+                label="Borrower Experience" 
+                value={loan.borrowerExperience}
+              />
+              {loan.lender && (
+                <InfoItem 
+                  label="Lender" 
+                  value={loan.lender}
+                />
+              )}
+            </Section>
+
+            {/* Dates */}
+            {(loan.fundingDate || loan.maturityDate) && (
+              <Section title="Important Dates" icon={<Calendar size={20} />}>
+                {loan.fundingDate && (
+                  <InfoItem 
+                    label="Funding Date" 
+                    value={new Date(loan.fundingDate).toLocaleDateString()}
+                  />
+                )}
+                {loan.maturityDate && (
+                  <InfoItem 
+                    label="Maturity Date" 
+                    value={new Date(loan.maturityDate).toLocaleDateString()}
+                  />
+                )}
+              </Section>
+            )}
           </div>
         </div>
       </div>
