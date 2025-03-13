@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
+import { pdfProcessingService } from '@/utilities/pdfProcessingService';
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,47 +15,52 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Here we would normally use a PDF processing library to split the document
-    // For now, we'll simulate the split by creating new documents for each expected type
-    const expectedDocTypes: Array<{
-      docType: string;
-      label: string;
-      category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat';
-    }> = [
-      { docType: 'promissory_note', label: 'Promissory Note', category: 'legal' },
-      { docType: 'deed_of_trust', label: 'Deed of Trust', category: 'legal' },
-      { docType: 'closing_disclosure', label: 'Closing Disclosure', category: 'financial' },
-      { docType: 'property_appraisal', label: 'Property Appraisal', category: 'financial' }
-    ];
+    // Convert base64 to ArrayBuffer
+    const base64Data = originalDoc.content.replace(/^data:application\/pdf;base64,/, '');
+    const binaryData = Buffer.from(base64Data, 'base64');
+    const pdfData = binaryData.buffer;
 
-    // Simulate document splitting and classification
-    const splitDocuments = expectedDocTypes.map(docType => {
-      // In a real implementation, we would:
-      // 1. Use OCR/ML to identify document types
-      // 2. Extract relevant pages for each document type
-      // 3. Create new PDFs from the extracted pages
-      // For now, we'll create placeholder documents
-      return simpleDocumentService.addDocument(
-        new File([originalDoc.content], `${docType.docType}.pdf`, { type: 'application/pdf' }),
-        loanId,
-        { docType: docType.docType, category: docType.category }
-      );
-    });
+    // Process and split the PDF
+    const splitDocuments = await pdfProcessingService.splitDocument(pdfData);
 
-    // Wait for all documents to be created
-    const createdDocs = await Promise.all(splitDocuments);
+    // Create new documents in the system
+    const createdDocs = await Promise.all(
+      splitDocuments.map(async (doc) => {
+        // Convert the PDF bytes back to base64
+        const base64Content = Buffer.from(doc.pdfBytes).toString('base64');
+        const dataUrl = `data:application/pdf;base64,${base64Content}`;
+
+        // Create a new document
+        return simpleDocumentService.addDocument(
+          new File([doc.pdfBytes], `${doc.docType}.pdf`, { type: 'application/pdf' }),
+          loanId,
+          { 
+            docType: doc.docType, 
+            category: doc.category 
+          }
+        );
+      })
+    );
+
+    // Filter out any null documents and map the results
+    const validDocs = createdDocs.filter((doc): doc is SimpleDocument => doc !== null);
 
     return NextResponse.json({
       success: true,
       message: 'Document split successfully',
-      splitDocuments: createdDocs
+      splitDocuments: validDocs.map(doc => ({
+        id: doc.id,
+        filename: doc.filename,
+        docType: doc.docType,
+        category: doc.category
+      }))
     });
 
   } catch (error) {
     console.error('Error splitting document:', error);
     return NextResponse.json({ 
       success: false, 
-      message: 'Error splitting document' 
+      message: error instanceof Error ? error.message : 'Error splitting document' 
     }, { status: 500 });
   }
 } 
