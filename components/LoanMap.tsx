@@ -22,6 +22,8 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
 
   // Keep track of which state the user last hovered (or clicked).
   const [hoveredState, setHoveredState] = useState<{ name: string; value: number } | null>(null);
+  // Add debug state to track if hover events are firing
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -31,16 +33,33 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
         setTileLayer(() => RL.TileLayer);
         setGeoJSON(() => RL.GeoJSON);
       })
-      .catch((error) => console.error("Failed to load Leaflet:", error));
+      .catch((error) => {
+        console.error("Failed to load Leaflet:", error);
+        setDebugInfo("Failed to load Leaflet: " + error.message);
+      });
   }, []);
 
   // Fetch your US states GeoJSON from /public/us-states.geojson
   useEffect(() => {
     fetch("/us-states.geojson")
       .then((res) => res.json())
-      .then((data) => setUsStatesData(data))
-      .catch((err) => console.error("Failed to load geojson:", err));
+      .then((data) => {
+        setUsStatesData(data);
+        setDebugInfo("GeoJSON loaded successfully");
+      })
+      .catch((err) => {
+        console.error("Failed to load geojson:", err);
+        setDebugInfo("Failed to load GeoJSON: " + err.message);
+      });
   }, []);
+
+  // Log when stateData changes
+  useEffect(() => {
+    console.log("State data updated:", stateData);
+    // Check if we have any data
+    const stateCount = Object.keys(stateData).length;
+    setDebugInfo(`State data loaded: ${stateCount} states with data`);
+  }, [stateData]);
 
   // A basic color scale function
   const getColor = (value: number) => {
@@ -71,6 +90,8 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       color: "#222",
       weight: 1,
       dashArray: "3",
+      // Add highlight on hover
+      className: hoveredState?.name === stateName ? "state-hover" : "",
     };
   };
 
@@ -82,13 +103,30 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
     // Show popup info on hover
     layer.on({
       mouseover: () => {
+        console.log(`Hovering over ${stateName} with value ${value}`);
         setHoveredState({ name: stateName, value });
+        // Add highlight to the layer
+        layer.setStyle({
+          weight: 3,
+          color: "#666",
+          dashArray: "",
+          fillOpacity: 0.9
+        });
       },
       mouseout: () => {
         setHoveredState(null);
+        // Reset style
+        layer.setStyle({
+          weight: 1,
+          color: "#222",
+          dashArray: "3",
+          fillOpacity: 0.7
+        });
       },
-      // or if you prefer click:
-      // click: () => { setHoveredState({ name: stateName, value }); },
+      click: () => {
+        // Keep the state highlighted on click
+        setHoveredState({ name: stateName, value });
+      },
     });
   };
 
@@ -96,6 +134,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
     return (
       <div className="h-full flex items-center justify-center text-gray-500">
         Loading map...
+        {debugInfo && <div className="mt-2 text-xs text-gray-400">{debugInfo}</div>}
       </div>
     );
   }
@@ -122,11 +161,18 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
         )}
       </MapContainer>
 
-      {/* Popup in the top-right corner */}
+      {/* Popup in the top-right corner with improved visibility */}
       {hoveredState && (
-        <div className="absolute top-2 right-2 z-50 bg-gray-800 text-white p-4 rounded shadow-lg">
+        <div className="absolute top-4 right-4 z-[9999] bg-gray-800 text-white p-4 rounded shadow-lg border border-gray-600">
           <div className="font-bold text-lg">{hoveredState.name}</div>
-          <div className="mt-1">Value: {hoveredState.value.toLocaleString()}</div>
+          <div className="mt-1">Value: ${hoveredState.value.toLocaleString()}</div>
+        </div>
+      )}
+
+      {/* Debug info */}
+      {debugInfo && (
+        <div className="absolute bottom-2 left-2 z-[9999] bg-gray-800 bg-opacity-75 text-white p-2 rounded text-xs">
+          {debugInfo}
         </div>
       )}
     </div>
