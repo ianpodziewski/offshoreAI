@@ -132,22 +132,29 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
 
   if (!isClient || !MapContainer || !TileLayer || !GeoJSON) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-500">
+      <div className="h-full w-full flex items-center justify-center text-gray-500">
         Loading map...
       </div>
     );
   }
 
   return (
-    // "relative" ensures the absolute popup is positioned relative to this container
+    // Using absolute positioning to ensure the map is centered in its container
     <div className="h-full w-full relative flex justify-center items-center">
-      <div className="h-full w-full">
+      <div className="h-full w-full absolute inset-0 flex items-center justify-center">
         <MapContainer
           center={[39.8283, -98.5795]}
           zoom={4}
           scrollWheelZoom={false}
           className="h-full w-full"
-          style={{ margin: '0 auto' }}
+          style={{ 
+            margin: '0 auto',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0
+          }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
@@ -167,7 +174,7 @@ const LoanMap: React.FC<LoanMapProps> = ({ stateData }) => {
       {hoveredState && (
         <div className="absolute top-4 right-4 z-[9999] bg-gray-800 text-white p-4 rounded shadow-lg border border-gray-600">
           <div className="font-bold text-lg">{hoveredState.name}</div>
-          <div className="mt-1">TLA: ${hoveredState.value.toLocaleString()}</div>
+          <div className="mt-1">Value: ${hoveredState.value.toLocaleString()}</div>
         </div>
       )}
     </div>

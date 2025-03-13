@@ -670,10 +670,10 @@ export default function EnhancedDashboard() {
               </h2>
             </div>
             <CardContent
-              className="h-[450px] p-4 flex justify-center items-center"
+              className="h-[450px] p-0 overflow-hidden"
               style={{ backgroundColor: COLORS.bgDarker }}
             >
-              <div className="w-full h-full">
+              <div className="w-full h-full flex items-center justify-center">
                 <LoanMap stateData={stateData} />
               </div>
             </CardContent>
