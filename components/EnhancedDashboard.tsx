@@ -327,23 +327,25 @@ export default function EnhancedDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {/* Active Loan Value */}
           <div className="transform transition-all duration-200 hover:scale-105">
-            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+            <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
               backgroundColor: COLORS.bgDarker,
-              borderColor: COLORS.chart.primary,
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}>
               <div
                 className="px-4 pt-4 pb-3"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+                style={{ 
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  background: `linear-gradient(to right, ${COLORS.chart.primary}20, ${COLORS.chart.primary}40)`
+                }}
               >
                 <h2
                   className="text-lg font-semibold text-center"
-                  style={{ color: COLORS.chart.primary }}
+                  style={{ color: COLORS.textPrimary }}
                 >
                   Active Loan Value
                 </h2>
               </div>
-              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+              <div className="w-full py-6 flex items-center justify-center">
                 <div className="text-center">
                   <div
                     className="text-4xl font-bold"
@@ -358,23 +360,25 @@ export default function EnhancedDashboard() {
 
           {/* Average Loan Size */}
           <div className="transform transition-all duration-200 hover:scale-105">
-            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+            <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
               backgroundColor: COLORS.bgDarker,
-              borderColor: COLORS.chart.secondary,
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}>
               <div
                 className="px-4 pt-4 pb-3"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+                style={{ 
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
+                }}
               >
                 <h2
                   className="text-lg font-semibold text-center"
-                  style={{ color: COLORS.chart.secondary }}
+                  style={{ color: COLORS.textPrimary }}
                 >
                   Average Loan Size
                 </h2>
               </div>
-              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+              <div className="w-full py-6 flex items-center justify-center">
                 <div className="text-center">
                   <div
                     className="text-4xl font-bold"
@@ -389,23 +393,25 @@ export default function EnhancedDashboard() {
 
           {/* Total Loans */}
           <div className="transform transition-all duration-200 hover:scale-105">
-            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+            <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
               backgroundColor: COLORS.bgDarker,
-              borderColor: COLORS.chart.tertiary,
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}>
               <div
                 className="px-4 pt-4 pb-3"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+                style={{ 
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  background: `linear-gradient(to right, ${COLORS.chart.tertiary}20, ${COLORS.chart.tertiary}40)`
+                }}
               >
                 <h2
                   className="text-lg font-semibold text-center"
-                  style={{ color: COLORS.chart.tertiary }}
+                  style={{ color: COLORS.textPrimary }}
                 >
                   Total Loans
                 </h2>
               </div>
-              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+              <div className="w-full py-6 flex items-center justify-center">
                 <div className="text-center">
                   <div
                     className="text-4xl font-bold"
@@ -420,23 +426,25 @@ export default function EnhancedDashboard() {
 
           {/* Funded Loans */}
           <div className="transform transition-all duration-200 hover:scale-105">
-            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+            <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
               backgroundColor: COLORS.bgDarker,
-              borderColor: COLORS.chart.funded,
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}>
               <div
                 className="px-4 pt-4 pb-3"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+                style={{ 
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  background: `linear-gradient(to right, ${COLORS.chart.funded}20, ${COLORS.chart.funded}40)`
+                }}
               >
                 <h2
                   className="text-lg font-semibold text-center"
-                  style={{ color: COLORS.chart.funded }}
+                  style={{ color: COLORS.textPrimary }}
                 >
                   Funded Loans
                 </h2>
               </div>
-              <div className="w-full py-6 flex items-center justify-center bg-gradient-to-b from-transparent to-black/10">
+              <div className="w-full py-6 flex items-center justify-center">
                 <div className="text-center">
                   <div
                     className="text-4xl font-bold"
@@ -454,14 +462,16 @@ export default function EnhancedDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Loan Status Pipeline */}
           <div className="transform transition-all duration-200 hover:scale-[1.02]">
-            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+            <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
               backgroundColor: COLORS.bgDarker,
-              borderColor: COLORS.border,
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}>
               <div
                 className="px-4 pt-4 pb-3"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+                style={{ 
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  backgroundColor: `${COLORS.bgHeader}`
+                }}
               >
                 <h2
                   className="text-lg font-semibold text-center"
@@ -540,14 +550,16 @@ export default function EnhancedDashboard() {
 
           {/* Monthly Loan Origination */}
           <div className="transform transition-all duration-200 hover:scale-[1.02]">
-            <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+            <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
               backgroundColor: COLORS.bgDarker,
-              borderColor: COLORS.border,
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
             }}>
               <div
                 className="px-4 pt-4 pb-3"
-                style={{ borderBottom: `2px solid ${COLORS.border}` }}
+                style={{ 
+                  borderBottom: `1px solid ${COLORS.border}`,
+                  backgroundColor: `${COLORS.bgHeader}`
+                }}
               >
                 <h2
                   className="text-lg font-semibold text-center"
@@ -639,14 +651,16 @@ export default function EnhancedDashboard() {
 
         {/* PROPERTY LOCATIONS */}
         <div className="transform transition-all duration-200 hover:scale-[1.01]">
-          <Card className="border-2 rounded-xl overflow-hidden" style={{ 
+          <Card className="border border-gray-800 rounded-xl overflow-hidden" style={{ 
             backgroundColor: COLORS.bgDarker,
-            borderColor: COLORS.border,
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
           }}>
             <div
               className="px-4 pt-4 pb-3"
-              style={{ borderBottom: `2px solid ${COLORS.border}` }}
+              style={{ 
+                borderBottom: `1px solid ${COLORS.border}`,
+                backgroundColor: `${COLORS.bgHeader}`
+              }}
             >
               <h2
                 className="text-lg font-semibold text-center"
