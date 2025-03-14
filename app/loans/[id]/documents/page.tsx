@@ -25,15 +25,19 @@ interface SectionProps {
   title: string;
   icon: React.ReactNode;
   children: React.ReactNode;
+  actionButton?: React.ReactNode;
 }
 
-const Section: React.FC<SectionProps> = ({ title, icon, children }) => (
+const Section: React.FC<SectionProps> = ({ title, icon, children, actionButton }) => (
   <div className="mb-8">
-    <div className="flex items-center mb-4 pb-2" style={{ 
+    <div className="flex items-center justify-between mb-4 pb-2" style={{ 
       borderBottom: `1px solid ${COLORS.border}`,
     }}>
-      <span className="mr-2" style={{ color: COLORS.primary }}>{icon}</span>
-      <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>{title}</h2>
+      <div className="flex items-center">
+        <span className="mr-2" style={{ color: COLORS.primary }}>{icon}</span>
+        <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>{title}</h2>
+      </div>
+      {actionButton}
     </div>
     <div className="space-y-4">
       {children}
@@ -382,6 +386,16 @@ export default function LoanDocumentsPage() {
     return documents.find(doc => doc.docType === docType);
   };
   
+  const handleGenerateUnexecutedDocuments = () => {
+    if (loan) {
+      // Generate only unexecuted closing documents
+      UNEXECUTED_CLOSING_DOCUMENTS.forEach(docInfo => {
+        fakeDocumentService.generateFakeDocument(loan, docInfo.docType);
+      });
+      setRefreshTrigger(prev => prev + 1);
+    }
+  };
+
   if (loading) {
     return (
       <LayoutWrapper>
@@ -422,24 +436,6 @@ export default function LoanDocumentsPage() {
                 <span style={{ color: COLORS.textSecondary }}>{loan.propertyAddress}</span>
               </div>
             </div>
-            <div className="mt-4 md:mt-0">
-              <Button
-                onClick={() => {
-                  if (loan) {
-                    fakeDocumentService.generateAllFakeDocuments(loan);
-                    setRefreshTrigger(prev => prev + 1);
-                  }
-                }}
-                className="flex items-center gap-2"
-                style={{ 
-                  backgroundColor: COLORS.primary, 
-                  color: COLORS.textPrimary 
-                }}
-              >
-                <FileCheck size={16} className="mr-1" />
-                Generate All Documents
-              </Button>
-            </div>
           </div>
         
           <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
@@ -460,7 +456,24 @@ export default function LoanDocumentsPage() {
             </Section>
 
             {/* Unexecuted Closing Documents */}
-            <Section title="Unexecuted Closing Documents" icon={<FileText size={20} />}>
+            <Section 
+              title="Unexecuted Closing Documents" 
+              icon={<FileText size={20} />}
+              actionButton={
+                <Button
+                  onClick={handleGenerateUnexecutedDocuments}
+                  className="flex items-center gap-2"
+                  size="sm"
+                  style={{ 
+                    backgroundColor: COLORS.primary, 
+                    color: COLORS.textPrimary 
+                  }}
+                >
+                  <FileCheck size={14} className="mr-1" />
+                  Generate Unexecuted Documents
+                </Button>
+              }
+            >
               {UNEXECUTED_CLOSING_DOCUMENTS.map((docInfo) => (
                 <DocumentSocket
                   key={docInfo.docType}
