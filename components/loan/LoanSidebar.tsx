@@ -21,13 +21,11 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loanId }) => {
   const navItems = [
     {
       name: 'Loan',
-      shortName: 'L',
       icon: <Info size={expanded ? 18 : 16} />,
       path: `/loans/${loanId}`,
     },
     {
       name: 'Documents',
-      shortName: 'D',
       icon: <FileText size={expanded ? 18 : 16} />,
       path: `/loans/${loanId}/documents`,
     },
@@ -48,7 +46,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loanId }) => {
           <Link 
             key={item.name} 
             href={item.path}
-            className={`flex items-center px-4 py-3 transition-colors ${
+            className={`flex items-center ${expanded ? 'px-4' : 'justify-center'} py-3 transition-colors ${
               isActive(item.path) 
                 ? 'text-white' 
                 : 'text-gray-400 hover:text-white'
@@ -58,11 +56,9 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loanId }) => {
               borderBottom: `1px solid ${COLORS.border}`
             }}
           >
-            <span className="mr-3">{item.icon}</span>
-            {expanded ? (
+            <span className={expanded ? "mr-3" : ""}>{item.icon}</span>
+            {expanded && (
               <span className="whitespace-nowrap">{item.name}</span>
-            ) : (
-              <span className="whitespace-nowrap">{item.shortName}</span>
             )}
           </Link>
         ))}
