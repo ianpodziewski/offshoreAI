@@ -335,6 +335,7 @@ const INITIAL_DOCUMENTS = [
 ];
 
 const UNEXECUTED_CLOSING_DOCUMENTS = [
+  { docType: 'unexecuted_package', label: 'Unexecuted Documents Package', category: 'loan' as const },
   { docType: 'promissory_note_draft', label: 'Promissory Note (Draft)', category: 'legal' as const },
   { docType: 'deed_of_trust_draft', label: 'Deed of Trust (Draft)', category: 'legal' as const },
   { docType: 'closing_disclosure_draft', label: 'Closing Disclosure (Draft)', category: 'financial' as const },
@@ -401,8 +402,13 @@ export default function LoanDocumentsPage() {
       const updatedDocs = [...allDocs];
       let docsChanged = false;
       
-      // Generate only unexecuted closing documents
-      UNEXECUTED_CLOSING_DOCUMENTS.forEach(docInfo => {
+      // Store generated document contents for package creation
+      const generatedContents: Record<string, string> = {};
+      
+      // Generate only unexecuted closing documents (excluding the package itself)
+      const individualDocuments = UNEXECUTED_CLOSING_DOCUMENTS.filter(doc => doc.docType !== 'unexecuted_package');
+      
+      individualDocuments.forEach(docInfo => {
         // Get the corresponding generator document type
         const generatorDocType = UNEXECUTED_TO_GENERATOR_MAP[docInfo.docType];
         
@@ -418,6 +424,9 @@ export default function LoanDocumentsPage() {
             const content = fakeDocumentService.generateDocumentContent(loan, generatorDocType);
             
             if (content) {
+              // Store content for package creation
+              generatedContents[docInfo.docType] = content;
+              
               // Create a new unexecuted document
               const unexecutedDoc: SimpleDocument = {
                 id: existingDocIndex >= 0 ? updatedDocs[existingDocIndex].id : `fake-${docInfo.docType}-${loan.id}`,
@@ -448,6 +457,44 @@ export default function LoanDocumentsPage() {
         }
       });
       
+      // Now create the unexecuted package document that combines all individual documents
+      if (Object.keys(generatedContents).length > 0) {
+        try {
+          // Check if package document already exists
+          const existingPackageIndex = updatedDocs.findIndex(doc => 
+            doc.loanId === loan.id && 
+            doc.docType === 'unexecuted_package'
+          );
+          
+          // Create the combined content with a table of contents
+          const packageContent = createUnexecutedPackage(loan, generatedContents);
+          
+          // Create the package document
+          const packageDoc: SimpleDocument = {
+            id: existingPackageIndex >= 0 ? updatedDocs[existingPackageIndex].id : `fake-unexecuted_package-${loan.id}`,
+            loanId: loan.id,
+            docType: 'unexecuted_package',
+            filename: 'unexecuted-documents-package.html',
+            category: 'loan',
+            content: packageContent,
+            dateUploaded: new Date().toISOString(),
+            status: 'pending',
+            fileType: 'text/html'
+          };
+          
+          // Update or add the package document
+          if (existingPackageIndex >= 0) {
+            updatedDocs[existingPackageIndex] = packageDoc;
+          } else {
+            updatedDocs.push(packageDoc);
+          }
+          
+          docsChanged = true;
+        } catch (error) {
+          console.error('Error creating unexecuted documents package:', error);
+        }
+      }
+      
       // Only update storage if documents were changed
       if (docsChanged) {
         // Save all documents back to storage
@@ -457,6 +504,154 @@ export default function LoanDocumentsPage() {
         setRefreshTrigger(prev => prev + 1);
       }
     }
+  };
+  
+  // Function to create a combined package of all unexecuted documents
+  const createUnexecutedPackage = (loan: any, contents: Record<string, string>): string => {
+    // Get document order from UNEXECUTED_CLOSING_DOCUMENTS (excluding the package itself)
+    const documentOrder = UNEXECUTED_CLOSING_DOCUMENTS
+      .filter(doc => doc.docType !== 'unexecuted_package')
+      .map(doc => ({
+        docType: doc.docType,
+        label: doc.label
+      }));
+    
+    // Create table of contents
+    const tableOfContents = `
+      <div class="toc-section">
+        <h2>Table of Contents</h2>
+        <ol>
+          ${documentOrder.map((doc, index) => `
+            <li>
+              <a href="#document-${index + 1}">${doc.label}</a>
+            </li>
+          `).join('')}
+        </ol>
+      </div>
+    `;
+    
+    // Create document sections in the specified order
+    const documentSections = documentOrder.map((doc, index) => {
+      const content = contents[doc.docType] || `<p>Document content not available for ${doc.label}</p>`;
+      return `
+        <div class="document-section" id="document-${index + 1}">
+          <div class="document-header">
+            <h2>${index + 1}. ${doc.label}</h2>
+          </div>
+          <div class="document-content">
+            ${content}
+          </div>
+          <div class="page-break"></div>
+        </div>
+      `;
+    }).join('');
+    
+    // Create the full package HTML
+    return `
+      <div class="document legal-document unexecuted-package">
+        <style>
+          .document {
+            font-family: 'Times New Roman', Times, serif;
+            line-height: 1.5;
+            color: #333;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 1rem;
+            position: relative;
+            background-color: white;
+          }
+          
+          .package-header {
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #333;
+            padding-bottom: 1rem;
+            text-align: center;
+          }
+          
+          h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: bold;
+          }
+          
+          .toc-section {
+            margin: 2rem 0;
+            padding: 1rem;
+            border: 1px solid #eee;
+            background-color: #f9f9f9;
+          }
+          
+          .toc-section h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 0.5rem;
+          }
+          
+          .toc-section ol {
+            margin-left: 1.5rem;
+          }
+          
+          .toc-section li {
+            margin-bottom: 0.5rem;
+          }
+          
+          .document-section {
+            margin-top: 3rem;
+            border-top: 1px solid #ccc;
+            padding-top: 1rem;
+          }
+          
+          .document-header {
+            margin-bottom: 1.5rem;
+          }
+          
+          .document-header h2 {
+            font-size: 1.3rem;
+            font-weight: bold;
+          }
+          
+          .page-break {
+            page-break-after: always;
+            height: 0;
+            margin: 3rem 0;
+          }
+          
+          .watermark {
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 3rem;
+            color: rgba(255, 0, 0, 0.1);
+            transform: rotate(-45deg);
+            pointer-events: none;
+            z-index: 1;
+          }
+        </style>
+        
+        <div class="watermark">UNEXECUTED DRAFT</div>
+        
+        <div class="package-header">
+          <h1>Unexecuted Loan Documents Package</h1>
+          <div class="document-id">Loan #: ${loan.id.substring(0, 8)}</div>
+          <div class="document-date">Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+          <div class="borrower-info">Borrower: ${loan.borrowerName}</div>
+          <div class="property-info">Property: ${loan.propertyAddress}</div>
+        </div>
+        
+        ${tableOfContents}
+        
+        ${documentSections}
+        
+        <div class="package-footer">
+          <p>This package contains unexecuted draft documents for review purposes only.</p>
+          <p>These documents are not legally binding until properly executed by all parties.</p>
+        </div>
+      </div>
+    `;
   };
 
   if (loading) {
