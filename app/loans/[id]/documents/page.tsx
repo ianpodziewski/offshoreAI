@@ -349,6 +349,14 @@ const EXECUTED_CLOSING_DOCUMENTS = [
   { docType: 'loan_agreement', label: 'Loan Agreement', category: 'legal' as const },
 ];
 
+// Map unexecuted document types to their corresponding generator types
+const UNEXECUTED_TO_GENERATOR_MAP: Record<string, string> = {
+  'promissory_note_draft': 'promissory_note',
+  'deed_of_trust_draft': 'deed_of_trust',
+  'closing_disclosure_draft': 'closing_disclosure',
+  'loan_agreement_draft': 'promissory_note', // Use promissory note generator as fallback
+};
+
 export default function LoanDocumentsPage() {
   const params = useParams();
   const [loan, setLoan] = useState<any>(null);
@@ -390,8 +398,32 @@ export default function LoanDocumentsPage() {
     if (loan) {
       // Generate only unexecuted closing documents
       UNEXECUTED_CLOSING_DOCUMENTS.forEach(docInfo => {
-        fakeDocumentService.generateFakeDocument(loan, docInfo.docType);
+        // Get the corresponding generator document type
+        const generatorDocType = UNEXECUTED_TO_GENERATOR_MAP[docInfo.docType];
+        
+        if (generatorDocType) {
+          // Generate the document using the appropriate generator
+          const generatedDoc = fakeDocumentService.generateFakeDocument(loan, generatorDocType);
+          
+          if (generatedDoc) {
+            // Create a copy of the generated document with the unexecuted document type
+            const unexecutedDoc: SimpleDocument = {
+              ...generatedDoc,
+              id: `fake-${docInfo.docType}-${loan.id}`,
+              docType: docInfo.docType,
+              filename: `${docInfo.docType.replace(/_/g, '-')}.html`,
+              category: docInfo.category
+            };
+            
+            // Add the unexecuted document
+            simpleDocumentService.addDocumentDirectly(unexecutedDoc);
+          }
+        } else {
+          console.error(`No generator mapping found for document type: ${docInfo.docType}`);
+        }
       });
+      
+      // Refresh the document list
       setRefreshTrigger(prev => prev + 1);
     }
   };
