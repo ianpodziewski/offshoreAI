@@ -6,7 +6,7 @@ import { Plus, RefreshCw, Search, Filter } from 'lucide-react';
 import LayoutWrapper from '../layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import LoanCard from '@/components/loans/LoanCard';
-import { LoanData, LoanStatus, LoanType, PropertyType } from '@/utilities/loanGenerator';
+import { LoanData, LoanStatus, LoanType, PropertyType, OriginationType } from '@/utilities/loanGenerator';
 import { Input } from "@/components/ui/input";
 import { 
   Select,
@@ -47,6 +47,7 @@ export default function LoansPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loanTypeFilter, setLoanTypeFilter] = useState<string>('all');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('all');
+  const [originationTypeFilter, setOriginationTypeFilter] = useState<string>('all');
   
   const fetchLoans = async () => {
     setLoading(true);
@@ -96,7 +97,9 @@ export default function LoansPage() {
       result = result.filter(loan => 
         (loan.borrowerName?.toLowerCase().includes(query)) ||
         (loan.propertyAddress?.toLowerCase().includes(query)) ||
-        (loan.id?.toLowerCase().includes(query))
+        (loan.id?.toLowerCase().includes(query)) ||
+        (loan.originationType === 'external' && loan.originatorInfo?.companyName?.toLowerCase().includes(query)) ||
+        (loan.originationType === 'internal' && loan.underwriterName?.toLowerCase().includes(query))
       );
     }
     
@@ -115,8 +118,13 @@ export default function LoansPage() {
       result = result.filter(loan => loan.propertyType === propertyTypeFilter);
     }
     
+    // Apply origination type filter
+    if (originationTypeFilter !== 'all') {
+      result = result.filter(loan => loan.originationType === originationTypeFilter);
+    }
+    
     setFilteredLoans(result);
-  }, [loans, searchQuery, statusFilter, loanTypeFilter, propertyTypeFilter]);
+  }, [loans, searchQuery, statusFilter, loanTypeFilter, propertyTypeFilter, originationTypeFilter]);
   
   const resetDatabase = () => {
     loanDatabase.reset();
@@ -189,7 +197,7 @@ export default function LoansPage() {
               </div>
               <Input
                 type="text"
-                placeholder="Search by borrower, address, or loan ID..."
+                placeholder="Search by borrower, address, loan ID, or originator..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-gray-800 border-gray-700 text-gray-200 placeholder-gray-500 focus:ring-blue-500 focus:border-blue-500"
@@ -279,6 +287,23 @@ export default function LoansPage() {
               </Select>
             </div>
             
+            {/* Origination Type Filter */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium mb-1" style={{ color: COLORS.textMuted }}>
+                Origination Type
+              </label>
+              <Select value={originationTypeFilter} onValueChange={setOriginationTypeFilter}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-gray-200">
+                  <SelectValue placeholder="All Origination Types" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
+                  <SelectItem value="all">All Origination Types</SelectItem>
+                  <SelectItem value="internal">Internal</SelectItem>
+                  <SelectItem value="external">External</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
             {/* Reset Filters Button */}
             <div className="flex items-end">
               <Button 
@@ -289,6 +314,7 @@ export default function LoansPage() {
                   setStatusFilter('all');
                   setLoanTypeFilter('all');
                   setPropertyTypeFilter('all');
+                  setOriginationTypeFilter('all');
                 }}
               >
                 Reset Filters

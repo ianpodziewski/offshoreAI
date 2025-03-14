@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, Home, DollarSign } from 'lucide-react';
+import { ArrowRight, Home, DollarSign, Briefcase, Users } from 'lucide-react';
 import { LoanData } from '@/utilities/loanGenerator';
 
 // Define a consistent color palette
@@ -52,6 +52,20 @@ const COLORS = {
   chart: {
     primary: "#60A5FA", // Primary line/bar color (blue-400)
     secondary: "#94A3B8", // Secondary line/bar color (gray for monthly chart)
+  },
+  
+  // Origination type colors
+  originationType: {
+    external: {
+      bg: "rgba(79, 70, 229, 0.2)", // Indigo-600/20
+      text: "#818CF8", // Indigo-400
+      pill: "bg-indigo-500/20 text-indigo-400"
+    },
+    internal: {
+      bg: "rgba(79, 209, 197, 0.2)", // Teal-400/20
+      text: "#2DD4BF", // Teal-400
+      pill: "bg-teal-500/20 text-teal-400"
+    }
   }
 };
 
@@ -86,6 +100,18 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
     }
   };
 
+  // Get origination type style
+  const getOriginationTypeStyle = (type?: string) => {
+    switch (type) {
+      case 'external':
+        return COLORS.originationType.external;
+      case 'internal':
+        return COLORS.originationType.internal;
+      default:
+        return COLORS.status.default;
+    }
+  };
+
   // Format loan type for display
   const formatLoanType = (loanType?: string) => {
     return loanType?.split('_').map(word => 
@@ -111,6 +137,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
   }
 
   const statusStyle = getStatusStyle(loan.status);
+  const originationTypeStyle = getOriginationTypeStyle(loan.originationType);
 
   return (
     <Card 
@@ -161,7 +188,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
         </div>
 
         {/* Loan Type and Loan Amount on the same line */}
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-3">
           <div>
             <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Loan Type</p>
             <p className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
@@ -173,6 +200,33 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
             <p className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>
               ${(loan.loanAmount ?? 0).toLocaleString()}
             </p>
+          </div>
+        </div>
+        
+        {/* Origination Information */}
+        <div className="flex items-start">
+          {loan.originationType === 'external' ? (
+            <Briefcase size={16} className="mt-0.5 mr-2 flex-shrink-0" style={{ color: COLORS.textMuted }} />
+          ) : (
+            <Users size={16} className="mt-0.5 mr-2 flex-shrink-0" style={{ color: COLORS.textMuted }} />
+          )}
+          <div>
+            <p className="text-xs font-medium" style={{ color: COLORS.textMuted }}>Origination</p>
+            <div className="flex items-center">
+              <span 
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${originationTypeStyle.pill} mr-2`}
+              >
+                {loan.originationType === 'external' ? 'External' : 'Internal'}
+              </span>
+              <p className="text-xs" style={{ color: COLORS.textPrimary }}>
+                {loan.originationType === 'external' && loan.originatorInfo 
+                  ? loan.originatorInfo.companyName
+                  : loan.originationType === 'internal' && loan.underwriterName
+                    ? loan.underwriterName
+                    : 'N/A'
+                }
+              </p>
+            </div>
           </div>
         </div>
       </div>
