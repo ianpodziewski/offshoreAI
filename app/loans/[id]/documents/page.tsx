@@ -35,7 +35,7 @@ const Section: React.FC<SectionProps> = ({ title, icon, children }) => (
       <span className="mr-2" style={{ color: COLORS.primary }}>{icon}</span>
       <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>{title}</h2>
     </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-4">
       {children}
     </div>
   </div>
@@ -147,117 +147,175 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
   };
   
   return (
-    <div 
-      className={`p-4 rounded-md shadow-sm ${dragOver ? 'ring-2' : ''}`}
-      style={{ 
-        backgroundColor: '#1a2234',
-        borderLeft: `3px solid ${COLORS.primary}`,
-        borderColor: dragOver ? COLORS.primary : undefined
-      }}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <div className="flex justify-between items-start mb-2">
-        <p className="text-sm font-medium" style={{ color: COLORS.textPrimary }}>{label}</p>
-        {document && getStatusBadge(document.status)}
-      </div>
-      
-      {document ? (
+    <div className="mb-4">
+      {/* Document Display - Long and skinny across the page */}
+      <div 
+        className="p-4 rounded-t-md shadow-sm w-full"
+        style={{ 
+          backgroundColor: '#1a2234',
+          borderLeft: `3px solid ${COLORS.primary}`,
+        }}
+      >
         <div className="flex justify-between items-center">
-          <div className="flex items-center">
-            <FileText size={18} style={{ color: COLORS.textMuted }} className="mr-3" />
-            <div>
-              <p className="font-medium" style={{ color: COLORS.textPrimary }}>{document.filename}</p>
-              <p className="text-xs" style={{ color: COLORS.textMuted }}>
-                {new Date(document.dateUploaded).toLocaleDateString()}
-              </p>
+          <div className="flex items-center flex-grow">
+            <FileText size={18} style={{ color: COLORS.textMuted }} className="mr-3 flex-shrink-0" />
+            <div className="flex-grow">
+              <p className="font-medium" style={{ color: COLORS.textPrimary }}>{label}</p>
+              {document && (
+                <p className="text-xs" style={{ color: COLORS.textMuted }}>
+                  {document.filename} • {new Date(document.dateUploaded).toLocaleDateString()}
+                </p>
+              )}
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={() => onViewDocument(document)}
-            style={{ color: COLORS.textAccent }}
-          >
-            <Eye size={16} className="mr-1" />
-            View
-          </Button>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {document && getStatusBadge(document.status)}
+            {document && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => onViewDocument(document)}
+                style={{ color: COLORS.textAccent }}
+              >
+                <Eye size={16} className="mr-1" />
+                View
+              </Button>
+            )}
+          </div>
         </div>
-      ) : (
-        <div className={`text-center py-3 ${dragOver ? '' : ''}`} style={{ 
-          backgroundColor: dragOver ? COLORS.bgButton : 'transparent' 
-        }}>
-          <Upload size={20} className="mx-auto mb-2" style={{ 
-            color: dragOver ? COLORS.primary : COLORS.textMuted 
-          }} />
-          <p className="text-sm" style={{ 
-            color: dragOver ? COLORS.textAccent : COLORS.textSecondary 
-          }}>
-            {dragOver ? 'Drop to upload' : 'Drag & drop a PDF file here'}
-          </p>
-          <div className="flex justify-center mt-2 space-x-2">
-            <label 
-              className="text-xs cursor-pointer hover:underline"
-              style={{ color: COLORS.textAccent }}
-              htmlFor={`file-upload-${docType}`}
-            >
-              Upload File
-              <input 
-                type="file" 
-                id={`file-upload-${docType}`}
-                className="hidden" 
-                accept=".pdf"
-                onChange={async (e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    const file = e.target.files[0];
-                    if (file.type !== "application/pdf") {
-                      alert("Please upload a PDF file");
-                      return;
-                    }
-                    
-                    try {
-                      const uploadedDoc = await simpleDocumentService.addDocument(
-                        file, 
-                        loanId,
-                        { docType: docType, category: category }
-                      );
-                      
-                      if (uploadedDoc) {
-                        onUpload(docType);
+      </div>
+      
+      {/* Upload Section - Same height underneath */}
+      <div 
+        className={`p-4 rounded-b-md shadow-sm w-full ${dragOver ? 'ring-2' : ''}`}
+        style={{ 
+          backgroundColor: '#141b2d',
+          borderLeft: `3px solid ${COLORS.primary}`,
+          borderColor: dragOver ? COLORS.primary : undefined,
+          borderTop: 'none'
+        }}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {!document ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Upload size={18} style={{ color: COLORS.textMuted }} className="mr-3" />
+              <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                {dragOver ? 'Drop to upload' : 'Drag & drop a PDF file here'}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <label 
+                className="text-xs cursor-pointer hover:underline"
+                style={{ color: COLORS.textAccent }}
+                htmlFor={`file-upload-${docType}`}
+              >
+                Upload File
+                <input 
+                  type="file" 
+                  id={`file-upload-${docType}`}
+                  className="hidden" 
+                  accept=".pdf"
+                  onChange={async (e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      if (file.type !== "application/pdf") {
+                        alert("Please upload a PDF file");
+                        return;
                       }
-                    } catch (error) {
-                      console.error("Error uploading document:", error);
-                    } finally {
-                      // Reset file input
-                      e.target.value = '';
+                      
+                      try {
+                        const uploadedDoc = await simpleDocumentService.addDocument(
+                          file, 
+                          loanId,
+                          { docType: docType, category: category }
+                        );
+                        
+                        if (uploadedDoc) {
+                          onUpload(docType);
+                        }
+                      } catch (error) {
+                        console.error("Error uploading document:", error);
+                      } finally {
+                        // Reset file input
+                        e.target.value = '';
+                      }
+                    }
+                  }}
+                />
+              </label>
+              <span className="text-xs" style={{ color: COLORS.textMuted }}>or</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs hover:underline p-0 h-auto"
+                style={{ color: COLORS.textAccent }}
+                onClick={() => {
+                  const loan = loanDatabase.getLoanById(loanId);
+                  if (loan) {
+                    const document = fakeDocumentService.generateFakeDocument(loan, docType);
+                    if (document) {
+                      onUpload(docType);
                     }
                   }
                 }}
-              />
-            </label>
-            <span className="text-xs" style={{ color: COLORS.textMuted }}>or</span>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-xs hover:underline p-0 h-auto"
-              style={{ color: COLORS.textAccent }}
-              onClick={() => {
-                const loan = loanDatabase.getLoanById(loanId);
-                if (loan) {
-                  const document = fakeDocumentService.generateFakeDocument(loan, docType);
-                  if (document) {
-                    onUpload(docType);
-                  }
-                }
-              }}
-            >
-              Generate Sample
-            </Button>
+              >
+                Generate Sample
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="flex items-center justify-between">
+            <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+              Document uploaded. You can replace it by uploading a new file.
+            </p>
+            <div className="flex items-center gap-3">
+              <label 
+                className="text-xs cursor-pointer hover:underline"
+                style={{ color: COLORS.textAccent }}
+                htmlFor={`file-upload-${docType}`}
+              >
+                Replace File
+                <input 
+                  type="file" 
+                  id={`file-upload-${docType}`}
+                  className="hidden" 
+                  accept=".pdf"
+                  onChange={async (e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      const file = e.target.files[0];
+                      if (file.type !== "application/pdf") {
+                        alert("Please upload a PDF file");
+                        return;
+                      }
+                      
+                      try {
+                        const uploadedDoc = await simpleDocumentService.addDocument(
+                          file, 
+                          loanId,
+                          { docType: docType, category: category }
+                        );
+                        
+                        if (uploadedDoc) {
+                          onUpload(docType);
+                        }
+                      } catch (error) {
+                        console.error("Error uploading document:", error);
+                      } finally {
+                        // Reset file input
+                        e.target.value = '';
+                      }
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
