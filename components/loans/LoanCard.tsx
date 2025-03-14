@@ -46,6 +46,12 @@ const COLORS = {
       text: "#6B7280", // Gray-500
       pill: "bg-gray-500/20 text-gray-400"
     }
+  },
+  
+  // Chart colors for gradients
+  chart: {
+    primary: "#60A5FA", // Primary line/bar color (blue-400)
+    secondary: "#94A3B8", // Secondary line/bar color (gray for monthly chart)
   }
 };
 
@@ -108,33 +114,33 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
 
   return (
     <Card 
-      className="overflow-hidden hover:shadow-md transition-shadow duration-200 flex flex-col" 
+      className="border border-gray-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200 flex flex-col transform transition-all duration-200 hover:scale-105" 
       style={{ 
-        backgroundColor: COLORS.bgDark,
-        borderColor: COLORS.border 
+        backgroundColor: COLORS.bgDarker,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
       }}
     >
-      {/* Card Header with Loan Number and Status */}
+      {/* Card Header with Loan Number and Status - Matching dashboard style */}
       <div 
-        className="flex justify-between items-center p-4 border-b"
+        className="px-4 pt-4 pb-3"
         style={{ 
-          backgroundColor: COLORS.bgHeader,
-          borderColor: COLORS.border 
+          borderBottom: `1px solid ${COLORS.border}`,
+          background: `linear-gradient(to right, ${COLORS.chart.secondary}20, ${COLORS.chart.secondary}40)`
         }}
       >
-        <div className="flex items-center">
-          <div className="mr-2" style={{ color: statusStyle.text }}>
-            <DollarSign size={16} />
-          </div>
-          <h3 className="font-medium" style={{ color: COLORS.textPrimary }}>
+        <div className="flex justify-between items-center">
+          <h3 
+            className="font-semibold"
+            style={{ color: COLORS.textPrimary }}
+          >
             Loan #{(loan.id || '').substring(0, 8)}
           </h3>
+          <span 
+            className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.pill}`}
+          >
+            {formatStatus(loan.status)}
+          </span>
         </div>
-        <span 
-          className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.pill}`}
-        >
-          {formatStatus(loan.status)}
-        </span>
       </div>
 
       {/* Property Address */}
