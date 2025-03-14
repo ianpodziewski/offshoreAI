@@ -34,6 +34,20 @@ const documentNames: Record<string, string> = {
 
 export const fakeDocumentService = {
   /**
+   * Generate document content without adding it to the document service
+   */
+  generateDocumentContent(loan: LoanData, docType: string): string | null {
+    // Check if we have a generator for this document type
+    if (!documentGenerators[docType]) {
+      console.error(`No generator found for document type: ${docType}`);
+      return null;
+    }
+
+    // Generate the HTML content using the appropriate generator
+    return documentGenerators[docType](loan);
+  },
+
+  /**
    * Generate a fake document for a specific loan and document type
    */
   generateFakeDocument(loan: LoanData, docType: string): SimpleDocument | null {

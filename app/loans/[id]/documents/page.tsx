@@ -396,35 +396,66 @@ export default function LoanDocumentsPage() {
   
   const handleGenerateUnexecutedDocuments = () => {
     if (loan) {
+      // Get all existing documents first
+      const allDocs = simpleDocumentService.getAllDocuments();
+      const updatedDocs = [...allDocs];
+      let docsChanged = false;
+      
       // Generate only unexecuted closing documents
       UNEXECUTED_CLOSING_DOCUMENTS.forEach(docInfo => {
         // Get the corresponding generator document type
         const generatorDocType = UNEXECUTED_TO_GENERATOR_MAP[docInfo.docType];
         
         if (generatorDocType) {
-          // Generate the document using the appropriate generator
-          const generatedDoc = fakeDocumentService.generateFakeDocument(loan, generatorDocType);
-          
-          if (generatedDoc) {
-            // Create a copy of the generated document with the unexecuted document type
-            const unexecutedDoc: SimpleDocument = {
-              ...generatedDoc,
-              id: `fake-${docInfo.docType}-${loan.id}`,
-              docType: docInfo.docType,
-              filename: `${docInfo.docType.replace(/_/g, '-')}.html`,
-              category: docInfo.category
-            };
+          try {
+            // Check if this unexecuted document already exists
+            const existingDocIndex = updatedDocs.findIndex(doc => 
+              doc.loanId === loan.id && 
+              doc.docType === docInfo.docType
+            );
             
-            // Add the unexecuted document
-            simpleDocumentService.addDocumentDirectly(unexecutedDoc);
+            // Generate the document content using the appropriate generator
+            const content = fakeDocumentService.generateDocumentContent(loan, generatorDocType);
+            
+            if (content) {
+              // Create a new unexecuted document
+              const unexecutedDoc: SimpleDocument = {
+                id: existingDocIndex >= 0 ? updatedDocs[existingDocIndex].id : `fake-${docInfo.docType}-${loan.id}`,
+                loanId: loan.id,
+                docType: docInfo.docType,
+                filename: `${docInfo.docType.replace(/_/g, '-')}.html`,
+                category: docInfo.category,
+                content: content,
+                dateUploaded: new Date().toISOString(),
+                status: 'pending',
+                fileType: 'text/html'
+              };
+              
+              // Update or add the document in our local array
+              if (existingDocIndex >= 0) {
+                updatedDocs[existingDocIndex] = unexecutedDoc;
+              } else {
+                updatedDocs.push(unexecutedDoc);
+              }
+              
+              docsChanged = true;
+            }
+          } catch (error) {
+            console.error(`Error generating document for ${docInfo.docType}:`, error);
           }
         } else {
           console.error(`No generator mapping found for document type: ${docInfo.docType}`);
         }
       });
       
-      // Refresh the document list
-      setRefreshTrigger(prev => prev + 1);
+      // Only update storage if documents were changed
+      if (docsChanged) {
+        // Save all documents back to storage
+        localStorage.setItem('simple_documents', JSON.stringify(updatedDocs));
+        
+        // Refresh the document list
+        setRefreshTrigger(prev => prev + 1);
+      }
     }
   };
 
