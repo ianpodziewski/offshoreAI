@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Home, DollarSign, Calendar, User, TrendingUp, MapPin } from 'lucide-react';
+import { ArrowLeft, Home, DollarSign, Calendar, User, TrendingUp, MapPin, Briefcase, Users } from 'lucide-react';
 import Link from 'next/link';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { COLORS } from '@/app/theme/colors';
 import LoanSidebar from '@/components/loan/LoanSidebar';
+import { LoanData, OriginatorInfo } from '@/utilities/loanGenerator';
 
 /**
  * Converts a string to title case (first letter of each word capitalized)
@@ -70,7 +71,7 @@ const InfoItem: React.FC<InfoItemProps> = ({ label, value }) => (
 export default function LoanDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const [loan, setLoan] = useState<any>(null);
+  const [loan, setLoan] = useState<LoanData | null>(null);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -254,6 +255,31 @@ export default function LoanDetailPage() {
                     label="Maturity Date" 
                     value={new Date(loan.maturityDate).toLocaleDateString()}
                   />
+                )}
+              </Section>
+            )}
+
+            {/* Originator Information */}
+            {loan?.originationType && (
+              <Section 
+                title={loan.originationType === 'external' ? 'External Originator' : 'Internal Underwriter'} 
+                icon={loan.originationType === 'external' ? <Briefcase size={20} /> : <Users size={20} />}
+              >
+                {loan.originationType === 'external' && loan.originatorInfo ? (
+                  <>
+                    <InfoItem label="Company Name" value={loan.originatorInfo.companyName || 'N/A'} />
+                    <InfoItem label="Contact Name" value={loan.originatorInfo.contactName || 'N/A'} />
+                    <InfoItem label="Contact Email" value={loan.originatorInfo.contactEmail || 'N/A'} />
+                    <InfoItem label="Contact Phone" value={loan.originatorInfo.contactPhone || 'N/A'} />
+                    <InfoItem 
+                      label="Referral Fee" 
+                      value={loan.originatorInfo.referralFee ? `${loan.originatorInfo.referralFee}%` : 'N/A'} 
+                    />
+                  </>
+                ) : loan.originationType === 'internal' && loan.underwriterName ? (
+                  <InfoItem label="Underwriter" value={loan.underwriterName} />
+                ) : (
+                  <InfoItem label="Information" value="No additional information available" />
                 )}
               </Section>
             )}

@@ -4,6 +4,15 @@ export type LoanStatus = 'pending' | 'approved' | 'in_review' | 'rejected' | 'cl
 export type LoanType = 'fix_and_flip' | 'bridge' | 'construction' | 'rehab' | 'rental' | 'commercial' | 'land';
 export type PropertyType = 'single_family' | 'multi_family' | 'condo' | 'townhouse' | 'commercial' | 'mixed_use' | 'land' | 'industrial';
 export type ExitStrategy = 'sale' | 'refinance' | 'rental' | 'development' | 'other';
+export type OriginationType = 'external' | 'internal';
+
+export interface OriginatorInfo {
+  companyName: string;
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string;
+  referralFee?: number; // Percentage of loan amount
+}
 
 export interface LoanData {
   id: string;
@@ -29,6 +38,9 @@ export interface LoanData {
   lender?: string; // Hard money lender/investor
   fundingDate?: string; // When the loan was funded
   maturityDate?: string; // When the loan is due
+  originationType: OriginationType; // Whether the loan was originated internally or externally
+  originatorInfo?: OriginatorInfo; // Information about the external originator if applicable
+  underwriterName?: string; // Name of the internal underwriter assigned to the loan
   documents: {
     category: string;
     files: {
@@ -136,6 +148,21 @@ export function generateLoan(overrides = {}): LoanData {
   const interestRate = Number((Math.random() * 4 + 9).toFixed(2)); // 9-13% interest rates
   const originationFee = Number((Math.random() * 2 + 2).toFixed(1)); // 2-4 points
   
+  // Determine origination type
+  const originationType = ['external', 'internal'][Math.floor(Math.random() * 2)] as OriginationType;
+  
+  // Generate originator info if external
+  const originatorInfo = originationType === 'external' ? {
+    companyName: `${lastNames[Math.floor(Math.random() * lastNames.length)]} Mortgage`,
+    contactName: getRandomName(),
+    contactEmail: `contact@${lastNames[Math.floor(Math.random() * lastNames.length)].toLowerCase()}mortgage.com`,
+    contactPhone: `(${Math.floor(Math.random() * 900) + 100})-${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`,
+    referralFee: Number((Math.random() * 1.5 + 0.5).toFixed(2)), // 0.5-2% referral fee
+  } : undefined;
+  
+  // Generate underwriter name if internal
+  const underwriterName = originationType === 'internal' ? getRandomName() : undefined;
+  
   const baseLoan: LoanData = {
     id: uuidv4(),
     borrowerName,
@@ -157,6 +184,9 @@ export function generateLoan(overrides = {}): LoanData {
     dateCreated,
     dateModified: new Date(new Date(dateCreated).getTime() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
     status: ['pending', 'approved', 'in_review', 'funded', 'closed', 'rejected', 'default'][Math.floor(Math.random() * 7)] as LoanStatus,
+    originationType,
+    originatorInfo,
+    underwriterName,
     documents: [
       {
         category: 'financial',
