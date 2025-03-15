@@ -98,6 +98,14 @@ function getRandomAddress(): string {
   return `${houseNumber} ${street}, ${city}, ${state} ${zip}`;
 }
 
+// Function to generate a more realistic loan ID
+function generateLoanId(): string {
+  // Format: DEMO-YYYY-XXXX where YYYY is the current year and XXXX is a random 4-digit number
+  const year = new Date().getFullYear();
+  const randomNum = Math.floor(1000 + Math.random() * 9000); // 4-digit number between 1000-9999
+  return `DEMO-${year}-${randomNum}`;
+}
+
 export function generateLoan(overrides = {}): LoanData {
   const borrowerName = getRandomName();
   const dateCreated = new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString();
@@ -164,7 +172,7 @@ export function generateLoan(overrides = {}): LoanData {
   const underwriterName = originationType === 'internal' ? getRandomName() : undefined;
   
   const baseLoan: LoanData = {
-    id: uuidv4(),
+    id: generateLoanId(),
     borrowerName,
     borrowerEmail: getRandomEmail(borrowerName),
     borrowerExperience: experienceLevels[Math.floor(Math.random() * experienceLevels.length)],
