@@ -34,8 +34,14 @@ export default function LoanSpecificChat() {
         : 'No documents available for this loan.';
       
       setLoanContext(`${loanContextStr}\n\nDocuments:\n${documentContextStr}`);
+      
+      // Automatically send the loan context to the chat when the component mounts
+      // or when the loan data changes
+      setTimeout(() => {
+        handleSubmit(`Please use the following loan information as context for our conversation: ${loanContextStr}\n\nDocuments:\n${documentContextStr}`);
+      }, 500);
     }
-  }, [activeLoan, loanDocuments]);
+  }, [activeLoan, loanDocuments, handleSubmit]);
   
   // Function to send loan context to the chat
   const sendLoanContextToChat = () => {
@@ -67,10 +73,10 @@ export default function LoanSpecificChat() {
                 onClick={sendLoanContextToChat}
                 className="mb-4"
               >
-                Load Loan Context
+                Reload Loan Context
               </Button>
             </div>
-            <ChatWithContext />
+            <ChatWithContext loanSpecificContext={loanContext} />
           </TabsContent>
           
           <TabsContent value="context">

@@ -36,8 +36,7 @@ export default function ChatWithContext({ loanSpecificContext }: ChatWithContext
   // Use loan-specific context if provided
   useEffect(() => {
     if (loanSpecificContext) {
-      // Instead of using setAdditionalContext, we'll handle this differently
-      // We'll let the LoanSpecificChat component handle sending the context
+      // Log the loan context for debugging
       console.log("Loan context available:", loanSpecificContext.substring(0, 50) + "...");
     }
   }, [loanSpecificContext]);
@@ -80,18 +79,37 @@ export default function ChatWithContext({ loanSpecificContext }: ChatWithContext
         new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
       );
       
-      // Split into chat and loan documents
-      const chatDocs = sortedDocs.filter(doc => doc.category === 'chat' || doc.loanId === 'chat-uploads');
-      const loanDocs = sortedDocs.filter(doc => doc.category !== 'chat' && doc.loanId !== 'chat-uploads');
-      
-      setChatDocuments(chatDocs);
-      setLoanDocuments(loanDocs);
+      // If we have loan-specific context, only show documents for that loan
+      // Otherwise, split into chat and loan documents as before
+      if (loanSpecificContext) {
+        // Extract loan ID from the context (assuming it's in the format "Active Loan: LOAN_ID")
+        const loanIdMatch = loanSpecificContext.match(/Active Loan: ([A-Z0-9]+)/);
+        const loanId = loanIdMatch ? loanIdMatch[1] : null;
+        
+        if (loanId) {
+          // Only show documents for this specific loan
+          const loanSpecificDocs = sortedDocs.filter(doc => doc.loanId === loanId);
+          setLoanDocuments(loanSpecificDocs);
+          setChatDocuments([]); // No general chat documents in loan-specific context
+        } else {
+          // Fallback if we can't extract loan ID
+          setChatDocuments([]);
+          setLoanDocuments([]);
+        }
+      } else {
+        // Regular behavior for main chat - split into chat and loan documents
+        const chatDocs = sortedDocs.filter(doc => doc.category === 'chat' || doc.loanId === 'chat-uploads');
+        const loanDocs = sortedDocs.filter(doc => doc.category !== 'chat' && doc.loanId !== 'chat-uploads');
+        
+        setChatDocuments(chatDocs);
+        setLoanDocuments(loanDocs);
+      }
     } catch (error) {
       console.error('Error fetching documents:', error);
     } finally {
       setLoadingDocs(false);
     }
-  }, []);
+  }, [loanSpecificContext]);
   
   // Add a useEffect to clean the localStorage on component mount
   useEffect(() => {
@@ -298,82 +316,141 @@ export default function ChatWithContext({ loanSpecificContext }: ChatWithContext
                   </div>
                 ) : (
                   <>
-                    {/* Chat Documents Section */}
-                    <div className="mb-5 mt-2">
-                      <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
-                        <h3 className="text-xs font-medium text-gray-200">Chat Uploads</h3>
-                      </div>
-                      
-                      {chatDocuments.length > 0 ? (
-                        <>
-                          <ul className="space-y-2.5">
-                            {(showAllChatDocs ? chatDocuments : chatDocuments.slice(0, 3)).map(renderDocumentItem)}
-                          </ul>
-                          {chatDocuments.length > 3 && (
-                            <button 
-                              onClick={() => setShowAllChatDocs(!showAllChatDocs)}
-                              className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
-                            >
-                              {showAllChatDocs ? 'Show Less' : 'More +'}
-                              <ChevronRight size={12} className={`ml-1 transition-transform ${showAllChatDocs ? 'rotate-90' : ''}`} />
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
-                          <p>No chat uploads available</p>
+                    {/* Show different document sections based on context */}
+                    {loanSpecificContext ? (
+                      // Loan-specific chat - only show loan documents
+                      <div className="mb-5 mt-2">
+                        <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
+                          <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
                         </div>
-                      )}
-                    </div>
-                    
-                    {/* Loan Documents Section */}
-                    <div className="mb-5">
-                      <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
-                        <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
+                        
+                        {loanDocuments.length > 0 ? (
+                          <>
+                            <ul className="space-y-2.5">
+                              {(showAllLoanDocs ? loanDocuments : loanDocuments.slice(0, 5)).map(renderDocumentItem)}
+                            </ul>
+                            {loanDocuments.length > 5 && (
+                              <button 
+                                onClick={() => setShowAllLoanDocs(!showAllLoanDocs)}
+                                className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
+                              >
+                                {showAllLoanDocs ? 'Show Less' : 'More +'}
+                                <ChevronRight size={12} className={`ml-1 transition-transform ${showAllLoanDocs ? 'rotate-90' : ''}`} />
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+                            <p>No loan documents available</p>
+                          </div>
+                        )}
                       </div>
-                      
-                      {loanDocuments.length > 0 ? (
-                        <>
-                          <ul className="space-y-2.5">
-                            {(showAllLoanDocs ? loanDocuments : loanDocuments.slice(0, 3)).map(renderDocumentItem)}
-                          </ul>
-                          {loanDocuments.length > 3 && (
-                            <button 
-                              onClick={() => setShowAllLoanDocs(!showAllLoanDocs)}
-                              className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
-                            >
-                              {showAllLoanDocs ? 'Show Less' : 'More +'}
-                              <ChevronRight size={12} className={`ml-1 transition-transform ${showAllLoanDocs ? 'rotate-90' : ''}`} />
-                            </button>
+                    ) : (
+                      // Main chat - show both chat uploads and loan documents
+                      <>
+                        {/* Chat Documents Section */}
+                        <div className="mb-5 mt-2">
+                          <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
+                            <h3 className="text-xs font-medium text-gray-200">Chat Uploads</h3>
+                          </div>
+                          
+                          {chatDocuments.length > 0 ? (
+                            <>
+                              <ul className="space-y-2.5">
+                                {(showAllChatDocs ? chatDocuments : chatDocuments.slice(0, 3)).map(renderDocumentItem)}
+                              </ul>
+                              {chatDocuments.length > 3 && (
+                                <button 
+                                  onClick={() => setShowAllChatDocs(!showAllChatDocs)}
+                                  className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
+                                >
+                                  {showAllChatDocs ? 'Show Less' : 'More +'}
+                                  <ChevronRight size={12} className={`ml-1 transition-transform ${showAllChatDocs ? 'rotate-90' : ''}`} />
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+                              <p>No chat uploads available</p>
+                            </div>
                           )}
-                        </>
-                      ) : (
-                        <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
-                          <p>No loan documents available</p>
                         </div>
-                      )}
-                    </div>
+                        
+                        {/* Loan Documents Section */}
+                        <div className="mb-5">
+                          <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
+                            <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
+                          </div>
+                          
+                          {loanDocuments.length > 0 ? (
+                            <>
+                              <ul className="space-y-2.5">
+                                {(showAllLoanDocs ? loanDocuments : loanDocuments.slice(0, 3)).map(renderDocumentItem)}
+                              </ul>
+                              {loanDocuments.length > 3 && (
+                                <button 
+                                  onClick={() => setShowAllLoanDocs(!showAllLoanDocs)}
+                                  className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
+                                >
+                                  {showAllLoanDocs ? 'Show Less' : 'More +'}
+                                  <ChevronRight size={12} className={`ml-1 transition-transform ${showAllLoanDocs ? 'rotate-90' : ''}`} />
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+                              <p>No loan documents available</p>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                     
                     {/* Help section */}
                     <div className="mt-6 text-xs text-gray-400 p-4 bg-gray-800/50 rounded-md border-l-2 border-blue-500">
                       <p className="font-medium mb-3">Ask the assistant about:</p>
                       <ul className="space-y-2.5 pl-4">
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Document requirements
-                        </li>
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Common errors in loan documents
-                        </li>
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Regulatory guidelines
-                        </li>
-                        <li className="flex items-start">
-                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                          Review best practices
-                        </li>
+                        {loanSpecificContext ? (
+                          // Loan-specific help suggestions
+                          <>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Loan terms and conditions
+                            </li>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Property details and valuation
+                            </li>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Borrower information
+                            </li>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Loan-specific document analysis
+                            </li>
+                          </>
+                        ) : (
+                          // General help suggestions
+                          <>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Document requirements
+                            </li>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Common errors in loan documents
+                            </li>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Regulatory guidelines
+                            </li>
+                            <li className="flex items-start">
+                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                              Review best practices
+                            </li>
+                          </>
+                        )}
                       </ul>
                     </div>
                   </>
