@@ -160,7 +160,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan }) => {
             className="font-semibold"
             style={{ color: COLORS.textPrimary }}
           >
-            Loan #{(loan.id || '').substring(0, 8)}
+            {loan.id || ''}
           </h3>
           <span 
             className={`px-3 py-1 rounded-full text-xs font-medium ${statusStyle.pill}`}
