@@ -13,7 +13,41 @@ import SimpleDocumentUploader from "@/components/document/SimpleDocumentUploader
 import { LoanType, PropertyType, ExitStrategy, OriginationType, OriginatorInfo } from "@/utilities/loanGenerator";
 import { loanDatabase } from "@/utilities/loanDatabase";
 import { useRouter } from "next/navigation";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, ArrowRight } from "lucide-react";
+
+// Define a consistent color palette based on dashboard and loans pages
+const COLORS = {
+  // Primary UI colors
+  primary: "#3B82F6", // Blue primary accent (blue-500)
+  secondary: "#6B7280", // Gray secondary accent (gray-500)
+
+  // Background colors
+  bgDark: "#111827", // Card/container background (gray-900)
+  bgDarker: "#0F1629", // Map/chart background (darker than gray-900)
+  bgHeader: "rgba(31, 41, 55, 0.7)", // Header background (gray-800/70)
+  bgHover: "rgba(31, 41, 55, 0.5)", // Hover state (gray-800/50)
+  bgButton: "rgba(31, 41, 55, 0.3)", // Button background (gray-800/30)
+
+  // Border colors
+  border: "#1F2937", // Border color (gray-800)
+  borderAccent: "#3B82F6", // Accent border (blue-500)
+
+  // Text colors
+  textPrimary: "#F3F4F6", // Primary text (gray-200)
+  textSecondary: "#D1D5DB", // Secondary text (gray-300)
+  textMuted: "#6B7280", // Muted text (gray-500)
+  textAccent: "#60A5FA", // Accent text (blue-400)
+
+  // Status colors
+  status: {
+    approved: "#10B981", // Approved status (green-400)
+    approvedBg: "rgba(6, 78, 59, 0.3)", // Approved bg (green-900/30)
+    pending: "#FBBF24", // Pending/in-review status (yellow-400)
+    pendingBg: "rgba(120, 53, 15, 0.3)", // Pending bg (yellow-900/30)
+    rejected: "#F87171", // Rejected status (red-400)
+    rejectedBg: "rgba(127, 29, 29, 0.3)" // Rejected bg (red-900/30)
+  },
+};
 
 // Custom Switch component to avoid import issues
 interface SwitchProps {
@@ -145,14 +179,23 @@ export default function NewLoanPage() {
 
   return (
     <LayoutWrapper>
-      <div className="container mx-auto py-12 px-4">
-        <h1 className="text-2xl font-bold mb-6">Create New Hard Money Loan</h1>
+      <div className="container mx-auto py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-100">Create New Hard Money Loan</h1>
+          <Button 
+            onClick={() => router.push('/loans')}
+            variant="outline" 
+            className="border-gray-700 bg-gray-800/30 hover:bg-gray-800/50 text-gray-300"
+          >
+            Back to Loans
+          </Button>
+        </div>
         
         {/* Origination Type Toggle */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Loan Origination Type</CardTitle>
-            <CardDescription>
+        <Card className="mb-6 border border-gray-800 bg-gray-900 shadow-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-gray-100">Loan Origination Type</CardTitle>
+            <CardDescription className="text-gray-400">
               Select whether this loan is being originated internally or by an external partner
             </CardDescription>
           </CardHeader>
@@ -164,12 +207,12 @@ export default function NewLoanPage() {
                   checked={originationType === "external"}
                   onCheckedChange={(checked: boolean) => setOriginationType(checked ? "external" : "internal")}
                 />
-                <Label htmlFor="origination-type">
+                <Label htmlFor="origination-type" className="text-gray-200">
                   {originationType === "external" ? "External Originator" : "Internal Origination"}
                 </Label>
               </div>
-              <div className="text-sm text-gray-500 flex items-center">
-                <InfoIcon size={16} className="mr-1" />
+              <div className="text-sm text-gray-400 flex items-center">
+                <InfoIcon size={16} className="mr-1 text-blue-400" />
                 {originationType === "external" 
                   ? "Loan originated by an external partner" 
                   : "Loan originated by our company"}
@@ -181,15 +224,15 @@ export default function NewLoanPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Loan Information Form */}
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Loan Details</CardTitle>
+            <Card className="border border-gray-800 bg-gray-900 shadow-md">
+              <CardHeader className="border-b border-gray-800 bg-gray-800/70 pb-3">
+                <CardTitle className="text-gray-100">Loan Details</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="pt-6">
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label htmlFor="borrowerName">Borrower Name</Label>
+                      <Label htmlFor="borrowerName" className="text-gray-300 mb-1.5 block">Borrower Name</Label>
                       <Input
                         id="borrowerName"
                         name="borrowerName"
@@ -197,11 +240,12 @@ export default function NewLoanPage() {
                         onChange={handleInputChange}
                         placeholder=""
                         required
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="borrowerEmail">Borrower Email</Label>
+                      <Label htmlFor="borrowerEmail" className="text-gray-300 mb-1.5 block">Borrower Email</Label>
                       <Input
                         id="borrowerEmail"
                         name="borrowerEmail"
@@ -209,23 +253,24 @@ export default function NewLoanPage() {
                         onChange={handleInputChange}
                         placeholder=""
                         type="email"
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label htmlFor="borrowerExperience">Borrower Experience</Label>
+                      <Label htmlFor="borrowerExperience" className="text-gray-300 mb-1.5 block">Borrower Experience</Label>
                       <Select 
                         value={loanData.borrowerExperience || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, borrowerExperience: value }))
                         }
                       >
-                        <SelectTrigger id="borrowerExperience" className="w-full">
+                        <SelectTrigger id="borrowerExperience" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
                           <SelectValue placeholder="" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
                           <SelectItem value="Beginner (0-1 projects)">Beginner (0-1 projects)</SelectItem>
                           <SelectItem value="Intermediate (2-5 projects)">Intermediate (2-5 projects)</SelectItem>
                           <SelectItem value="Experienced (6-10 projects)">Experienced (6-10 projects)</SelectItem>
@@ -235,17 +280,17 @@ export default function NewLoanPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="loanType">Loan Type</Label>
+                      <Label htmlFor="loanType" className="text-gray-300 mb-1.5 block">Loan Type</Label>
                       <Select 
                         value={loanData.loanType || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, loanType: value as LoanType }))
                         }
                       >
-                        <SelectTrigger id="loanType" className="w-full">
+                        <SelectTrigger id="loanType" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
                           <SelectValue placeholder="" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
                           <SelectItem value="fix_and_flip">Fix and Flip</SelectItem>
                           <SelectItem value="bridge">Bridge Loan</SelectItem>
                           <SelectItem value="construction">Construction</SelectItem>
@@ -258,9 +303,9 @@ export default function NewLoanPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label htmlFor="loanAmount">Loan Amount ($)</Label>
+                      <Label htmlFor="loanAmount" className="text-gray-300 mb-1.5 block">Loan Amount ($)</Label>
                       <Input
                         id="loanAmount"
                         name="loanAmount"
@@ -269,11 +314,12 @@ export default function NewLoanPage() {
                         placeholder=""
                         type="number"
                         min="0"
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                      <Label htmlFor="interestRate" className="text-gray-300 mb-1.5 block">Interest Rate (%)</Label>
                       <Input
                         id="interestRate"
                         name="interestRate"
@@ -283,13 +329,14 @@ export default function NewLoanPage() {
                         type="number"
                         step="0.25"
                         min="0"
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label htmlFor="originationFee">Origination Fee (%)</Label>
+                      <Label htmlFor="originationFee" className="text-gray-300 mb-1.5 block">Origination Fee (%)</Label>
                       <Input
                         id="originationFee"
                         name="originationFee"
@@ -299,21 +346,22 @@ export default function NewLoanPage() {
                         type="number"
                         step="0.25"
                         min="0"
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="loanTerm">Loan Term (months)</Label>
+                      <Label htmlFor="loanTerm" className="text-gray-300 mb-1.5 block">Loan Term (months)</Label>
                       <Select 
                         value={loanData.loanTerm || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, loanTerm: value }))
                         }
                       >
-                        <SelectTrigger id="loanTerm" className="w-full">
+                        <SelectTrigger id="loanTerm" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
                           <SelectValue placeholder="" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
                           <SelectItem value="6">6 months</SelectItem>
                           <SelectItem value="9">9 months</SelectItem>
                           <SelectItem value="12">12 months</SelectItem>
@@ -325,19 +373,19 @@ export default function NewLoanPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label htmlFor="propertyType">Property Type</Label>
+                      <Label htmlFor="propertyType" className="text-gray-300 mb-1.5 block">Property Type</Label>
                       <Select 
                         value={loanData.propertyType || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, propertyType: value as PropertyType }))
                         }
                       >
-                        <SelectTrigger id="propertyType" className="w-full">
+                        <SelectTrigger id="propertyType" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
                           <SelectValue placeholder="" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
                           <SelectItem value="single_family">Single Family</SelectItem>
                           <SelectItem value="multi_family">Multi-Family</SelectItem>
                           <SelectItem value="condo">Condo</SelectItem>
@@ -351,17 +399,17 @@ export default function NewLoanPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="exitStrategy">Exit Strategy</Label>
+                      <Label htmlFor="exitStrategy" className="text-gray-300 mb-1.5 block">Exit Strategy</Label>
                       <Select 
                         value={loanData.exitStrategy || undefined} 
                         onValueChange={(value: string) => 
                           setLoanData((prev) => ({ ...prev, exitStrategy: value as ExitStrategy }))
                         }
                       >
-                        <SelectTrigger id="exitStrategy" className="w-full">
+                        <SelectTrigger id="exitStrategy" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
                           <SelectValue placeholder="" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
                           <SelectItem value="sale">Sale</SelectItem>
                           <SelectItem value="refinance">Refinance</SelectItem>
                           <SelectItem value="rental">Rental</SelectItem>
@@ -372,9 +420,9 @@ export default function NewLoanPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <Label htmlFor="purchasePrice">Purchase Price ($)</Label>
+                      <Label htmlFor="purchasePrice" className="text-gray-300 mb-1.5 block">Purchase Price ($)</Label>
                       <Input
                         id="purchasePrice"
                         name="purchasePrice"
@@ -383,11 +431,12 @@ export default function NewLoanPage() {
                         placeholder=""
                         type="number"
                         min="0"
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="afterRepairValue">After Repair Value ($)</Label>
+                      <Label htmlFor="afterRepairValue" className="text-gray-300 mb-1.5 block">After Repair Value ($)</Label>
                       <Input
                         id="afterRepairValue"
                         name="afterRepairValue"
@@ -396,23 +445,25 @@ export default function NewLoanPage() {
                         placeholder=""
                         type="number"
                         min="0"
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label htmlFor="propertyAddress">Property Address</Label>
+                    <Label htmlFor="propertyAddress" className="text-gray-300 mb-1.5 block">Property Address</Label>
                     <Input
                       id="propertyAddress"
                       name="propertyAddress"
                       value={loanData.propertyAddress}
                       onChange={handleInputChange}
                       placeholder=""
+                      className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="rehabBudget">Rehab Budget ($)</Label>
+                    <Label htmlFor="rehabBudget" className="text-gray-300 mb-1.5 block">Rehab Budget ($)</Label>
                     <Input
                       id="rehabBudget"
                       name="rehabBudget"
@@ -421,30 +472,28 @@ export default function NewLoanPage() {
                       placeholder=""
                       type="number"
                       min="0"
+                      className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
-            {/* Originator/Underwriter Information */}
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>
+          </div>
+
+          {/* Originator/Underwriter Information */}
+          <div className="lg:col-span-1">
+            <Card className="border border-gray-800 bg-gray-900 shadow-md h-full">
+              <CardHeader className="border-b border-gray-800 bg-gray-800/70 pb-3">
+                <CardTitle className="text-gray-100">
                   {originationType === "external" ? "Originator Information" : "Underwriter Information"}
                 </CardTitle>
-                <CardDescription>
-                  {originationType === "external" 
-                    ? "Information about the external originator" 
-                    : "Information about the internal underwriter"}
-                </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 {originationType === "external" ? (
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="companyName">Company Name</Label>
+                        <Label htmlFor="companyName" className="text-gray-300 mb-1.5 block">Company Name</Label>
                         <Input
                           id="companyName"
                           name="companyName"
@@ -452,10 +501,11 @@ export default function NewLoanPage() {
                           onChange={handleOriginatorInfoChange}
                           placeholder=""
                           required
+                          className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="contactName">Contact Name</Label>
+                        <Label htmlFor="contactName" className="text-gray-300 mb-1.5 block">Contact Name</Label>
                         <Input
                           id="contactName"
                           name="contactName"
@@ -463,13 +513,14 @@ export default function NewLoanPage() {
                           onChange={handleOriginatorInfoChange}
                           placeholder=""
                           required
+                          className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="contactEmail">Contact Email</Label>
+                        <Label htmlFor="contactEmail" className="text-gray-300 mb-1.5 block">Contact Email</Label>
                         <Input
                           id="contactEmail"
                           name="contactEmail"
@@ -477,22 +528,24 @@ export default function NewLoanPage() {
                           onChange={handleOriginatorInfoChange}
                           placeholder=""
                           type="email"
+                          className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </div>
                       <div>
-                        <Label htmlFor="contactPhone">Contact Phone</Label>
+                        <Label htmlFor="contactPhone" className="text-gray-300 mb-1.5 block">Contact Phone</Label>
                         <Input
                           id="contactPhone"
                           name="contactPhone"
                           value={originatorInfo.contactPhone}
                           onChange={handleOriginatorInfoChange}
                           placeholder=""
+                          className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                         />
                       </div>
                     </div>
                     
                     <div>
-                      <Label htmlFor="referralFee">Referral Fee (%)</Label>
+                      <Label htmlFor="referralFee" className="text-gray-300 mb-1.5 block">Referral Fee (%)</Label>
                       <Input
                         id="referralFee"
                         name="referralFee"
@@ -503,12 +556,13 @@ export default function NewLoanPage() {
                         step="0.25"
                         min="0"
                         max="10"
+                        className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                       />
                     </div>
                   </div>
                 ) : (
                   <div>
-                    <Label htmlFor="underwriterName">Underwriter Name</Label>
+                    <Label htmlFor="underwriterName" className="text-gray-300 mb-1.5 block">Underwriter Name</Label>
                     <Input
                       id="underwriterName"
                       name="underwriterName"
@@ -516,52 +570,41 @@ export default function NewLoanPage() {
                       onChange={(e) => setUnderwriterName(e.target.value)}
                       placeholder=""
                       required
+                      className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     />
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
+        </div>
 
-          {/* Right Column - Document Upload and Submit */}
-          <div className="lg:col-span-1">
-            {/* Document Upload Section - Only for External Originators */}
-            {originationType === "external" && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Upload Documents</CardTitle>
-                  <CardDescription>
-                    Upload required documents for this loan
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <SimpleDocumentUploader 
-                    loanId="new" 
-                    onUploadComplete={(docs) => setUploadedDocuments(docs)}
-                  />
-                </CardContent>
-              </Card>
-            )}
+        {/* Document Upload Section */}
+        <Card className="mt-6 border border-gray-800 bg-gray-900 shadow-md">
+          <CardHeader className="border-b border-gray-800 bg-gray-800/70 pb-3">
+            <CardTitle className="text-gray-100">Upload Documents</CardTitle>
+            <CardDescription className="text-gray-400">
+              Upload property photos, borrower documents, and other relevant files
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <SimpleDocumentUploader 
+              loanId="new" 
+              onUploadComplete={(docs) => setUploadedDocuments(docs)}
+            />
+          </CardContent>
+        </Card>
 
-            {/* Submit Button */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Create Loan</CardTitle>
-                <CardDescription>
-                  Review the information and create the loan
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button
-                  onClick={handleLoanCreation}
-                  className="w-full bg-blue-600 hover:bg-blue-700"
-                  disabled={loading}
-                >
-                  {loading ? "Creating..." : "Create Loan"}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+        {/* Submit Button */}
+        <div className="mt-8 flex justify-end">
+          <Button 
+            onClick={handleLoanCreation} 
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-md flex items-center"
+          >
+            {loading ? "Creating Loan..." : "Create Loan"}
+            {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+          </Button>
         </div>
       </div>
     </LayoutWrapper>
