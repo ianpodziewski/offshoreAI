@@ -3,13 +3,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Home, DollarSign, Calendar, User, TrendingUp, MapPin, Briefcase, Users } from 'lucide-react';
+import { ArrowLeft, Home, DollarSign, Calendar, User, TrendingUp, MapPin, Briefcase, Users, MessageSquare, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { COLORS } from '@/app/theme/colors';
 import LoanSidebar from '@/components/loan/LoanSidebar';
 import { LoanData, OriginatorInfo } from '@/utilities/loanGenerator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import LoanContextProvider from '@/components/LoanContextProvider';
+import LoanSpecificChat from '@/components/LoanSpecificChat';
+import ReviewProcessFlow from '@/components/ReviewProcessFlow';
 
 /**
  * Converts a string to title case (first letter of each word capitalized)
@@ -136,159 +140,183 @@ export default function LoanDetailPage() {
   };
   
   return (
-    <LayoutWrapper>
-      <div className="container mx-auto py-8 px-4">
-        <div className="mb-6">
-          <Link href="/loans">
-            <Button variant="ghost" className="mb-4" style={{ color: COLORS.textSecondary }}>
-              <ArrowLeft size={16} className="mr-2" />
-              Back to Loans
-            </Button>
-          </Link>
-          
-          <div className="p-6 rounded-lg mb-6 flex flex-col md:flex-row justify-between items-start md:items-center" 
-               style={{ backgroundColor: COLORS.bgDark }}>
-            <div>
-              <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
-                Loan #{loan.id}
-              </h1>
-              <div className="flex items-center">
-                <MapPin size={16} className="mr-2" style={{ color: COLORS.textSecondary }} />
-                <span style={{ color: COLORS.textSecondary }}>{loan.propertyAddress}</span>
+    <LoanContextProvider initialLoanId={loan.id}>
+      <LayoutWrapper>
+        <div className="container mx-auto py-8 px-4">
+          <div className="mb-6">
+            <Link href="/loans">
+              <Button variant="ghost" className="mb-4" style={{ color: COLORS.textSecondary }}>
+                <ArrowLeft size={16} className="mr-2" />
+                Back to Loans
+              </Button>
+            </Link>
+            
+            <div className="p-6 rounded-lg mb-6 flex flex-col md:flex-row justify-between items-start md:items-center" 
+                style={{ backgroundColor: COLORS.bgDark }}>
+              <div>
+                <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+                  Loan #{loan.id}
+                </h1>
+                <div className="flex items-center">
+                  <MapPin size={16} className="mr-2" style={{ color: COLORS.textSecondary }} />
+                  <span style={{ color: COLORS.textSecondary }}>{loan.propertyAddress}</span>
+                </div>
+              </div>
+              <div className="mt-4 md:mt-0">
+                {getStatusDisplay(loan.status)}
               </div>
             </div>
-            <div className="mt-4 md:mt-0">
-              {getStatusDisplay(loan.status)}
-            </div>
-          </div>
-        
-          <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
-            {/* Key Loan Details */}
-            <Section title="Key Loan Details" icon={<DollarSign size={20} />}>
-              <InfoItem 
-                label="Loan Amount" 
-                value={`$${loan.loanAmount.toLocaleString()}`} 
-              />
-              <InfoItem 
-                label="Interest Rate" 
-                value={`${loan.interestRate}%`}
-              />
-              <InfoItem 
-                label="Loan Term" 
-                value={`${loan.loanTerm} months`}
-              />
-              <InfoItem 
-                label="Origination Fee" 
-                value={`${loan.originationFee}%`}
-              />
-              <InfoItem 
-                label="Loan Type" 
-                value={toTitleCase(loan.loanType)}
-              />
-              <InfoItem 
-                label="Exit Strategy" 
-                value={toTitleCase(loan.exitStrategy)}
-              />
-            </Section>
-
-            {/* Property Information */}
-            <Section title="Property Information" icon={<Home size={20} />}>
-              <InfoItem 
-                label="Property Type" 
-                value={toTitleCase(loan.propertyType)}
-              />
-              <InfoItem 
-                label="Purchase Price" 
-                value={`$${loan.purchasePrice.toLocaleString()}`}
-              />
-              <InfoItem 
-                label="After Repair Value" 
-                value={`$${loan.afterRepairValue.toLocaleString()}`}
-              />
-              <InfoItem 
-                label="Rehab Budget" 
-                value={`$${loan.rehabBudget.toLocaleString()}`}
-              />
-            </Section>
-
-            {/* Loan Metrics */}
-            <Section title="Loan Metrics" icon={<TrendingUp size={20} />}>
-              <InfoItem 
-                label="Loan-to-Value (LTV)" 
-                value={`${loan.ltv}%`}
-              />
-              <InfoItem 
-                label="After-Repair LTV" 
-                value={`${loan.arv_ltv}%`}
-              />
-            </Section>
-
-            {/* Parties */}
-            <Section title="Parties" icon={<User size={20} />}>
-              <InfoItem 
-                label="Borrower" 
-                value={loan.borrowerName}
-              />
-              <InfoItem 
-                label="Borrower Experience" 
-                value={loan.borrowerExperience}
-              />
-              {loan.lender && (
-                <InfoItem 
-                  label="Lender" 
-                  value={loan.lender}
-                />
-              )}
-            </Section>
-
-            {/* Dates */}
-            {(loan.fundingDate || loan.maturityDate) && (
-              <Section title="Important Dates" icon={<Calendar size={20} />}>
-                {loan.fundingDate && (
-                  <InfoItem 
-                    label="Funding Date" 
-                    value={new Date(loan.fundingDate).toLocaleDateString()}
-                  />
-                )}
-                {loan.maturityDate && (
-                  <InfoItem 
-                    label="Maturity Date" 
-                    value={new Date(loan.maturityDate).toLocaleDateString()}
-                  />
-                )}
-              </Section>
-            )}
-
-            {/* Originator Information */}
-            {loan?.originationType && (
-              <Section 
-                title={loan.originationType === 'external' ? 'External Originator' : 'Internal Underwriter'} 
-                icon={loan.originationType === 'external' ? <Briefcase size={20} /> : <Users size={20} />}
-              >
-                {loan.originationType === 'external' && loan.originatorInfo ? (
-                  <>
-                    <InfoItem label="Company Name" value={loan.originatorInfo.companyName || 'N/A'} />
-                    <InfoItem label="Contact Name" value={loan.originatorInfo.contactName || 'N/A'} />
-                    <InfoItem label="Contact Email" value={loan.originatorInfo.contactEmail || 'N/A'} />
-                    <InfoItem label="Contact Phone" value={loan.originatorInfo.contactPhone || 'N/A'} />
+          
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="mb-6">
+                <TabsTrigger value="details">Loan Details</TabsTrigger>
+                <TabsTrigger value="review">Review Process</TabsTrigger>
+                <TabsTrigger value="chat">Loan Assistant</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="details">
+                <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
+                  {/* Key Loan Details */}
+                  <Section title="Key Loan Details" icon={<DollarSign size={20} />}>
                     <InfoItem 
-                      label="Referral Fee" 
-                      value={loan.originatorInfo.referralFee ? `${loan.originatorInfo.referralFee}%` : 'N/A'} 
+                      label="Loan Amount" 
+                      value={`$${loan.loanAmount.toLocaleString()}`} 
                     />
-                  </>
-                ) : loan.originationType === 'internal' && loan.underwriterName ? (
-                  <InfoItem label="Underwriter" value={loan.underwriterName} />
-                ) : (
-                  <InfoItem label="Information" value="No additional information available" />
-                )}
-              </Section>
-            )}
+                    <InfoItem 
+                      label="Interest Rate" 
+                      value={`${loan.interestRate}%`}
+                    />
+                    <InfoItem 
+                      label="Loan Term" 
+                      value={`${loan.loanTerm} months`}
+                    />
+                    <InfoItem 
+                      label="Origination Fee" 
+                      value={`${loan.originationFee}%`}
+                    />
+                    <InfoItem 
+                      label="Loan Type" 
+                      value={toTitleCase(loan.loanType)}
+                    />
+                    <InfoItem 
+                      label="Exit Strategy" 
+                      value={toTitleCase(loan.exitStrategy)}
+                    />
+                  </Section>
+
+                  {/* Property Information */}
+                  <Section title="Property Information" icon={<Home size={20} />}>
+                    <InfoItem 
+                      label="Property Type" 
+                      value={toTitleCase(loan.propertyType)}
+                    />
+                    <InfoItem 
+                      label="Purchase Price" 
+                      value={`$${loan.purchasePrice.toLocaleString()}`}
+                    />
+                    <InfoItem 
+                      label="After Repair Value" 
+                      value={`$${loan.afterRepairValue.toLocaleString()}`}
+                    />
+                    <InfoItem 
+                      label="Rehab Budget" 
+                      value={`$${loan.rehabBudget.toLocaleString()}`}
+                    />
+                  </Section>
+
+                  {/* Loan Metrics */}
+                  <Section title="Loan Metrics" icon={<TrendingUp size={20} />}>
+                    <InfoItem 
+                      label="Loan-to-Value (LTV)" 
+                      value={`${loan.ltv}%`}
+                    />
+                    <InfoItem 
+                      label="After-Repair LTV" 
+                      value={`${loan.arv_ltv}%`}
+                    />
+                  </Section>
+
+                  {/* Parties */}
+                  <Section title="Parties" icon={<User size={20} />}>
+                    <InfoItem 
+                      label="Borrower" 
+                      value={loan.borrowerName}
+                    />
+                    <InfoItem 
+                      label="Borrower Experience" 
+                      value={loan.borrowerExperience}
+                    />
+                    {loan.lender && (
+                      <InfoItem 
+                        label="Lender" 
+                        value={loan.lender}
+                      />
+                    )}
+                  </Section>
+
+                  {/* Dates */}
+                  {(loan.fundingDate || loan.maturityDate) && (
+                    <Section title="Important Dates" icon={<Calendar size={20} />}>
+                      {loan.fundingDate && (
+                        <InfoItem 
+                          label="Funding Date" 
+                          value={new Date(loan.fundingDate).toLocaleDateString()}
+                        />
+                      )}
+                      {loan.maturityDate && (
+                        <InfoItem 
+                          label="Maturity Date" 
+                          value={new Date(loan.maturityDate).toLocaleDateString()}
+                        />
+                      )}
+                    </Section>
+                  )}
+
+                  {/* Originator Information */}
+                  {loan?.originationType && (
+                    <Section 
+                      title={loan.originationType === 'external' ? 'External Originator' : 'Internal Underwriter'} 
+                      icon={loan.originationType === 'external' ? <Briefcase size={20} /> : <Users size={20} />}
+                    >
+                      {loan.originationType === 'external' && loan.originatorInfo ? (
+                        <>
+                          <InfoItem label="Company Name" value={loan.originatorInfo.companyName || 'N/A'} />
+                          <InfoItem label="Contact Name" value={loan.originatorInfo.contactName || 'N/A'} />
+                          <InfoItem label="Contact Email" value={loan.originatorInfo.contactEmail || 'N/A'} />
+                          <InfoItem label="Contact Phone" value={loan.originatorInfo.contactPhone || 'N/A'} />
+                          <InfoItem 
+                            label="Referral Fee" 
+                            value={loan.originatorInfo.referralFee ? `${loan.originatorInfo.referralFee}%` : 'N/A'} 
+                          />
+                        </>
+                      ) : loan.originationType === 'internal' && loan.underwriterName ? (
+                        <InfoItem label="Underwriter" value={loan.underwriterName} />
+                      ) : (
+                        <InfoItem label="Information" value="No additional information available" />
+                      )}
+                    </Section>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="review">
+                <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
+                  <ReviewProcessFlow />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="chat">
+                <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
+                  <LoanSpecificChat />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
-      </div>
-      
-      {/* Sidebar Navigation */}
-      <LoanSidebar loanId={loan.id} />
-    </LayoutWrapper>
+        
+        {/* Sidebar Navigation */}
+        <LoanSidebar loanId={loan.id} />
+      </LayoutWrapper>
+    </LoanContextProvider>
   );
 }

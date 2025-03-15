@@ -12,7 +12,11 @@ import Link from 'next/link';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import LayoutWrapper from '@/app/layout-wrapper';
 
-export default function ChatWithContext() {
+interface ChatWithContextProps {
+  loanSpecificContext?: string;
+}
+
+export default function ChatWithContext({ loanSpecificContext }: ChatWithContextProps) {
   const {
     messages,
     handleInputChange,
@@ -28,6 +32,15 @@ export default function ChatWithContext() {
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [showAllChatDocs, setShowAllChatDocs] = useState(false);
   const [showAllLoanDocs, setShowAllLoanDocs] = useState(false);
+  
+  // Use loan-specific context if provided
+  useEffect(() => {
+    if (loanSpecificContext) {
+      // Instead of using setAdditionalContext, we'll handle this differently
+      // We'll let the LoanSpecificChat component handle sending the context
+      console.log("Loan context available:", loanSpecificContext.substring(0, 50) + "...");
+    }
+  }, [loanSpecificContext]);
   
   // Function to fetch documents with special handling for the problematic document
   const fetchDocuments = useCallback(async () => {
