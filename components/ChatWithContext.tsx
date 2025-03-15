@@ -14,9 +14,10 @@ import LayoutWrapper from '@/app/layout-wrapper';
 
 interface ChatWithContextProps {
   loanSpecificContext?: string;
+  isLoanSpecific?: boolean; // New prop to determine if this is a loan-specific chat
 }
 
-export default function ChatWithContext({ loanSpecificContext }: ChatWithContextProps) {
+export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = false }: ChatWithContextProps) {
   const {
     messages,
     handleInputChange,
@@ -83,7 +84,7 @@ export default function ChatWithContext({ loanSpecificContext }: ChatWithContext
       // Otherwise, split into chat and loan documents as before
       if (loanSpecificContext) {
         // Extract loan ID from the context (assuming it's in the format "Active Loan: LOAN_ID")
-        const loanIdMatch = loanSpecificContext.match(/Active Loan: ([A-Z0-9]+)/);
+        const loanIdMatch = loanSpecificContext.match(/Active Loan: ([A-Z0-9-]+)/);
         const loanId = loanIdMatch ? loanIdMatch[1] : null;
         
         if (loanId) {
@@ -265,6 +266,35 @@ export default function ChatWithContext({ loanSpecificContext }: ChatWithContext
     );
   };
 
+  // Render a simplified version for loan-specific chat
+  if (isLoanSpecific) {
+    return (
+      <div className="flex flex-col h-full">
+        {/* Chat Container */}
+        <div className="flex flex-col h-[calc(100vh-220px)] bg-gray-900 rounded-lg border border-gray-800 shadow-lg overflow-hidden">
+          {/* Messages container */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <ChatContainer messages={messages}>
+              <ChatMessages messages={messages} indicatorState={indicatorState} />
+            </ChatContainer>
+          </div>
+          
+          {/* Input area */}
+          <div className="flex-shrink-0 p-3 border-t border-gray-800 bg-gray-900">
+            <ChatInput
+              handleInputChange={handleInputChange}
+              handleSubmit={handleSubmit}
+              input={input}
+              isLoading={isLoading}
+              onUploadComplete={fetchDocuments}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Original full layout for the main chat assistant
   return (
     <LayoutWrapper>
       {/* Removed the container's top padding to reduce the gap */}

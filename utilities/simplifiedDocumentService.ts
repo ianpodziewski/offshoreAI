@@ -55,6 +55,27 @@ function classifyDocument(filename: string): {
   return { docType: 'general_document', category: 'misc' };
 }
 
+// Helper function to read file as base64
+function readFileAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Failed to convert file to base64'));
+      }
+    };
+    
+    reader.onerror = () => reject(reader.error);
+    
+    // Use readAsDataURL instead of readAsArrayBuffer for PDFs
+    reader.readAsDataURL(file);
+  });
+}
+
+// Create and export the document service
 export const simpleDocumentService = {
   // Get all documents
   getAllDocuments: (): SimpleDocument[] => {
@@ -368,25 +389,51 @@ export const simpleDocumentService = {
   // Clear all documents (for testing)
   clearAllDocuments: (): void => {
     localStorage.removeItem(STORAGE_KEY);
+  },
+  
+  // Update a document directly
+  updateDocument: (document: SimpleDocument): void => {
+    try {
+      const allDocs = simpleDocumentService.getAllDocuments();
+      const index = allDocs.findIndex(d => d.id === document.id);
+      
+      if (index !== -1) {
+        allDocs[index] = document;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
+      }
+    } catch (error) {
+      console.error('Error updating document:', error);
+    }
+  },
+  
+  // Sync loan documents with the chat
+  syncLoanDocumentsWithChat: (loanId: string): SimpleDocument[] => {
+    try {
+      // Get all documents
+      const allDocs = simpleDocumentService.getAllDocuments();
+      
+      // Find documents for this loan
+      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
+      
+      // Ensure each loan document is properly tagged for the chat
+      loanDocs.forEach(doc => {
+        // Make sure the document has the correct loanId
+        doc.loanId = loanId;
+        
+        // Update the document in storage
+        const index = allDocs.findIndex(d => d.id === doc.id);
+        if (index !== -1) {
+          allDocs[index] = doc;
+        }
+      });
+      
+      // Save all updates at once
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
+      
+      return loanDocs;
+    } catch (error) {
+      console.error('Error syncing loan documents with chat:', error);
+      return [];
+    }
   }
 };
-
-// Helper function to read file as base64
-function readFileAsBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('Failed to convert file to base64'));
-      }
-    };
-    
-    reader.onerror = () => reject(reader.error);
-    
-    // Use readAsDataURL instead of readAsArrayBuffer for PDFs
-    reader.readAsDataURL(file);
-  });
-}
