@@ -7,57 +7,10 @@ import ChatContainer from "@/components/ChatContainer";
 import useApp from "@/hooks/use-app";
 import ChatHeader from "@/components/chat/header";
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { FileText, Eye, ExternalLink, ChevronRight, HelpCircle, FileQuestion, AlertCircle, BookOpen } from 'lucide-react';
+import { FileText, Eye, ExternalLink, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import LayoutWrapper from '@/app/layout-wrapper';
-import { Button } from '@/components/ui/button';
-import ChatSidebar from '@/components/chat/sidebar';
-
-// Quick Suggestions Component
-const QuickSuggestions = ({ onSuggestionClick }: { onSuggestionClick: (suggestion: string) => void }) => {
-  const suggestions = [
-    { 
-      text: "Document requirements", 
-      icon: <FileQuestion className="w-4 h-4 mr-2" />,
-      query: "What documents are required for a hard money loan application?"
-    },
-    { 
-      text: "Common errors in loan documents", 
-      icon: <AlertCircle className="w-4 h-4 mr-2" />,
-      query: "What are common errors to avoid in loan documents?"
-    },
-    { 
-      text: "Regulatory guidelines", 
-      icon: <BookOpen className="w-4 h-4 mr-2" />,
-      query: "What regulatory guidelines should I be aware of for hard money loans?"
-    },
-    { 
-      text: "Review best practices", 
-      icon: <HelpCircle className="w-4 h-4 mr-2" />,
-      query: "What are best practices for reviewing loan applications?"
-    }
-  ];
-
-  return (
-    <div className="mb-6 mt-2">
-      <h3 className="text-sm font-medium text-gray-400 mb-3">Ask the assistant about:</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        {suggestions.map((suggestion, index) => (
-          <Button
-            key={index}
-            variant="outline"
-            className="flex items-center justify-start border-gray-700 bg-gray-800/30 hover:bg-gray-800/70 text-gray-300 text-sm"
-            onClick={() => onSuggestionClick(suggestion.query)}
-          >
-            {suggestion.icon}
-            <span>{suggestion.text}</span>
-          </Button>
-        ))}
-      </div>
-    </div>
-  );
-};
 
 export default function ChatWithContext() {
   const {
@@ -184,72 +137,236 @@ export default function ChatWithContext() {
       console.error('Error clearing chat documents:', error);
     }
   }, [fetchDocuments]);
-
-  // Add this function to handle suggestion clicks
-  const handleSuggestionClick = (suggestion: string) => {
-    handleInputChange({ target: { value: suggestion } } as React.ChangeEvent<HTMLInputElement>);
-    // Use setTimeout to allow the input to update before submitting
-    setTimeout(() => {
-      handleSubmit(suggestion);
-    }, 100);
+  
+  // Get appropriate link and icon for a document
+  const getDocumentActionLink = (doc: any) => {
+    if (doc.category === 'chat' || doc.loanId === 'chat-uploads') {
+      return {
+        href: `#document-${doc.id}`,
+        text: 'Preview',
+        icon: <ExternalLink size={10} className="mr-1" />
+      };
+    }
+    
+    return {
+      href: `/loans/${doc.loanId}`,
+      text: 'View Loan',
+      icon: <Eye size={10} className="mr-1" />
+    };
   };
   
-  // Function to get document action link
-  const getDocumentActionLink = useCallback((doc: any) => {
-    if (doc.category === 'chat' || doc.loanId === 'chat-uploads') {
-      return `/documents/${doc.id}`;
-    } else {
-      return `/loans/${doc.loanId}/documents/${doc.id}`;
-    }
-  }, []);
+  // Render document list item
+  const renderDocumentItem = (doc: any) => (
+    <li key={doc.id} className="text-xs border border-gray-800 rounded p-2 hover:bg-gray-800/50 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center max-w-[80%]">
+          <FileText size={12} className="text-gray-400 mr-2 flex-shrink-0" />
+          <span className="truncate font-medium text-gray-300" title={doc.filename}>
+            {doc.filename.length > 25 
+              ? doc.filename.substring(0, 22) + '...' 
+              : doc.filename}
+          </span>
+        </div>
+        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+          doc.status === 'approved' 
+            ? 'bg-green-900/30 text-green-400' 
+            : doc.status === 'rejected'
+            ? 'bg-red-900/30 text-red-400'
+            : 'bg-yellow-900/30 text-yellow-400'
+        }`}>
+          {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+        </span>
+      </div>
+      <div className="mt-1 flex justify-between items-center">
+        <span className="text-xs text-gray-500 truncate">
+          {new Date(doc.dateUploaded).toLocaleDateString()}
+        </span>
+        {doc.category === 'chat' || doc.loanId === 'chat-uploads' ? (
+          <span className="text-xs text-blue-400 italic">
+            Chat Document
+          </span>
+        ) : (
+          <Link 
+            href={getDocumentActionLink(doc).href}
+            className="text-xs text-blue-400 hover:underline flex items-center"
+          >
+            {getDocumentActionLink(doc).icon}
+            {getDocumentActionLink(doc).text}
+          </Link>
+        )}
+      </div>
+    </li>
+  );
+  
+  // Render document section with title, list, and "More +" button
+  const renderDocumentSection = (title: string, documents: any[], showAll: boolean, setShowAll: React.Dispatch<React.SetStateAction<boolean>>) => {
+    const displayDocs = showAll ? documents : documents.slice(0, 3);
+    const hasMore = documents.length > 3;
+    
+    return (
+      <div className="mb-4">
+        {/* Section header with improved styling */}
+        <div className="bg-gray-800/70 px-3 py-2 rounded-md mb-3 border-l-2 border-blue-500">
+          <h3 className="text-xs font-medium text-gray-200">{title}</h3>
+        </div>
+        
+        {displayDocs.length > 0 ? (
+          <>
+            <ul className="space-y-2">
+              {displayDocs.map(renderDocumentItem)}
+            </ul>
+            {hasMore && (
+              <button 
+                onClick={() => setShowAll(!showAll)}
+                className="text-xs text-blue-400 hover:underline mt-2 flex items-center justify-center w-full py-1 px-2 bg-gray-800/30 rounded-md"
+              >
+                {showAll ? 'Show Less' : 'More +'}
+                <ChevronRight size={12} className={`ml-1 transition-transform ${showAll ? 'rotate-90' : ''}`} />
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+            <p>No {title.toLowerCase()} available</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <LayoutWrapper>
-      <div className="container mx-auto py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main Chat Area */}
-          <div className="lg:col-span-3">
-            <Card className="border border-gray-800 bg-gray-900 shadow-md h-[calc(100vh-10rem)]">
-              <ChatHeader clearMessages={clearMessages} />
-              <CardContent className="p-0 h-[calc(100%-4rem)]">
+      {/* Removed the container's top padding to reduce the gap */}
+      <div className="container mx-auto px-4 py-0"> {/* Changed py-4 to py-0 */}
+        <div className="flex gap-6 mt-2"> {/* Added a small mt-2 instead */}
+          {/* Main chat area with bubble header */}
+          <div className="w-3/4 flex flex-col">
+            {/* Chat Header with bubble */}
+            <ChatHeader 
+              clearMessages={clearMessages} 
+              clearChatDocuments={clearChatDocuments}
+            />
+            
+            {/* Chat Container - FIXED LAYOUT */}
+            <div className="flex flex-col h-[calc(100vh-180px)] bg-gray-900 rounded-lg border border-gray-800 shadow-lg overflow-hidden"> {/* Increased height by reducing 220px to 180px */}
+              {/* Messages container - make sure it fills available space */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {/* Pass messages directly to ChatContainer */}
                 <ChatContainer messages={messages}>
-                  {messages.length === 0 ? (
-                    <div className="flex flex-col h-full justify-center items-center p-6">
-                      <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-4">
-                        <HelpCircle className="h-8 w-8 text-blue-400" />
-                      </div>
-                      <h2 className="text-xl font-semibold text-gray-200 mb-2">Loan Underwriting Assistant</h2>
-                      <p className="text-gray-400 text-center max-w-md mb-6">
-                        Ask questions about loan documents, underwriting requirements, or upload documents for analysis.
-                      </p>
-                      
-                      {/* Add Quick Suggestions here */}
-                      <QuickSuggestions onSuggestionClick={handleSuggestionClick} />
-                    </div>
-                  ) : (
-                    <ChatMessages messages={messages} indicatorState={indicatorState} />
-                  )}
+                  <ChatMessages messages={messages} indicatorState={indicatorState} />
                 </ChatContainer>
-              </CardContent>
-              <div className="p-4 border-t border-gray-800">
+              </div>
+              
+              {/* Input area - fixed at bottom */}
+              <div className="flex-shrink-0 p-3 border-t border-gray-800 bg-gray-900">
                 <ChatInput
-                  input={input}
                   handleInputChange={handleInputChange}
                   handleSubmit={handleSubmit}
+                  input={input}
                   isLoading={isLoading}
+                  onUploadComplete={fetchDocuments}
                 />
               </div>
-            </Card>
+            </div>
           </div>
-
-          {/* Documents Sidebar */}
-          <div className="lg:col-span-1">
-            <ChatSidebar 
-              chatDocuments={chatDocuments}
-              loanDocuments={loanDocuments}
-              loadingDocs={loadingDocs}
-              getDocumentActionLink={getDocumentActionLink}
-            />
+          <div className="w-1/4">
+            <Card className="shadow-lg border-gray-800 bg-gray-900 h-full">
+              <CardHeader className="bg-gray-800/70 border-b border-gray-800 py-3">
+                <CardTitle className="text-sm font-medium text-gray-200 flex items-center">
+                  <FileText size={16} className="mr-2 text-blue-400" />
+                  Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                {loadingDocs ? (
+                  <div className="py-8 text-center">
+                    <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-xs text-gray-400">Loading documents...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Chat Documents Section */}
+                    <div className="mb-5 mt-2">
+                      <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
+                        <h3 className="text-xs font-medium text-gray-200">Chat Uploads</h3>
+                      </div>
+                      
+                      {chatDocuments.length > 0 ? (
+                        <>
+                          <ul className="space-y-2.5">
+                            {(showAllChatDocs ? chatDocuments : chatDocuments.slice(0, 3)).map(renderDocumentItem)}
+                          </ul>
+                          {chatDocuments.length > 3 && (
+                            <button 
+                              onClick={() => setShowAllChatDocs(!showAllChatDocs)}
+                              className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
+                            >
+                              {showAllChatDocs ? 'Show Less' : 'More +'}
+                              <ChevronRight size={12} className={`ml-1 transition-transform ${showAllChatDocs ? 'rotate-90' : ''}`} />
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+                          <p>No chat uploads available</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Loan Documents Section */}
+                    <div className="mb-5">
+                      <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
+                        <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
+                      </div>
+                      
+                      {loanDocuments.length > 0 ? (
+                        <>
+                          <ul className="space-y-2.5">
+                            {(showAllLoanDocs ? loanDocuments : loanDocuments.slice(0, 3)).map(renderDocumentItem)}
+                          </ul>
+                          {loanDocuments.length > 3 && (
+                            <button 
+                              onClick={() => setShowAllLoanDocs(!showAllLoanDocs)}
+                              className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
+                            >
+                              {showAllLoanDocs ? 'Show Less' : 'More +'}
+                              <ChevronRight size={12} className={`ml-1 transition-transform ${showAllLoanDocs ? 'rotate-90' : ''}`} />
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
+                          <p>No loan documents available</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Help section */}
+                    <div className="mt-6 text-xs text-gray-400 p-4 bg-gray-800/50 rounded-md border-l-2 border-blue-500">
+                      <p className="font-medium mb-3">Ask the assistant about:</p>
+                      <ul className="space-y-2.5 pl-4">
+                        <li className="flex items-start">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                          Document requirements
+                        </li>
+                        <li className="flex items-start">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                          Common errors in loan documents
+                        </li>
+                        <li className="flex items-start">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                          Regulatory guidelines
+                        </li>
+                        <li className="flex items-start">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                          Review best practices
+                        </li>
+                      </ul>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

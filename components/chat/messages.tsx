@@ -64,11 +64,9 @@ const AssistantMessage = memo(({ message }: { message: DisplayMessage }) => {
       <motion.div
         whileHover={{ scale: 1.01 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className="px-4 py-3 bg-gray-800/90 rounded-2xl text-white max-w-[85%] shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-700"
+        className="px-4 py-3 bg-gray-800 rounded-2xl text-white max-w-[80%] shadow-md hover:shadow-lg transition-shadow duration-300"
       >
-        <div className="prose prose-invert max-w-none">
-          <Formatting message={message} />
-        </div>
+        <Formatting message={message} />
       </motion.div>
     </motion.div>
   );
