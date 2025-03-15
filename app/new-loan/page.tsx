@@ -13,7 +13,7 @@ import SimpleDocumentUploader from "@/components/document/SimpleDocumentUploader
 import { LoanType, PropertyType, ExitStrategy, OriginationType, OriginatorInfo } from "@/utilities/loanGenerator";
 import { loanDatabase } from "@/utilities/loanDatabase";
 import { useRouter } from "next/navigation";
-import { InfoIcon, ArrowRight } from "lucide-react";
+import { InfoIcon, ArrowRight, Check, FileText, AlertCircle } from "lucide-react";
 
 // Define a consistent color palette based on dashboard and loans pages
 const COLORS = {
@@ -122,7 +122,9 @@ export default function NewLoanPage() {
   const [underwriterName, setUnderwriterName] = useState("");
   
   // Document upload state
-  const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([]);
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [documentError, setDocumentError] = useState<string | null>(null);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -138,43 +140,102 @@ export default function NewLoanPage() {
     setOriginatorInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleLoanCreation = () => {
+  // Handle document drag and drop
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      
+      if (droppedFile.type !== "application/pdf") {
+        setDocumentError("Please drop a PDF file");
+        return;
+      }
+      
+      setDocumentFile(droppedFile);
+      setDocumentError(null);
+    }
+  };
+
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      
+      if (selectedFile.type !== "application/pdf") {
+        setDocumentError("Please select a PDF file");
+        setDocumentFile(null);
+        return;
+      }
+      
+      setDocumentFile(selectedFile);
+      setDocumentError(null);
+    }
+  };
+
+  const handleLoanCreation = async () => {
     setLoading(true);
 
-    // Create a new loan with the entered data
-    const newLoan = loanDatabase.addLoan({
-      ...loanDatabase.generateLoan(), // generate default values
-      borrowerName: loanData.borrowerName,
-      borrowerEmail: loanData.borrowerEmail || "",
-      borrowerExperience: loanData.borrowerExperience || "Beginner (0-1 projects)",
-      loanAmount: parseFloat(loanData.loanAmount) || 250000,
-      interestRate: parseFloat(loanData.interestRate) || 10,
-      originationFee: parseFloat(loanData.originationFee) || 3,
-      loanTerm: parseInt(loanData.loanTerm) || 12,
-      loanType: loanData.loanType || "fix_and_flip",
-      propertyAddress: loanData.propertyAddress,
-      propertyType: loanData.propertyType || "single_family",
-      purchasePrice: parseFloat(loanData.purchasePrice) || 0,
-      afterRepairValue: parseFloat(loanData.afterRepairValue) || 0,
-      rehabBudget: parseFloat(loanData.rehabBudget) || 0,
-      exitStrategy: loanData.exitStrategy || "sale",
-      originationType: originationType,
-      // Add originator info if external
-      originatorInfo: originationType === "external" ? {
-        companyName: originatorInfo.companyName || "",
-        contactName: originatorInfo.contactName || "",
-        contactEmail: originatorInfo.contactEmail || "",
-        contactPhone: originatorInfo.contactPhone || "",
-        referralFee: parseFloat(originatorInfo.referralFee?.toString() || "0") || 0,
-      } : undefined,
-      // Add underwriter name if internal
-      underwriterName: originationType === "internal" ? underwriterName : undefined,
-    });
+    try {
+      // Create a new loan with the entered data
+      const newLoan = loanDatabase.addLoan({
+        ...loanDatabase.generateLoan(), // generate default values
+        borrowerName: loanData.borrowerName,
+        borrowerEmail: loanData.borrowerEmail || "",
+        borrowerExperience: loanData.borrowerExperience || "Beginner (0-1 projects)",
+        loanAmount: parseFloat(loanData.loanAmount) || 250000,
+        interestRate: parseFloat(loanData.interestRate) || 10,
+        originationFee: parseFloat(loanData.originationFee) || 3,
+        loanTerm: parseInt(loanData.loanTerm) || 12,
+        loanType: loanData.loanType || "fix_and_flip",
+        propertyAddress: loanData.propertyAddress,
+        propertyType: loanData.propertyType || "single_family",
+        purchasePrice: parseFloat(loanData.purchasePrice) || 0,
+        afterRepairValue: parseFloat(loanData.afterRepairValue) || 0,
+        rehabBudget: parseFloat(loanData.rehabBudget) || 0,
+        exitStrategy: loanData.exitStrategy || "sale",
+        originationType: originationType,
+        // Add originator info if external
+        originatorInfo: originationType === "external" ? {
+          companyName: originatorInfo.companyName || "",
+          contactName: originatorInfo.contactName || "",
+          contactEmail: originatorInfo.contactEmail || "",
+          contactPhone: originatorInfo.contactPhone || "",
+          referralFee: parseFloat(originatorInfo.referralFee?.toString() || "0") || 0,
+        } : undefined,
+        // Add underwriter name if internal
+        underwriterName: originationType === "internal" ? underwriterName : undefined,
+      });
 
-    setLoading(false);
+      // Process document if one was uploaded
+      if (documentFile) {
+        try {
+          // Import the document service dynamically to avoid issues
+          const { simpleDocumentService } = await import('@/utilities/simplifiedDocumentService');
+          await simpleDocumentService.addDocument(documentFile, newLoan.id);
+        } catch (docError) {
+          console.error("Error processing document:", docError);
+          // Continue with loan creation even if document processing fails
+        }
+      }
 
-    // Redirect to the loan details page
-    router.push(`/loans/${newLoan.id}`);
+      // Redirect to the loan details page
+      router.push(`/loans/${newLoan.id}`);
+    } catch (error) {
+      console.error("Error creating loan:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -579,19 +640,84 @@ export default function NewLoanPage() {
           </div>
         </div>
 
-        {/* Document Upload Section */}
+        {/* Document Upload Section - Simplified */}
         <Card className="mt-6 border border-gray-800 bg-gray-900 shadow-md">
           <CardHeader className="border-b border-gray-800 bg-gray-800/70 pb-3">
-            <CardTitle className="text-gray-100">Upload Documents</CardTitle>
+            <CardTitle className="text-gray-100">Upload Document</CardTitle>
             <CardDescription className="text-gray-400">
-              Upload property photos, borrower documents, and other relevant files
+              Upload property photos, borrower documents, or other relevant files
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
-            <SimpleDocumentUploader 
-              loanId="new" 
-              onUploadComplete={(docs) => setUploadedDocuments(docs)}
-            />
+            <div 
+              className={`border-2 border-dashed rounded-lg p-6 text-center ${
+                isDragging 
+                  ? 'border-blue-500 bg-blue-500/10' 
+                  : documentFile 
+                    ? 'border-green-500 bg-green-500/10' 
+                    : 'border-gray-700 bg-gray-800/30'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <input 
+                type="file" 
+                id="file-upload"
+                accept=".pdf" 
+                onChange={handleFileChange} 
+                className="hidden" 
+              />
+              <label 
+                htmlFor="file-upload" 
+                className="flex flex-col items-center cursor-pointer"
+              >
+                {documentFile ? (
+                  <>
+                    <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-3">
+                      <Check className="h-8 w-8 text-green-400" />
+                    </div>
+                    <p className="text-lg font-medium text-gray-200 mb-1">{documentFile.name}</p>
+                    <p className="text-sm text-gray-400 mb-4">
+                      {(documentFile.size / 1024).toFixed(2)} KB - PDF document
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      className="border-gray-700 bg-gray-800/50 hover:bg-gray-800/70 text-gray-300"
+                    >
+                      Change File
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-3">
+                      <FileText className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-lg font-medium text-gray-200 mb-1">
+                      {isDragging ? "Drop PDF here" : "Drop your document here"}
+                    </p>
+                    <p className="text-sm text-gray-400 mb-4">
+                      Upload a PDF document (optional)
+                    </p>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      className="border-gray-700 bg-gray-800/50 hover:bg-gray-800/70 text-gray-300"
+                    >
+                      Select PDF File
+                    </Button>
+                  </>
+                )}
+              </label>
+            </div>
+            
+            {documentError && (
+              <div className="mt-4 p-3 bg-red-900/30 text-red-400 rounded-md flex items-center">
+                <AlertCircle size={16} className="mr-2" />
+                <p>{documentError}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
