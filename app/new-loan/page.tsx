@@ -86,6 +86,75 @@ const Switch: React.FC<SwitchProps> = ({ id, checked, onCheckedChange, disabled 
   );
 };
 
+// Add this function to calculate recommended loan parameters based on loan type
+const getLoanParameters = (loanType: string) => {
+  switch(loanType) {
+    case 'fix_and_flip':
+      return {
+        minAmount: 100000,
+        maxAmount: 2500000,
+        maxLTV: 75,
+        term: "6-24 months",
+        minRate: 9.75,
+        points: "2-3",
+        minCreditScore: 650
+      };
+    case 'rental_brrrr':
+      return {
+        minAmount: 100000,
+        maxAmount: 3000000,
+        maxLTV: 75,
+        term: "12-36 months",
+        minRate: 8.75,
+        points: "1.5-2.5",
+        minCreditScore: 680,
+        minDSCR: 1.25
+      };
+    case 'bridge':
+      return {
+        minAmount: 250000,
+        maxAmount: 5000000,
+        maxLTV: 70,
+        term: "3-18 months",
+        minRate: 9.25,
+        points: "2-3",
+        minCreditScore: 660
+      };
+    case 'construction':
+      return {
+        minAmount: 500000,
+        maxAmount: 7500000,
+        maxLTV: 65,
+        maxLTC: 80,
+        term: "12-24 months",
+        minRate: 10.25,
+        points: "2.5-3.5",
+        minCreditScore: 680
+      };
+    case 'commercial':
+      return {
+        minAmount: 250000,
+        maxAmount: 10000000,
+        maxLTV: 65,
+        term: "12-36 months",
+        minRate: 9.5,
+        points: "2-3",
+        minCreditScore: 680,
+        minDSCR: 1.3
+      };
+    default:
+      return {
+        minAmount: 100000,
+        maxAmount: 5000000,
+        maxLTV: 75,
+        term: "6-24 months",
+        minRate: 9.75,
+        points: "2-3",
+        minCreditScore: 650
+      };
+  }
+};
+
 export default function NewLoanPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -107,6 +176,9 @@ export default function NewLoanPage() {
     afterRepairValue: "",
     rehabBudget: "",
     exitStrategy: "" as ExitStrategy,
+    creditScore: "",
+    dscr: "",
+    cashReserves: "",
   });
   
   // External originator data
@@ -192,7 +264,7 @@ export default function NewLoanPage() {
         ...loanDatabase.generateLoan(), // generate default values
         borrowerName: loanData.borrowerName,
         borrowerEmail: loanData.borrowerEmail || "",
-        borrowerExperience: loanData.borrowerExperience || "Beginner (0-1 projects)",
+        borrowerExperience: loanData.borrowerExperience || "Tier 3: Novice (0-1 projects)",
         loanAmount: parseFloat(loanData.loanAmount) || 250000,
         interestRate: parseFloat(loanData.interestRate) || 10,
         originationFee: parseFloat(loanData.originationFee) || 3,
@@ -205,6 +277,9 @@ export default function NewLoanPage() {
         rehabBudget: parseFloat(loanData.rehabBudget) || 0,
         exitStrategy: loanData.exitStrategy || "sale",
         originationType: originationType,
+        creditScore: parseFloat(loanData.creditScore) || 650,
+        dscr: parseFloat(loanData.dscr) || 0,
+        cashReserves: parseFloat(loanData.cashReserves) || 6,
         // Add originator info if external
         originatorInfo: originationType === "external" ? {
           companyName: originatorInfo.companyName || "",
@@ -322,45 +397,62 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                       <Label htmlFor="borrowerExperience" className="text-gray-300 mb-1.5 block">Borrower Experience</Label>
-                      <Select 
-                        value={loanData.borrowerExperience || undefined} 
-                        onValueChange={(value: string) => 
-                          setLoanData((prev) => ({ ...prev, borrowerExperience: value }))
-                        }
+                      <Select
+                        name="borrowerExperience"
+                        value={loanData.borrowerExperience}
+                        onValueChange={(value) => setLoanData((prev) => ({ ...prev, borrowerExperience: value }))}
                       >
-                        <SelectTrigger id="borrowerExperience" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                          <SelectValue placeholder="" />
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-gray-200">
+                          <SelectValue placeholder="Select experience level" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-                          <SelectItem value="Beginner (0-1 projects)">Beginner (0-1 projects)</SelectItem>
-                          <SelectItem value="Intermediate (2-5 projects)">Intermediate (2-5 projects)</SelectItem>
-                          <SelectItem value="Experienced (6-10 projects)">Experienced (6-10 projects)</SelectItem>
-                          <SelectItem value="Expert (10+ projects)">Expert (10+ projects)</SelectItem>
+                          <SelectItem value="Tier 3: Novice (0-1 projects)">Tier 3: Novice (0-1 projects)</SelectItem>
+                          <SelectItem value="Tier 2: Intermediate (2-4 projects)">Tier 2: Intermediate (2-4 projects)</SelectItem>
+                          <SelectItem value="Tier 1: Experienced (5+ projects)">Tier 1: Experienced (5+ projects)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div>
-                      <Label htmlFor="loanType" className="text-gray-300 mb-1.5 block">Loan Type</Label>
-                      <Select 
-                        value={loanData.loanType || undefined} 
-                        onValueChange={(value: string) => 
-                          setLoanData((prev) => ({ ...prev, loanType: value as LoanType }))
-                        }
+                      <Label htmlFor="loanType" className="text-gray-300 mb-1.5 block">Loan Program</Label>
+                      <Select
+                        name="loanType"
+                        value={loanData.loanType}
+                        onValueChange={(value) => {
+                          setLoanData((prev) => ({ ...prev, loanType: value as LoanType }));
+                          // Set default values based on loan type
+                          const params = getLoanParameters(value);
+                          setLoanData((prev) => ({
+                            ...prev,
+                            interestRate: params.minRate.toString(),
+                            originationFee: params.points.split('-')[0],
+                          }));
+                        }}
                       >
-                        <SelectTrigger id="loanType" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                          <SelectValue placeholder="" />
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-gray-200">
+                          <SelectValue placeholder="Select loan program" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-                          <SelectItem value="fix_and_flip">Fix and Flip</SelectItem>
-                          <SelectItem value="bridge">Bridge Loan</SelectItem>
-                          <SelectItem value="construction">Construction</SelectItem>
-                          <SelectItem value="rehab">Rehab</SelectItem>
-                          <SelectItem value="rental">Rental</SelectItem>
-                          <SelectItem value="commercial">Commercial</SelectItem>
-                          <SelectItem value="land">Land</SelectItem>
+                          <SelectItem value="fix_and_flip">Fix-and-Flip Program</SelectItem>
+                          <SelectItem value="rental_brrrr">Rental/BRRRR Program</SelectItem>
+                          <SelectItem value="bridge">Bridge Loan Program</SelectItem>
+                          <SelectItem value="construction">Construction Loan Program</SelectItem>
+                          <SelectItem value="commercial">Commercial Property Program</SelectItem>
                         </SelectContent>
                       </Select>
+                      {loanData.loanType && (
+                        <div className="mt-2 text-xs text-blue-400">
+                          <p>Loan Amount: ${getLoanParameters(loanData.loanType).minAmount.toLocaleString()} - ${getLoanParameters(loanData.loanType).maxAmount.toLocaleString()}</p>
+                          <p>Max LTV: {getLoanParameters(loanData.loanType).maxLTV}%</p>
+                          <p>Term: {getLoanParameters(loanData.loanType).term}</p>
+                          <p>Min Rate: {getLoanParameters(loanData.loanType).minRate}%</p>
+                          <p>Points: {getLoanParameters(loanData.loanType).points}</p>
+                          <p>Min Credit Score: {getLoanParameters(loanData.loanType).minCreditScore}</p>
+                          {getLoanParameters(loanData.loanType).minDSCR && (
+                            <p>Min DSCR: {getLoanParameters(loanData.loanType).minDSCR}</p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -437,24 +529,24 @@ export default function NewLoanPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                       <Label htmlFor="propertyType" className="text-gray-300 mb-1.5 block">Property Type</Label>
-                      <Select 
-                        value={loanData.propertyType || undefined} 
-                        onValueChange={(value: string) => 
-                          setLoanData((prev) => ({ ...prev, propertyType: value as PropertyType }))
-                        }
+                      <Select
+                        name="propertyType"
+                        value={loanData.propertyType}
+                        onValueChange={(value) => setLoanData((prev) => ({ ...prev, propertyType: value as PropertyType }))}
                       >
-                        <SelectTrigger id="propertyType" className="w-full bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500">
-                          <SelectValue placeholder="" />
+                        <SelectTrigger className="bg-gray-800 border-gray-700 text-gray-200">
+                          <SelectValue placeholder="Select property type" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-                          <SelectItem value="single_family">Single Family</SelectItem>
-                          <SelectItem value="multi_family">Multi-Family</SelectItem>
-                          <SelectItem value="condo">Condo</SelectItem>
-                          <SelectItem value="townhouse">Townhouse</SelectItem>
-                          <SelectItem value="commercial">Commercial</SelectItem>
-                          <SelectItem value="mixed_use">Mixed Use</SelectItem>
-                          <SelectItem value="land">Land</SelectItem>
-                          <SelectItem value="industrial">Industrial</SelectItem>
+                          <SelectItem value="single_family">Single-Family Residence</SelectItem>
+                          <SelectItem value="multi_family_2_4">Multi-Family (2-4 units)</SelectItem>
+                          <SelectItem value="multi_family_5plus">Multi-Family (5+ units)</SelectItem>
+                          <SelectItem value="mixed_use">Mixed-Use</SelectItem>
+                          <SelectItem value="retail">Retail</SelectItem>
+                          <SelectItem value="office">Office</SelectItem>
+                          <SelectItem value="industrial">Industrial/Warehouse</SelectItem>
+                          <SelectItem value="self_storage">Self-Storage</SelectItem>
+                          <SelectItem value="hotel_motel">Hotel/Motel</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -535,6 +627,55 @@ export default function NewLoanPage() {
                       min="0"
                       className="bg-gray-800 border-gray-700 text-gray-200 focus:border-blue-500 focus:ring-blue-500"
                     />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="creditScore" className="text-gray-300 mb-1.5 block">Credit Score</Label>
+                    <Input
+                      id="creditScore"
+                      name="creditScore"
+                      value={loanData.creditScore}
+                      onChange={handleInputChange}
+                      placeholder="Enter borrower's credit score"
+                      className="bg-gray-800 border-gray-700 text-gray-200"
+                    />
+                    {loanData.loanType && (
+                      <p className="mt-1 text-xs text-blue-400">
+                        Minimum: {getLoanParameters(loanData.loanType).minCreditScore}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="dscr" className="text-gray-300 mb-1.5 block">DSCR (Rental Properties)</Label>
+                    <Input
+                      id="dscr"
+                      name="dscr"
+                      value={loanData.dscr}
+                      onChange={handleInputChange}
+                      placeholder="Enter DSCR (if applicable)"
+                      className="bg-gray-800 border-gray-700 text-gray-200"
+                    />
+                    {loanData.loanType === 'rental_brrrr' && (
+                      <p className="mt-1 text-xs text-blue-400">
+                        Minimum: {getLoanParameters(loanData.loanType).minDSCR}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="cashReserves" className="text-gray-300 mb-1.5 block">Cash Reserves (months)</Label>
+                    <Input
+                      id="cashReserves"
+                      name="cashReserves"
+                      value={loanData.cashReserves}
+                      onChange={handleInputChange}
+                      placeholder="Enter cash reserves in months"
+                      className="bg-gray-800 border-gray-700 text-gray-200"
+                    />
+                    <p className="mt-1 text-xs text-blue-400">
+                      Minimum: 6 months of loan payments
+                    </p>
                   </div>
                 </div>
               </CardContent>

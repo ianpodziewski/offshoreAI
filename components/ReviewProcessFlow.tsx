@@ -11,48 +11,161 @@ import {
   User,
   Building,
   DollarSign,
-  Calendar
+  Calendar,
+  Home,
+  Briefcase,
+  Map,
+  TrendingUp,
+  Shield
 } from 'lucide-react';
 import documentDatabase from '../utilities/documentDatabase';
 import { Textarea } from '../components/ui/textarea';
 
-// Define review stages
+// Define review stages based on Atlas Capital's underwriting process
 const REVIEW_STAGES = [
   {
-    id: 'document_collection',
-    name: 'Document Collection',
-    requiredDocuments: ['credit_report', 'property_appraisal', 'income_verification'],
-    description: 'Ensure all required documents are collected and legible'
+    id: 'initial_application',
+    name: 'Initial Application & Pre-Qualification',
+    requiredDocuments: [
+      'loan_application', 
+      'photo_id', 
+      'credit_authorization', 
+      'proof_of_funds'
+    ],
+    description: 'Review initial application and pre-qualify the borrower',
+    timeline: '24-48 hours'
   },
   {
-    id: 'borrower_verification',
-    name: 'Borrower Verification',
-    requiredFields: ['credit_score', 'borrower_name', 'borrower_address'],
-    description: 'Verify borrower identity and creditworthiness'
+    id: 'property_evaluation',
+    name: 'Property Evaluation',
+    requiredDocuments: [
+      'title_report', 
+      'property_photos', 
+      'purchase_contract', 
+      'comparative_market_analysis', 
+      'renovation_budget'
+    ],
+    description: 'Evaluate the property and review supporting documentation',
+    timeline: '3-5 business days'
   },
   {
-    id: 'property_verification',
-    name: 'Property Verification',
-    requiredFields: ['property_address', 'property_value', 'after_repair_value'],
-    description: 'Verify property details and valuation'
+    id: 'borrower_financial',
+    name: 'Borrower Financial Analysis',
+    requiredDocuments: [
+      'financial_statement', 
+      'tax_returns', 
+      'bank_statements', 
+      'real_estate_schedule', 
+      'business_documents'
+    ],
+    description: 'Analyze borrower financials and creditworthiness',
+    timeline: '2-3 business days'
   },
   {
-    id: 'financial_analysis',
-    name: 'Financial Analysis',
-    requiredFields: ['ltv', 'dti_ratio', 'exit_strategy'],
-    description: 'Analyze loan financials and risk factors'
+    id: 'exit_strategy',
+    name: 'Exit Strategy Validation',
+    requiredDocuments: [
+      'exit_strategy_statement', 
+      'market_data', 
+      'timeline'
+    ],
+    description: 'Validate the borrower\'s exit strategy',
+    timeline: '1-2 business days'
   },
   {
-    id: 'final_approval',
-    name: 'Final Approval',
-    requiredApprovers: ['underwriter', 'manager'],
-    description: 'Final review and approval process'
+    id: 'final_underwriting',
+    name: 'Final Underwriting & Approval',
+    requiredApprovers: ['underwriter', 'loan_committee'],
+    description: 'Final review and approval decision',
+    timeline: '5-7 business days'
+  },
+  {
+    id: 'closing_process',
+    name: 'Closing Process',
+    requiredDocuments: [
+      'signed_term_sheet', 
+      'insurance_binder', 
+      'entity_documents'
+    ],
+    description: 'Prepare for closing and fund the loan',
+    timeline: '7-10 business days'
   }
 ];
 
+// Define document types required for Atlas Capital's underwriting process
+const DOCUMENT_TYPES = {
+  loan_application: 'Atlas Capital Loan Application',
+  photo_id: 'Government-Issued Photo ID',
+  credit_authorization: 'Credit Authorization Form',
+  proof_of_funds: 'Proof of Funds for Down Payment',
+  title_report: 'Preliminary Title Report',
+  property_photos: 'Property Photos (Interior/Exterior)',
+  purchase_contract: 'Purchase Contract',
+  comparative_market_analysis: 'Comparative Market Analysis',
+  renovation_budget: 'Renovation Budget',
+  financial_statement: 'Personal Financial Statement',
+  tax_returns: 'Last 2 Years Tax Returns',
+  bank_statements: 'Last 3 Months Bank Statements',
+  real_estate_schedule: 'Schedule of Real Estate Owned',
+  business_documents: 'Business Formation Documents',
+  exit_strategy_statement: 'Detailed Exit Strategy Statement',
+  market_data: 'Supporting Market Data',
+  timeline: 'Exit Strategy Timeline',
+  signed_term_sheet: 'Signed Term Sheet',
+  insurance_binder: 'Insurance Binder',
+  entity_documents: 'Entity Documents'
+};
+
+// Define evaluation criteria for each stage
+const EVALUATION_CRITERIA = {
+  initial_application: [
+    'Credit score meets minimum program requirements',
+    'Property aligns with lending guidelines',
+    'Feasible exit strategy',
+    'Sufficient cash reserves (minimum 6 months of loan payments)'
+  ],
+  property_evaluation: [
+    'Property condition assessment',
+    'Valuation verification',
+    'Title review',
+    'Market analysis',
+    'Renovation budget review (if applicable)'
+  ],
+  borrower_financial: [
+    'Debt-to-income ratio below 50%',
+    'Sufficient liquidity (minimum 10% of loan amount in reserves)',
+    'Stable income sources',
+    'History of timely debt payments',
+    'Clean background check (no financial felonies)',
+    'Experience level appropriate for project scope'
+  ],
+  exit_strategy: [
+    'Realistic timeline',
+    'Market-supported valuation expectations',
+    'Feasible execution plan',
+    'Backup exit options'
+  ],
+  final_underwriting: [
+    'Complete documentation package',
+    'Satisfactory property condition and value',
+    'Borrower financial strength',
+    'Experience level',
+    'Exit strategy viability',
+    'Compliance with all guidelines',
+    'Risk-adjusted return analysis'
+  ],
+  closing_process: [
+    'Final title review',
+    'Document preparation',
+    'Closing coordination',
+    'Funds disbursement',
+    'Establishment of draw schedule (if applicable)'
+  ]
+};
+
 export default function ReviewProcessFlow() {
   const { activeLoan, loanDocuments } = useLoanContext();
-  const [currentStage, setCurrentStage] = useState('document_collection');
+  const [currentStage, setCurrentStage] = useState('initial_application');
   const [stageStatus, setStageStatus] = useState<Record<string, 'pending' | 'in_progress' | 'completed' | 'issues'>>({});
   const [extractedData, setExtractedData] = useState<Record<string, string | number>>({});
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
@@ -78,7 +191,7 @@ export default function ReviewProcessFlow() {
       });
       
       // Set first stage to in_progress
-      initialStatus['document_collection'] = 'in_progress';
+      initialStatus['initial_application'] = 'in_progress';
       
       setStageStatus(initialStatus);
     }
@@ -98,10 +211,10 @@ export default function ReviewProcessFlow() {
       return Math.floor((completed / required) * 100);
     }
     
-    if (stage.requiredFields) {
-      const required = stage.requiredFields.length;
-      const completed = stage.requiredFields.filter(field => 
-        field in extractedData && extractedData[field] !== undefined && extractedData[field] !== ''
+    if (stage.requiredApprovers) {
+      const required = stage.requiredApprovers.length;
+      const completed = stage.requiredApprovers.filter(approver => 
+        reviewNotes[`${stageId}_${approver}`]
       ).length;
       
       return Math.floor((completed / required) * 100);
@@ -110,37 +223,84 @@ export default function ReviewProcessFlow() {
     return 0;
   };
   
-  // Handle stage completion
+  // Complete current stage and move to next
   const completeCurrentStage = () => {
-    if (!currentStage) return;
-    
-    const updatedStatus = { ...stageStatus };
-    updatedStatus[currentStage] = 'completed';
-    
-    // Find next stage
     const currentIndex = REVIEW_STAGES.findIndex(s => s.id === currentStage);
-    if (currentIndex < REVIEW_STAGES.length - 1) {
-      const nextStage = REVIEW_STAGES[currentIndex + 1].id;
-      updatedStatus[nextStage] = 'in_progress';
-      setCurrentStage(nextStage);
-    }
+    if (currentIndex < 0 || currentIndex >= REVIEW_STAGES.length - 1) return;
     
-    setStageStatus(updatedStatus);
+    const nextStage = REVIEW_STAGES[currentIndex + 1].id;
+    
+    setStageStatus(prev => ({
+      ...prev,
+      [currentStage]: 'completed',
+      [nextStage]: 'in_progress'
+    }));
+    
+    setCurrentStage(nextStage);
   };
   
   // Report issues with current stage
   const reportIssues = () => {
-    if (!currentStage || !issueNote.trim()) return;
+    if (!issueNote.trim()) return;
     
-    const updatedStatus = { ...stageStatus };
-    updatedStatus[currentStage] = 'issues';
+    setStageStatus(prev => ({
+      ...prev,
+      [currentStage]: 'issues'
+    }));
     
-    const updatedNotes = { ...reviewNotes };
-    updatedNotes[currentStage] = issueNote.trim();
+    setReviewNotes(prev => ({
+      ...prev,
+      [`${currentStage}_issues`]: issueNote
+    }));
     
-    setStageStatus(updatedStatus);
-    setReviewNotes(updatedNotes);
     setIssueNote('');
+  };
+  
+  // Handle note changes
+  const handleNoteChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setIssueNote(e.target.value);
+  };
+  
+  // Handle approver note changes
+  const handleApproverNoteChange = (approver: string, note: string) => {
+    setReviewNotes(prev => ({
+      ...prev,
+      [`${currentStage}_${approver}`]: note
+    }));
+  };
+  
+  // Get icon for stage
+  const getStageIcon = (stageId: string) => {
+    switch (stageId) {
+      case 'initial_application':
+        return <FileText className="h-5 w-5" />;
+      case 'property_evaluation':
+        return <Home className="h-5 w-5" />;
+      case 'borrower_financial':
+        return <User className="h-5 w-5" />;
+      case 'exit_strategy':
+        return <TrendingUp className="h-5 w-5" />;
+      case 'final_underwriting':
+        return <Briefcase className="h-5 w-5" />;
+      case 'closing_process':
+        return <DollarSign className="h-5 w-5" />;
+      default:
+        return <FileText className="h-5 w-5" />;
+    }
+  };
+  
+  // Get status icon
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'in_progress':
+        return <Clock className="h-5 w-5 text-blue-500 animate-pulse" />;
+      case 'issues':
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+      default:
+        return <Clock className="h-5 w-5 text-gray-400" />;
+    }
   };
   
   return (
@@ -198,7 +358,7 @@ export default function ReviewProcessFlow() {
               </div>
               
               {/* Stage-specific content */}
-              {currentStage === 'document_collection' && (
+              {currentStage === 'initial_application' && (
                 <div className="space-y-2">
                   <h3 className="font-medium">Required Documents:</h3>
                   {REVIEW_STAGES.find(s => s.id === currentStage)?.requiredDocuments?.map(doc => (
@@ -215,34 +375,7 @@ export default function ReviewProcessFlow() {
                 </div>
               )}
               
-              {currentStage === 'borrower_verification' && (
-                <div className="space-y-2">
-                  <h3 className="font-medium">Borrower Information:</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <User size={16} className="mr-2 text-gray-400" />
-                        <span className="text-sm font-medium">Borrower Name</span>
-                      </div>
-                      <div className="text-sm ml-6">
-                        {extractedData.borrower_name || activeLoan?.borrowerName || 'Not available'}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <DollarSign size={16} className="mr-2 text-gray-400" />
-                        <span className="text-sm font-medium">Credit Score</span>
-                      </div>
-                      <div className="text-sm ml-6">
-                        {extractedData.credit_score || 'Not available'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {currentStage === 'property_verification' && (
+              {currentStage === 'property_evaluation' && (
                 <div className="space-y-2">
                   <h3 className="font-medium">Property Information:</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -271,27 +404,44 @@ export default function ReviewProcessFlow() {
                 </div>
               )}
               
-              {currentStage === 'financial_analysis' && (
+              {currentStage === 'borrower_financial' && (
                 <div className="space-y-2">
-                  <h3 className="font-medium">Financial Analysis:</h3>
+                  <h3 className="font-medium">Borrower Information:</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <div className="flex items-center">
-                        <DollarSign size={16} className="mr-2 text-gray-400" />
-                        <span className="text-sm font-medium">Loan-to-Value (LTV)</span>
+                        <User size={16} className="mr-2 text-gray-400" />
+                        <span className="text-sm font-medium">Borrower Name</span>
                       </div>
                       <div className="text-sm ml-6">
-                        {activeLoan?.ltv ? `${activeLoan.ltv}%` : 'Not available'}
+                        {extractedData.borrower_name || activeLoan?.borrowerName || 'Not available'}
                       </div>
                     </div>
                     
                     <div className="space-y-1">
                       <div className="flex items-center">
-                        <Calendar size={16} className="mr-2 text-gray-400" />
-                        <span className="text-sm font-medium">Exit Strategy</span>
+                        <DollarSign size={16} className="mr-2 text-gray-400" />
+                        <span className="text-sm font-medium">Credit Score</span>
                       </div>
                       <div className="text-sm ml-6">
-                        {activeLoan?.exitStrategy || extractedData.exit_strategy || 'Not available'}
+                        {extractedData.credit_score || 'Not available'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {currentStage === 'exit_strategy' && (
+                <div className="space-y-2">
+                  <h3 className="font-medium">Exit Strategy:</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Calendar size={16} className="mr-2 text-gray-400" />
+                        <span className="text-sm font-medium">Exit Strategy Timeline</span>
+                      </div>
+                      <div className="text-sm ml-6">
+                        {activeLoan?.exitStrategy || extractedData.timeline || 'Not available'}
                       </div>
                     </div>
                   </div>
@@ -304,7 +454,7 @@ export default function ReviewProcessFlow() {
                   <AlertTriangle className="h-4 w-4" />
                   <AlertTitle>Issues Detected</AlertTitle>
                   <AlertDescription>
-                    {reviewNotes[currentStage]}
+                    {reviewNotes[`${currentStage}_issues`]}
                   </AlertDescription>
                 </Alert>
               )}
@@ -315,7 +465,7 @@ export default function ReviewProcessFlow() {
                 <Textarea 
                   placeholder="Describe any issues with this stage..." 
                   value={issueNote}
-                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setIssueNote(e.target.value)}
+                  onChange={handleNoteChange}
                   className="h-24"
                 />
               </div>

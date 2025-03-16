@@ -1,10 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 
 export type LoanStatus = 'pending' | 'approved' | 'in_review' | 'rejected' | 'closed' | 'funded' | 'default';
-export type LoanType = 'fix_and_flip' | 'bridge' | 'construction' | 'rehab' | 'rental' | 'commercial' | 'land';
-export type PropertyType = 'single_family' | 'multi_family' | 'condo' | 'townhouse' | 'commercial' | 'mixed_use' | 'land' | 'industrial';
+export type LoanType = 'fix_and_flip' | 'rental_brrrr' | 'bridge' | 'construction' | 'commercial';
+export type PropertyType = 'single_family' | 'multi_family_2_4' | 'multi_family_5plus' | 'mixed_use' | 'retail' | 'office' | 'industrial' | 'self_storage' | 'hotel_motel';
 export type ExitStrategy = 'sale' | 'refinance' | 'rental' | 'development' | 'other';
 export type OriginationType = 'external' | 'internal';
+export type RiskTier = 'tier_1' | 'tier_2' | 'tier_3';
 
 export interface OriginatorInfo {
   companyName: string;
@@ -41,6 +42,10 @@ export interface LoanData {
   originationType: OriginationType; // Whether the loan was originated internally or externally
   originatorInfo?: OriginatorInfo; // Information about the external originator if applicable
   underwriterName?: string; // Name of the internal underwriter assigned to the loan
+  creditScore?: number; // Borrower's credit score
+  dscr?: number; // Debt Service Coverage Ratio (for rental properties)
+  riskTier?: RiskTier; // Risk tier based on borrower experience
+  cashReserves?: number; // Cash reserves in months of loan payments
   documents: {
     category: string;
     files: {
@@ -72,10 +77,9 @@ const states = ['AZ', 'GA', 'TX', 'FL', 'NC', 'NV', 'CA', 'CO', 'TN', 'OH'];
 
 // More nuanced experience levels for real estate investors
 const experienceLevels = [
-  'Beginner (0-1 projects)', 
-  'Intermediate (2-5 projects)', 
-  'Experienced (6-10 projects)', 
-  'Seasoned Investor (10+ projects)'
+  'Tier 3: Novice (0-1 projects)', 
+  'Tier 2: Intermediate (2-4 projects)', 
+  'Tier 1: Experienced (5+ projects)'
 ];
 
 function getRandomName(): string {
@@ -113,23 +117,30 @@ export function generateLoan(overrides = {}): LoanData {
   // More realistic property value generation
   const purchasePrice = (() => {
     // Different price ranges based on property type
-    const propertyType = ['single_family', 'multi_family', 'commercial', 'land'][Math.floor(Math.random() * 4)];
+    const propertyType = ['single_family', 'multi_family_2_4', 'multi_family_5plus', 'mixed_use', 'retail', 'office', 'industrial', 'self_storage', 'hotel_motel'][Math.floor(Math.random() * 8)];
     switch(propertyType) {
       case 'single_family': return Math.floor(Math.random() * 500000) + 150000; // $150k to $650k
-      case 'multi_family': return Math.floor(Math.random() * 1000000) + 300000; // $300k to $1.3M
-      case 'commercial': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
-      case 'land': return Math.floor(Math.random() * 500000) + 50000; // $50k to $550k
+      case 'multi_family_2_4': return Math.floor(Math.random() * 1000000) + 300000; // $300k to $1.3M
+      case 'multi_family_5plus': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
+      case 'mixed_use': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
+      case 'retail': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
+      case 'office': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
+      case 'industrial': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
+      case 'self_storage': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
+      case 'hotel_motel': return Math.floor(Math.random() * 2000000) + 500000; // $500k to $2.5M
       default: return Math.floor(Math.random() * 900000) + 150000;
     }
   })();
 
   // Rehab budget more tightly coupled to purchase price
   const rehabBudget = (() => {
-    const loanType = ['fix_and_flip', 'rehab', 'construction'][Math.floor(Math.random() * 3)];
+    const loanType = ['fix_and_flip', 'rental_brrrr', 'bridge', 'construction', 'commercial'][Math.floor(Math.random() * 5)];
     switch(loanType) {
       case 'fix_and_flip': return Math.floor(purchasePrice * (Math.random() * 0.3 + 0.15)); // 15-45% of purchase price
-      case 'rehab': return Math.floor(purchasePrice * (Math.random() * 0.4 + 0.2)); // 20-60% of purchase price
+      case 'rental_brrrr': return Math.floor(purchasePrice * (Math.random() * 0.4 + 0.2)); // 20-60% of purchase price
+      case 'bridge': return Math.floor(purchasePrice * (Math.random() * 0.5 + 0.5)); // 50-100% of purchase price
       case 'construction': return Math.floor(purchasePrice * (Math.random() * 0.5 + 0.5)); // 50-100% of purchase price
+      case 'commercial': return Math.floor(purchasePrice * (Math.random() * 0.3 + 0.1));
       default: return Math.floor(purchasePrice * (Math.random() * 0.3 + 0.1));
     }
   })();
@@ -139,11 +150,13 @@ export function generateLoan(overrides = {}): LoanData {
 
   // LTV calculation with more realistic constraints
   const ltv = (() => {
-    const loanType = ['fix_and_flip', 'bridge', 'construction'][Math.floor(Math.random() * 3)];
+    const loanType = ['fix_and_flip', 'rental_brrrr', 'bridge', 'construction', 'commercial'][Math.floor(Math.random() * 5)];
     switch(loanType) {
       case 'fix_and_flip': return Math.floor(Math.random() * 10 + 70); // 70-80% LTV
+      case 'rental_brrrr': return Math.floor(Math.random() * 10 + 65); // 65-75% LTV
       case 'bridge': return Math.floor(Math.random() * 10 + 65); // 65-75% LTV
       case 'construction': return Math.floor(Math.random() * 10 + 65); // 65-75% LTV
+      case 'commercial': return Math.floor(Math.random() * 15 + 65); // 65-80% LTV
       default: return Math.floor(Math.random() * 15 + 65); // 65-80% LTV
     }
   })();
@@ -180,9 +193,9 @@ export function generateLoan(overrides = {}): LoanData {
     interestRate,
     originationFee,
     loanTerm,
-    loanType: ['fix_and_flip', 'bridge', 'construction', 'rehab', 'rental', 'commercial', 'land'][Math.floor(Math.random() * 7)] as LoanType,
+    loanType: ['fix_and_flip', 'rental_brrrr', 'bridge', 'construction', 'commercial'][Math.floor(Math.random() * 5)] as LoanType,
     propertyAddress: getRandomAddress(),
-    propertyType: ['single_family', 'multi_family', 'condo', 'townhouse', 'commercial', 'mixed_use', 'land', 'industrial'][Math.floor(Math.random() * 8)] as PropertyType,
+    propertyType: ['single_family', 'multi_family_2_4', 'multi_family_5plus', 'mixed_use', 'retail', 'office', 'industrial', 'self_storage', 'hotel_motel'][Math.floor(Math.random() * 9)] as PropertyType,
     purchasePrice,
     afterRepairValue,
     rehabBudget,

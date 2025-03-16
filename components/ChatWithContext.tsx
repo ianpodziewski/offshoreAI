@@ -17,6 +17,77 @@ interface ChatWithContextProps {
   isLoanSpecific?: boolean; // New prop to determine if this is a loan-specific chat
 }
 
+// Add Atlas Capital's underwriting guidelines as context
+const ATLAS_CAPITAL_GUIDELINES = `
+ATLAS CAPITAL PARTNERS UNDERWRITING GUIDELINES
+
+COMPANY OVERVIEW
+Atlas Capital Partners is a private money lender specializing in asset-based lending solutions for real estate investors. We provide short-term financing for residential and commercial investment properties with a focus on value-add opportunities.
+
+LOAN PRODUCTS
+Fix-and-Flip Program
+- Loan Amount: $100,000 - $2,500,000
+- LTV: Up to 75% of purchase price, 75% ARV
+- Term: 6-24 months
+- Interest Rate: Starting at 9.75%
+- Points: 2-3 points
+- Minimum Credit Score: 650
+
+Rental/BRRRR Program
+- Loan Amount: $100,000 - $3,000,000
+- LTV: Up to 75% of purchase price or appraised value
+- Term: 12-36 months
+- Interest Rate: Starting at 8.75%
+- Points: 1.5-2.5 points
+- Minimum Credit Score: 680
+- Minimum DSCR: 1.25
+
+Bridge Loan Program
+- Loan Amount: $250,000 - $5,000,000
+- LTV: Up to 70% of current value
+- Term: 3-18 months
+- Interest Rate: Starting at 9.25%
+- Points: 2-3 points
+- Minimum Credit Score: 660
+
+Construction Loan Program
+- Loan Amount: $500,000 - $7,500,000
+- LTV: Up to 65% of completed value
+- LTC: Up to 80% of construction costs
+- Term: 12-24 months
+- Interest Rate: Starting at 10.25%
+- Points: 2.5-3.5 points
+- Minimum Credit Score: 680
+- Construction Reserve: Required
+
+Commercial Property Program
+- Loan Amount: $250,000 - $10,000,000
+- LTV: Up to 65% of purchase price or appraised value
+- Term: 12-36 months
+- Interest Rate: Starting at 9.5%
+- Points: 2-3 points
+- Minimum Credit Score: 680
+- Minimum DSCR: 1.3
+
+UNDERWRITING PROCESS
+1. Initial Application & Pre-Qualification (24-48 hours)
+2. Property Evaluation (3-5 business days)
+3. Borrower Financial Analysis (2-3 business days)
+4. Exit Strategy Validation (1-2 business days)
+5. Final Underwriting & Approval (5-7 business days)
+6. Closing Process (7-10 business days)
+
+RISK TIER ADJUSTMENTS
+- Tier 1: Experienced Investors (5+ successful similar projects)
+- Tier 2: Intermediate Investors (2-4 successful similar projects)
+- Tier 3: Novice Investors (0-1 successful similar projects)
+
+PROPERTY TYPES
+Acceptable: Single-family residences, Multi-family (2-4 units), Multi-family (5+ units), Mixed-use, Retail, Office, Industrial/warehouse, Self-storage, Hotel/motel (case by case)
+
+Restricted: Owner-occupied primary residences, Properties under 500 square feet, Mobile or manufactured homes, Properties with environmental issues, Properties with severe structural damage, Condotels, Time-shares, Working farms/ranches, Gas stations, Properties with legal non-conforming use issues
+`;
+
 export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = false }: ChatWithContextProps) {
   const {
     messages,
@@ -40,6 +111,10 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
       // Log the loan context for debugging
       console.log("Loan context available:", loanSpecificContext.substring(0, 50) + "...");
     }
+    
+    // Add Atlas Capital's guidelines to the context
+    const atlasCapitalContext = ATLAS_CAPITAL_GUIDELINES;
+    console.log("Atlas Capital guidelines available for chat context");
   }, [loanSpecificContext]);
   
   // Function to fetch documents with special handling for the problematic document

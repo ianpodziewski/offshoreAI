@@ -12,6 +12,77 @@ interface LoanChatMessage {
 // Storage key for loan documents
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
 
+// Atlas Capital's underwriting guidelines
+const ATLAS_CAPITAL_GUIDELINES = `
+ATLAS CAPITAL PARTNERS UNDERWRITING GUIDELINES
+
+COMPANY OVERVIEW
+Atlas Capital Partners is a private money lender specializing in asset-based lending solutions for real estate investors. We provide short-term financing for residential and commercial investment properties with a focus on value-add opportunities.
+
+LOAN PRODUCTS
+Fix-and-Flip Program
+- Loan Amount: $100,000 - $2,500,000
+- LTV: Up to 75% of purchase price, 75% ARV
+- Term: 6-24 months
+- Interest Rate: Starting at 9.75%
+- Points: 2-3 points
+- Minimum Credit Score: 650
+
+Rental/BRRRR Program
+- Loan Amount: $100,000 - $3,000,000
+- LTV: Up to 75% of purchase price or appraised value
+- Term: 12-36 months
+- Interest Rate: Starting at 8.75%
+- Points: 1.5-2.5 points
+- Minimum Credit Score: 680
+- Minimum DSCR: 1.25
+
+Bridge Loan Program
+- Loan Amount: $250,000 - $5,000,000
+- LTV: Up to 70% of current value
+- Term: 3-18 months
+- Interest Rate: Starting at 9.25%
+- Points: 2-3 points
+- Minimum Credit Score: 660
+
+Construction Loan Program
+- Loan Amount: $500,000 - $7,500,000
+- LTV: Up to 65% of completed value
+- LTC: Up to 80% of construction costs
+- Term: 12-24 months
+- Interest Rate: Starting at 10.25%
+- Points: 2.5-3.5 points
+- Minimum Credit Score: 680
+- Construction Reserve: Required
+
+Commercial Property Program
+- Loan Amount: $250,000 - $10,000,000
+- LTV: Up to 65% of purchase price or appraised value
+- Term: 12-36 months
+- Interest Rate: Starting at 9.5%
+- Points: 2-3 points
+- Minimum Credit Score: 680
+- Minimum DSCR: 1.3
+
+UNDERWRITING PROCESS
+1. Initial Application & Pre-Qualification (24-48 hours)
+2. Property Evaluation (3-5 business days)
+3. Borrower Financial Analysis (2-3 business days)
+4. Exit Strategy Validation (1-2 business days)
+5. Final Underwriting & Approval (5-7 business days)
+6. Closing Process (7-10 business days)
+
+RISK TIER ADJUSTMENTS
+- Tier 1: Experienced Investors (5+ successful similar projects)
+- Tier 2: Intermediate Investors (2-4 successful similar projects)
+- Tier 3: Novice Investors (0-1 successful similar projects)
+
+PROPERTY TYPES
+Acceptable: Single-family residences, Multi-family (2-4 units), Multi-family (5+ units), Mixed-use, Retail, Office, Industrial/warehouse, Self-storage, Hotel/motel (case by case)
+
+Restricted: Owner-occupied primary residences, Properties under 500 square feet, Mobile or manufactured homes, Properties with environmental issues, Properties with severe structural damage, Condotels, Time-shares, Working farms/ranches, Gas stations, Properties with legal non-conforming use issues
+`;
+
 export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: any[]) {
   // Independent state for the loan-specific chat
   const [messages, setMessages] = useState<LoanChatMessage[]>([]);
@@ -32,10 +103,14 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
       Loan Amount: $${activeLoan.loanAmount.toLocaleString()}
       Interest Rate: ${activeLoan.interestRate}%
       Property: ${activeLoan.propertyAddress}
+      Property Type: ${activeLoan.propertyType.replace(/_/g, ' ')}
       Loan Status: ${activeLoan.status}
-      Loan Type: ${activeLoan.loanType}
+      Loan Type: ${activeLoan.loanType.replace(/_/g, ' ')}
       LTV: ${activeLoan.ltv}%
       ARV LTV: ${activeLoan.arv_ltv}%
+      Credit Score: ${activeLoan.creditScore || 'Not available'}
+      Borrower Experience: ${activeLoan.borrowerExperience || 'Not available'}
+      Exit Strategy: ${activeLoan.exitStrategy.replace(/_/g, ' ')}
     `;
     
     // Add document information
@@ -45,10 +120,11 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
         ).join('\n')
       : 'No documents available for this loan.';
     
-    const fullContext = `${loanContextStr}\n\nDocuments:\n${documentContextStr}`;
+    // Add Atlas Capital guidelines
+    const fullContext = `${loanContextStr}\n\nDocuments:\n${documentContextStr}\n\nATLAS CAPITAL GUIDELINES:\n${ATLAS_CAPITAL_GUIDELINES}`;
     setLoanContext(fullContext);
     
-    console.log('Loan context updated successfully');
+    console.log('Loan context updated successfully with Atlas Capital guidelines');
     return fullContext;
   }, [activeLoan, loanDocuments]);
   
@@ -61,7 +137,7 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
       // Add welcome message when loan changes
       setMessages([{
         role: 'assistant',
-        content: `Welcome to the loan assistant for loan #${activeLoan.id}. I can help you with information about this specific loan.`,
+        content: `Welcome to the Atlas Capital Partners loan assistant for loan #${activeLoan.id}. I can help you with information about this specific loan and our lending guidelines.`,
         timestamp: new Date()
       }]);
     }
@@ -213,7 +289,7 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
         }
       }
       
-      // Enhance loan context with document contents
+      // Enhance loan context with document contents and Atlas Capital guidelines
       const enhancedContext = documentContents 
         ? `${loanContext}\n\nDocument Contents:\n${documentContents}`
         : loanContext;
