@@ -330,16 +330,16 @@ const DOCUMENT_TYPES = [
   // 1. BORROWER DOCS
   // Personal Information
   { docType: 'loan_application', label: 'Completed Loan Application', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
-  { docType: 'government_id', label: 'Government-issued Photo ID', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
+  { docType: 'government_id', label: 'Government-Issued Photo ID', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
   { docType: 'credit_authorization', label: 'Credit Authorization', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
-  { docType: 'background_check', label: 'Background Check Results', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
-  { docType: 'contact_information', label: 'Contact Information Sheet', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
+  { docType: 'background_check', label: 'Background Check', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
+  { docType: 'contact_information', label: 'Contact Information', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
   
   // Financial Documentation
   { docType: 'personal_financial_statement', label: 'Personal Financial Statement', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
-  { docType: 'personal_tax_returns', label: 'Last 2 Years Personal Tax Returns', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
-  { docType: 'business_tax_returns', label: 'Last 2 Years Business Tax Returns', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
-  { docType: 'bank_statements', label: 'Last 3 Months Bank Statements', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'personal_tax_returns', label: 'Personal Tax Returns (2 Years)', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'business_tax_returns', label: 'Business Tax Returns (2 Years)', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'bank_statements', label: 'Bank Statements (3 Months)', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
   { docType: 'income_verification', label: 'Income Verification Documents', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
   { docType: 'real_estate_schedule', label: 'Schedule of Real Estate Owned', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
   { docType: 'debt_schedule', label: 'Debt Schedule', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
