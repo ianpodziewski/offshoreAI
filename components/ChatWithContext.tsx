@@ -335,7 +335,8 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
             </div>
           </div>
           <div className="w-1/4">
-            <Card className="shadow-lg border-gray-800 bg-gray-900 h-full">
+            {/* Documents Section Card */}
+            <Card className="shadow-lg border-gray-800 bg-gray-900 mb-4">
               <CardHeader className="bg-gray-800/70 border-b border-gray-800 py-3">
                 <CardTitle className="text-sm font-medium text-gray-200 flex items-center">
                   <FileText size={16} className="mr-2 text-blue-400" />
@@ -353,7 +354,7 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
                     {/* Show different document sections based on context */}
                     {loanSpecificContext ? (
                       // Loan-specific chat - only show loan documents
-                      <div className="mb-5 mt-2">
+                      <div className="mb-2 mt-2">
                         <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
                           <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
                         </div>
@@ -383,7 +384,7 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
                       // Main chat - show only chat uploads
                       <>
                         {/* Chat Documents Section */}
-                        <div className="mb-5 mt-2">
+                        <div className="mb-2 mt-2">
                           <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
                             <h3 className="text-xs font-medium text-gray-200">Chat Uploads</h3>
                           </div>
@@ -409,60 +410,65 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
                             </div>
                           )}
                         </div>
-                        
-                        {/* Removed Loan Documents Section */}
                       </>
                     )}
-                    
-                    {/* Help section */}
-                    <div className="mt-6 text-xs text-gray-400 p-4 bg-gray-800/50 rounded-md border-l-2 border-blue-500">
-                      <p className="font-medium mb-3">Ask the assistant about:</p>
-                      <ul className="space-y-2.5 pl-4">
-                        {loanSpecificContext ? (
-                          // Loan-specific help suggestions
-                          <>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Loan terms and conditions
-                            </li>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Property details and valuation
-                            </li>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Borrower information
-                            </li>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Loan-specific document analysis
-                            </li>
-                          </>
-                        ) : (
-                          // General help suggestions
-                          <>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Document requirements
-                            </li>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Common errors in loan documents
-                            </li>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Regulatory guidelines
-                            </li>
-                            <li className="flex items-start">
-                              <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
-                              Review best practices
-                            </li>
-                          </>
-                        )}
-                      </ul>
-                    </div>
                   </>
                 )}
+              </CardContent>
+            </Card>
+            
+            {/* Ask the Assistant Section Card */}
+            <Card className="shadow-lg border-gray-800 bg-gray-900">
+              <CardHeader className="bg-gray-800/70 border-b border-gray-800 py-3">
+                <CardTitle className="text-sm font-medium text-gray-200 flex items-center">
+                  <Eye size={16} className="mr-2 text-blue-400" />
+                  Ask the assistant about:
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <ul className="space-y-2.5">
+                  {loanSpecificContext ? (
+                    // Loan-specific help suggestions
+                    <>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Loan terms and conditions
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Property details and valuation
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Borrower information
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Loan-specific document analysis
+                      </li>
+                    </>
+                  ) : (
+                    // General help suggestions
+                    <>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Document requirements
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Common errors in loan documents
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Regulatory guidelines
+                      </li>
+                      <li className="flex items-start">
+                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-500 mt-1.5 mr-2"></span>
+                        Review best practices
+                      </li>
+                    </>
+                  )}
+                </ul>
               </CardContent>
             </Card>
           </div>
