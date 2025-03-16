@@ -142,14 +142,14 @@ export default function LoanDetailPage() {
   return (
     <LoanContextProvider initialLoanId={loan.id}>
       <LayoutWrapper>
-        <div className="flex flex-col md:flex-row gap-6">
+        <div className="flex flex-col md:flex-row gap-6 relative">
           {/* Sidebar - positioned consistently on the left */}
-          <div className="w-full md:w-64 flex-shrink-0">
+          <div className="w-full md:w-64 flex-shrink-0 relative z-30">
             <LoanSidebar loan={loan} activePage="overview" />
           </div>
           
           {/* Main content */}
-          <div className="flex-grow">
+          <div className="flex-grow relative z-20">
             <div className="mb-6">
               <Link href="/loans">
                 <Button variant="ghost" className="mb-4" style={{ color: COLORS.textSecondary }}>

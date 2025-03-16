@@ -771,14 +771,14 @@ export default function DocumentsPage({ params }: { params: { id: string } }) {
   
   return (
     <LayoutWrapper>
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="flex flex-col md:flex-row gap-6 relative">
         {/* Sidebar - positioned on the left with consistent width */}
-        <div className="w-full md:w-64 flex-shrink-0">
+        <div className="w-full md:w-64 flex-shrink-0 relative z-30">
           <LoanSidebar loan={loan} activePage="documents" />
         </div>
         
         {/* Main content - takes remaining space */}
-        <div className="flex-grow relative">
+        <div className="flex-grow relative z-20">
           <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
             Loan Documents
           </h1>

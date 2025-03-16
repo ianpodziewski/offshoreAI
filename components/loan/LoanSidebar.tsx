@@ -44,7 +44,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
   if (!loan) return null;
 
   return (
-    <div className="md:sticky md:top-20 bg-[#141b2d] rounded-lg shadow-md overflow-hidden">
+    <div className="md:sticky md:top-20 bg-[#141b2d] rounded-lg shadow-md overflow-hidden relative z-30">
       {/* Loan header */}
       <div className="p-4 border-b border-gray-700">
         <h3 className="font-semibold text-lg" style={{ color: COLORS.textPrimary }}>
@@ -65,15 +65,15 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
               : `/loans/${loan.id}/${item.path}`;
               
             return (
-              <li key={item.path}>
+              <li key={item.path} className="relative z-30">
                 <Link
                   href={href}
-                  className={`flex items-center px-3 py-3 rounded-md transition-colors ${
+                  className={`flex items-center px-3 py-3 rounded-md transition-colors pointer-events-auto ${
                     isActive(item.path)
                       ? 'bg-[#1a2234] text-white'
                       : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'
                   }`}
-                  style={{ zIndex: 10 }} // Ensure links are clickable
+                  style={{ zIndex: 30 }} // Ensure links are clickable
                 >
                   <span className="mr-3">{item.icon}</span>
                   <span className="flex-grow">{item.name}</span>
