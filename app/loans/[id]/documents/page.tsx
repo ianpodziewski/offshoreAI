@@ -49,7 +49,7 @@ const Section: React.FC<SectionProps> = ({ title, icon, children, actionButton }
 interface DocumentSocketProps {
   label: string;
   docType: string;
-  category: 'loan' | 'legal' | 'financial' | 'misc' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit' | 'insurance';
   loanId: string;
   document?: SimpleDocument;
   onViewDocument: (doc: SimpleDocument) => void;
@@ -325,198 +325,227 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
   );
 };
 
-// Updated document types based on the recommended loan system file structure
+// Updated document types based on the new 4-section structure
 const DOCUMENT_TYPES = [
-  // 1. BORROWER PROFILE
-  // Borrower Information
-  { docType: 'application_form', label: 'Application Form', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
-  { docType: 'government_id', label: 'Government ID', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
-  { docType: 'credit_authorization', label: 'Credit Authorization', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
-  { docType: 'personal_financial_statement', label: 'Personal Financial Statement', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
-  { docType: 'background_check', label: 'Background Check Results', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
+  // 1. BORROWER DOCS
+  // Personal Information
+  { docType: 'loan_application', label: 'Completed Loan Application', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
+  { docType: 'government_id', label: 'Government-issued Photo ID', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
+  { docType: 'credit_authorization', label: 'Credit Authorization', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
+  { docType: 'background_check', label: 'Background Check Results', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
+  { docType: 'contact_information', label: 'Contact Information Sheet', category: 'borrower' as const, section: 'borrower_docs', subsection: 'personal_information' },
   
   // Financial Documentation
-  { docType: 'tax_returns', label: 'Tax Returns', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
-  { docType: 'bank_statements', label: 'Bank Statements', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
-  { docType: 'income_verification', label: 'Income Verification', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
-  { docType: 'debt_schedule', label: 'Debt Schedule', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
-  { docType: 'real_estate_portfolio', label: 'Real Estate Portfolio', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
+  { docType: 'personal_financial_statement', label: 'Personal Financial Statement', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'personal_tax_returns', label: 'Last 2 Years Personal Tax Returns', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'business_tax_returns', label: 'Last 2 Years Business Tax Returns', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'bank_statements', label: 'Last 3 Months Bank Statements', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'income_verification', label: 'Income Verification Documents', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'real_estate_schedule', label: 'Schedule of Real Estate Owned', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'debt_schedule', label: 'Debt Schedule', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
+  { docType: 'credit_explanation', label: 'Credit Explanation Letters', category: 'financial' as const, section: 'borrower_docs', subsection: 'financial_documentation' },
   
   // Entity Documentation
-  { docType: 'formation_documents', label: 'Formation Documents', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
-  { docType: 'operating_agreement', label: 'Operating Agreement', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
-  { docType: 'resolution_to_borrow', label: 'Resolution to Borrow', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
-  { docType: 'certificate_good_standing', label: 'Certificate of Good Standing', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
-  { docType: 'ein_documentation', label: 'EIN Documentation', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
+  { docType: 'formation_documents', label: 'Business Formation Documents', category: 'legal' as const, section: 'borrower_docs', subsection: 'entity_documentation' },
+  { docType: 'operating_agreement', label: 'Operating Agreement/Bylaws', category: 'legal' as const, section: 'borrower_docs', subsection: 'entity_documentation' },
+  { docType: 'certificate_good_standing', label: 'Certificate of Good Standing', category: 'legal' as const, section: 'borrower_docs', subsection: 'entity_documentation' },
+  { docType: 'ein_documentation', label: 'EIN Documentation', category: 'legal' as const, section: 'borrower_docs', subsection: 'entity_documentation' },
+  { docType: 'resolution_to_borrow', label: 'Resolution to Borrow', category: 'legal' as const, section: 'borrower_docs', subsection: 'entity_documentation' },
+  { docType: 'corporate_structure', label: 'Corporate Structure Chart', category: 'legal' as const, section: 'borrower_docs', subsection: 'entity_documentation' },
   
-  // 2. PROPERTY FILE
+  // Experience & Background
+  { docType: 'investment_history', label: 'Real Estate Investment History', category: 'borrower' as const, section: 'borrower_docs', subsection: 'experience_background' },
+  { docType: 'project_portfolio', label: 'Past Project Portfolio', category: 'borrower' as const, section: 'borrower_docs', subsection: 'experience_background' },
+  { docType: 'professional_credentials', label: 'Professional Credentials', category: 'borrower' as const, section: 'borrower_docs', subsection: 'experience_background' },
+  { docType: 'references', label: 'References', category: 'borrower' as const, section: 'borrower_docs', subsection: 'experience_background' },
+  { docType: 'risk_assessment', label: 'Risk Tier Assessment', category: 'borrower' as const, section: 'borrower_docs', subsection: 'experience_background' },
+  
+  // Exit Strategy
+  { docType: 'exit_strategy_statement', label: 'Exit Strategy Statement', category: 'exit' as const, section: 'borrower_docs', subsection: 'exit_strategy' },
+  { docType: 'project_timeline', label: 'Timeline for Project Completion', category: 'exit' as const, section: 'borrower_docs', subsection: 'exit_strategy' },
+  { docType: 'refinance_qualification', label: 'Refinance Qualification', category: 'exit' as const, section: 'borrower_docs', subsection: 'exit_strategy' },
+  { docType: 'sales_comparables', label: 'Sales Comparables', category: 'exit' as const, section: 'borrower_docs', subsection: 'exit_strategy' },
+  { docType: 'marketing_plan', label: 'Marketing Plan', category: 'exit' as const, section: 'borrower_docs', subsection: 'exit_strategy' },
+  
+  // 2. PROPERTY DOCS
   // Property Information
-  { docType: 'property_details', label: 'Property Details Summary', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
-  { docType: 'purchase_contract', label: 'Purchase Contract', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
-  { docType: 'property_photos', label: 'Property Photos', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
-  { docType: 'preliminary_title', label: 'Preliminary Title Report', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
-  { docType: 'survey_plot_plan', label: 'Survey/Plot Plan', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
+  { docType: 'property_summary', label: 'Property Summary Sheet', category: 'property' as const, section: 'property_docs', subsection: 'property_information' },
+  { docType: 'purchase_contract', label: 'Purchase Contract', category: 'property' as const, section: 'property_docs', subsection: 'property_information' },
+  { docType: 'property_photos', label: 'Property Photos', category: 'property' as const, section: 'property_docs', subsection: 'property_information' },
+  { docType: 'preliminary_title', label: 'Preliminary Title Report', category: 'property' as const, section: 'property_docs', subsection: 'property_information' },
+  { docType: 'survey_plot_plan', label: 'Survey/Plot Plan', category: 'property' as const, section: 'property_docs', subsection: 'property_information' },
+  { docType: 'legal_description', label: 'Legal Description', category: 'property' as const, section: 'property_docs', subsection: 'property_information' },
+  { docType: 'zoning_verification', label: 'Zoning Verification', category: 'property' as const, section: 'property_docs', subsection: 'property_information' },
   
   // Valuation
-  { docType: 'appraisal_report', label: 'Appraisal Report', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
-  { docType: 'comparative_market_analysis', label: 'Comparative Market Analysis', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
-  { docType: 'broker_price_opinion', label: 'Broker Price Opinion (BPO)', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
-  { docType: 'historical_property_values', label: 'Historical Property Values', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
+  { docType: 'appraisal_report', label: 'Appraisal Report', category: 'property' as const, section: 'property_docs', subsection: 'valuation' },
+  { docType: 'comparative_market_analysis', label: 'Comparative Market Analysis', category: 'property' as const, section: 'property_docs', subsection: 'valuation' },
+  { docType: 'arv_assessment', label: 'After-Repair Value Assessment', category: 'property' as const, section: 'property_docs', subsection: 'valuation' },
+  { docType: 'broker_price_opinion', label: 'Broker Price Opinion', category: 'property' as const, section: 'property_docs', subsection: 'valuation' },
+  { docType: 'value_justification', label: 'Value Justification Analysis', category: 'property' as const, section: 'property_docs', subsection: 'valuation' },
   
   // Property Condition
-  { docType: 'inspection_report', label: 'Inspection Report', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
-  { docType: 'environmental_assessment', label: 'Environmental Assessment', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
-  { docType: 'engineering_report', label: 'Engineering Report', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
-  { docType: 'pest_inspection', label: 'Pest Inspection', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
-  { docType: 'natural_hazard_disclosures', label: 'Natural Hazard Disclosures', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
+  { docType: 'inspection_report', label: 'Inspection Report', category: 'property' as const, section: 'property_docs', subsection: 'property_condition' },
+  { docType: 'environmental_assessment', label: 'Environmental Assessment', category: 'property' as const, section: 'property_docs', subsection: 'property_condition' },
+  { docType: 'engineering_report', label: 'Engineering Report', category: 'property' as const, section: 'property_docs', subsection: 'property_condition' },
+  { docType: 'pest_inspection', label: 'Pest Inspection', category: 'property' as const, section: 'property_docs', subsection: 'property_condition' },
+  { docType: 'natural_hazard_disclosures', label: 'Natural Hazard Disclosures', category: 'property' as const, section: 'property_docs', subsection: 'property_condition' },
+  { docType: 'lead_asbestos_testing', label: 'Lead/Asbestos Testing', category: 'property' as const, section: 'property_docs', subsection: 'property_condition' },
+  { docType: 'soil_reports', label: 'Soil Reports', category: 'property' as const, section: 'property_docs', subsection: 'property_condition' },
   
-  // 3. PROJECT DOCUMENTATION
-  // Fix-and-Flip/Construction
-  { docType: 'renovation_budget', label: 'Renovation/Construction Budget', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
-  { docType: 'project_timeline', label: 'Timeline and Milestones', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
-  { docType: 'contractor_information', label: 'Contractor Information', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
-  { docType: 'permits_approvals', label: 'Permits and Approvals', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
-  { docType: 'architectural_plans', label: 'Architectural Plans', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
-  { docType: 'draw_schedule', label: 'Draw Schedule', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
+  // Project Documentation
+  { docType: 'renovation_budget', label: 'Renovation/Construction Budget', category: 'project' as const, section: 'property_docs', subsection: 'project_documentation' },
+  { docType: 'scope_of_work', label: 'Scope of Work', category: 'project' as const, section: 'property_docs', subsection: 'project_documentation' },
+  { docType: 'architectural_plans', label: 'Architectural Plans', category: 'project' as const, section: 'property_docs', subsection: 'project_documentation' },
+  { docType: 'contractor_bids', label: 'Contractor Bids and Credentials', category: 'project' as const, section: 'property_docs', subsection: 'project_documentation' },
+  { docType: 'construction_timeline', label: 'Construction Timeline', category: 'project' as const, section: 'property_docs', subsection: 'project_documentation' },
+  { docType: 'permits_approvals', label: 'Permits and Approvals', category: 'project' as const, section: 'property_docs', subsection: 'project_documentation' },
+  { docType: 'draw_schedule', label: 'Draw Schedule', category: 'project' as const, section: 'property_docs', subsection: 'project_documentation' },
   
-  // Rental/Commercial
-  { docType: 'rent_roll', label: 'Rent Roll', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
-  { docType: 'lease_agreements', label: 'Lease Agreements', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
-  { docType: 'operating_expenses', label: 'Operating Expenses', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
-  { docType: 'dscr_calculations', label: 'DSCR Calculations', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
-  { docType: 'property_management_plan', label: 'Property Management Plan', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
-  { docType: 'market_rental_analysis', label: 'Market Rental Analysis', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
+  // Income Property Documents
+  { docType: 'rent_roll', label: 'Rent Roll', category: 'property' as const, section: 'property_docs', subsection: 'income_property' },
+  { docType: 'lease_agreements', label: 'Lease Agreements', category: 'property' as const, section: 'property_docs', subsection: 'income_property' },
+  { docType: 'operating_expenses', label: 'Operating Expense History', category: 'property' as const, section: 'property_docs', subsection: 'income_property' },
+  { docType: 'dscr_calculation', label: 'DSCR Calculation Worksheet', category: 'property' as const, section: 'property_docs', subsection: 'income_property' },
+  { docType: 'property_management', label: 'Property Management Agreement', category: 'property' as const, section: 'property_docs', subsection: 'income_property' },
+  { docType: 'market_rental_analysis', label: 'Market Rental Analysis', category: 'property' as const, section: 'property_docs', subsection: 'income_property' },
+  { docType: 'tenant_estoppel', label: 'Tenant Estoppel Certificates', category: 'property' as const, section: 'property_docs', subsection: 'income_property' },
   
-  // 4. LOAN DOCUMENTS
-  // Pre-Approval
-  { docType: 'pre_qualification_letter', label: 'Pre-qualification Letter', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
-  { docType: 'term_sheet', label: 'Term Sheet', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
-  { docType: 'rate_lock_agreement', label: 'Rate Lock Agreement', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
-  { docType: 'fee_disclosure', label: 'Fee Disclosure', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
+  // State-Specific Property Requirements
+  { docType: 'state_property_disclosures', label: 'State-specific Property Disclosures', category: 'property' as const, section: 'property_docs', subsection: 'state_specific' },
+  { docType: 'regional_certifications', label: 'Regional Certifications', category: 'property' as const, section: 'property_docs', subsection: 'state_specific' },
+  { docType: 'local_compliance', label: 'Local Compliance Documentation', category: 'property' as const, section: 'property_docs', subsection: 'state_specific' },
   
-  // Loan Agreement
-  { docType: 'promissory_note', label: 'Promissory Note', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
-  { docType: 'deed_of_trust', label: 'Mortgage/Deed of Trust', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
-  { docType: 'security_agreement', label: 'Security Agreement', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
-  { docType: 'personal_guarantee', label: 'Personal Guarantee', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
-  { docType: 'assignment_rents', label: 'Assignment of Rents/Leases', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
+  // 3. CLOSING DOCS
+  // Pre-Closing
+  { docType: 'pre_approval_letter', label: 'Pre-approval Letter', category: 'loan' as const, section: 'closing_docs', subsection: 'pre_closing' },
+  { docType: 'term_sheet', label: 'Term Sheet', category: 'loan' as const, section: 'closing_docs', subsection: 'pre_closing' },
+  { docType: 'fee_disclosure', label: 'Fee Disclosure', category: 'loan' as const, section: 'closing_docs', subsection: 'pre_closing' },
+  { docType: 'rate_lock_agreement', label: 'Rate Lock Agreement', category: 'loan' as const, section: 'closing_docs', subsection: 'pre_closing' },
+  { docType: 'underwriting_approval', label: 'Underwriting Approval', category: 'loan' as const, section: 'closing_docs', subsection: 'pre_closing' },
+  { docType: 'closing_checklist', label: 'Closing Checklist', category: 'loan' as const, section: 'closing_docs', subsection: 'pre_closing' },
   
-  // Closing Documents
-  { docType: 'closing_disclosure', label: 'Closing Disclosure', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
-  { docType: 'title_insurance_policy', label: 'Title Insurance Policy', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
-  { docType: 'insurance_certificates', label: 'Insurance Certificates', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
-  { docType: 'funding_authorization', label: 'Funding Authorization', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
-  { docType: 'disbursement_instructions', label: 'Disbursement Instructions', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
+  // Loan Agreements
+  { docType: 'promissory_note', label: 'Promissory Note', category: 'loan' as const, section: 'closing_docs', subsection: 'loan_agreements' },
+  { docType: 'deed_of_trust', label: 'Mortgage/Deed of Trust', category: 'loan' as const, section: 'closing_docs', subsection: 'loan_agreements' },
+  { docType: 'security_agreement', label: 'Security Agreement', category: 'loan' as const, section: 'closing_docs', subsection: 'loan_agreements' },
+  { docType: 'personal_guarantee', label: 'Personal Guarantee', category: 'loan' as const, section: 'closing_docs', subsection: 'loan_agreements' },
+  { docType: 'assignment_rents', label: 'Assignment of Rents and Leases', category: 'loan' as const, section: 'closing_docs', subsection: 'loan_agreements' },
+  { docType: 'loan_servicing_agreement', label: 'Loan Servicing Agreement', category: 'loan' as const, section: 'closing_docs', subsection: 'loan_agreements' },
   
-  // 5. COMPLIANCE & STATE-SPECIFIC
-  // Regulatory Compliance
-  { docType: 'state_disclosures', label: 'State-specific Disclosures', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
-  { docType: 'federal_disclosures', label: 'Federal Disclosures', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
-  { docType: 'aml_documentation', label: 'Anti-money Laundering Documentation', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
-  { docType: 'ofac_check', label: 'OFAC Check Results', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
-  { docType: 'patriot_act_compliance', label: 'Patriot Act Compliance', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
+  // Compliance Documents
+  { docType: 'state_lending_disclosures', label: 'State-specific Lending Disclosures', category: 'compliance' as const, section: 'closing_docs', subsection: 'compliance_documents' },
+  { docType: 'federal_lending_disclosures', label: 'Federal Lending Disclosures', category: 'compliance' as const, section: 'closing_docs', subsection: 'compliance_documents' },
+  { docType: 'aml_documentation', label: 'Anti-money Laundering Documentation', category: 'compliance' as const, section: 'closing_docs', subsection: 'compliance_documents' },
+  { docType: 'ofac_check', label: 'OFAC Check Results', category: 'compliance' as const, section: 'closing_docs', subsection: 'compliance_documents' },
+  { docType: 'patriot_act_compliance', label: 'Patriot Act Compliance Verification', category: 'compliance' as const, section: 'closing_docs', subsection: 'compliance_documents' },
   
-  // State-Specific Requirements
-  { docType: 'ca_documentation', label: 'CA Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
-  { docType: 'fl_documentation', label: 'FL Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
-  { docType: 'ny_documentation', label: 'NY Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
-  { docType: 'tx_documentation', label: 'TX Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
-  { docType: 'az_documentation', label: 'AZ Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
+  // Insurance
+  { docType: 'property_insurance', label: 'Property Insurance Policy', category: 'insurance' as const, section: 'closing_docs', subsection: 'insurance' },
+  { docType: 'flood_insurance', label: 'Flood Insurance', category: 'insurance' as const, section: 'closing_docs', subsection: 'insurance' },
+  { docType: 'builders_risk', label: 'Builder\'s Risk Policy', category: 'insurance' as const, section: 'closing_docs', subsection: 'insurance' },
+  { docType: 'liability_insurance', label: 'Liability Insurance', category: 'insurance' as const, section: 'closing_docs', subsection: 'insurance' },
+  { docType: 'insurance_binder', label: 'Insurance Binder Naming Lender', category: 'insurance' as const, section: 'closing_docs', subsection: 'insurance' },
   
-  // 6. LOAN SERVICING
+  // Funding
+  { docType: 'closing_disclosure', label: 'Closing Disclosure', category: 'loan' as const, section: 'closing_docs', subsection: 'funding' },
+  { docType: 'final_title_policy', label: 'Final Title Policy', category: 'loan' as const, section: 'closing_docs', subsection: 'funding' },
+  { docType: 'disbursement_instructions', label: 'Disbursement Instructions', category: 'loan' as const, section: 'closing_docs', subsection: 'funding' },
+  { docType: 'funding_authorization', label: 'Funding Authorization', category: 'loan' as const, section: 'closing_docs', subsection: 'funding' },
+  { docType: 'escrow_agreements', label: 'Escrow Agreements', category: 'loan' as const, section: 'closing_docs', subsection: 'funding' },
+  { docType: 'wiring_instructions', label: 'Wiring Instructions', category: 'loan' as const, section: 'closing_docs', subsection: 'funding' },
+  
+  // 4. SERVICING DOCS
   // Payment Records
-  { docType: 'payment_history', label: 'Payment History', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
-  { docType: 'late_notices', label: 'Late Notices', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
-  { docType: 'modification_requests', label: 'Modification Requests', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
-  { docType: 'payoff_statements', label: 'Payoff Statements', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
+  { docType: 'payment_history', label: 'Payment History', category: 'servicing' as const, section: 'servicing_docs', subsection: 'payment_records' },
+  { docType: 'payment_receipts', label: 'Payment Receipts', category: 'servicing' as const, section: 'servicing_docs', subsection: 'payment_records' },
+  { docType: 'ach_authorization', label: 'ACH Authorization', category: 'servicing' as const, section: 'servicing_docs', subsection: 'payment_records' },
+  { docType: 'late_notices', label: 'Late Notices', category: 'servicing' as const, section: 'servicing_docs', subsection: 'payment_records' },
+  { docType: 'payment_modification', label: 'Payment Modification Requests', category: 'servicing' as const, section: 'servicing_docs', subsection: 'payment_records' },
   
   // Loan Monitoring
-  { docType: 'monitoring_inspection_reports', label: 'Inspection Reports', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
-  { docType: 'draw_request_documentation', label: 'Draw Request Documentation', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
-  { docType: 'project_update_reports', label: 'Project Update Reports', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
-  { docType: 'insurance_renewal_tracking', label: 'Insurance Renewal Tracking', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
-  { docType: 'tax_payment_verification', label: 'Tax Payment Verification', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
+  { docType: 'inspection_reports', label: 'Project Inspection Reports', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_monitoring' },
+  { docType: 'draw_requests', label: 'Draw Requests and Approvals', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_monitoring' },
+  { docType: 'progress_photos', label: 'Construction Progress Photos', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_monitoring' },
+  { docType: 'milestone_verification', label: 'Milestone Verification', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_monitoring' },
+  { docType: 'budget_variance', label: 'Budget Variance Tracking', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_monitoring' },
+  { docType: 'change_orders', label: 'Change Orders', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_monitoring' },
+  
+  // Asset Management
+  { docType: 'property_tax_verification', label: 'Property Tax Verification', category: 'servicing' as const, section: 'servicing_docs', subsection: 'asset_management' },
+  { docType: 'insurance_renewal', label: 'Insurance Renewal Tracking', category: 'servicing' as const, section: 'servicing_docs', subsection: 'asset_management' },
+  { docType: 'annual_financial_review', label: 'Annual Financial Review', category: 'servicing' as const, section: 'servicing_docs', subsection: 'asset_management' },
+  { docType: 'property_condition_reports', label: 'Periodic Property Condition Reports', category: 'servicing' as const, section: 'servicing_docs', subsection: 'asset_management' },
+  { docType: 'lease_monitoring', label: 'Lease/Tenant Monitoring', category: 'servicing' as const, section: 'servicing_docs', subsection: 'asset_management' },
   
   // Default Management
-  { docType: 'default_notices', label: 'Default Notices', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
-  { docType: 'workout_documentation', label: 'Workout Documentation', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
-  { docType: 'forbearance_agreements', label: 'Forbearance Agreements', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
-  { docType: 'foreclosure_documentation', label: 'Foreclosure Documentation', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
+  { docType: 'default_notices', label: 'Default Notices', category: 'servicing' as const, section: 'servicing_docs', subsection: 'default_management' },
+  { docType: 'workout_documentation', label: 'Workout Documentation', category: 'servicing' as const, section: 'servicing_docs', subsection: 'default_management' },
+  { docType: 'forbearance_agreements', label: 'Forbearance Agreements', category: 'servicing' as const, section: 'servicing_docs', subsection: 'default_management' },
+  { docType: 'loan_modification', label: 'Loan Modification Documents', category: 'servicing' as const, section: 'servicing_docs', subsection: 'default_management' },
+  { docType: 'collection_communications', label: 'Collection Communications', category: 'servicing' as const, section: 'servicing_docs', subsection: 'default_management' },
+  { docType: 'foreclosure_documentation', label: 'Foreclosure Documentation', category: 'servicing' as const, section: 'servicing_docs', subsection: 'default_management' },
   
-  // 7. EXIT STRATEGY
-  // Exit Documentation
-  { docType: 'exit_strategy_statement', label: 'Exit Strategy Statement', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
-  { docType: 'sale_documentation', label: 'Sale Documentation', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
-  { docType: 'refinance_documentation', label: 'Refinance Documentation', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
-  { docType: 'leaseup_documentation', label: 'Lease-up Documentation', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
-  { docType: 'marketing_materials', label: 'Marketing Materials', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
+  // Loan Conclusion
+  { docType: 'payoff_statement', label: 'Payoff Statement', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_conclusion' },
+  { docType: 'satisfaction_of_mortgage', label: 'Satisfaction of Mortgage', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_conclusion' },
+  { docType: 'release_documents', label: 'Release Documents', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_conclusion' },
+  { docType: 'final_accounting', label: 'Final Accounting', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_conclusion' },
+  { docType: 'post_loan_documentation', label: 'Post-loan Project Documentation', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_conclusion' },
+  { docType: 'client_followup', label: 'Client Follow-up Records', category: 'servicing' as const, section: 'servicing_docs', subsection: 'loan_conclusion' },
 ];
 
 // Define section icons and titles
-type SectionKey = 'borrower_profile' | 'property_file' | 'project_documentation' | 'loan_documents' | 'compliance' | 'loan_servicing' | 'exit_strategy' | 'unexecuted';
+type SectionKey = 'borrower_docs' | 'property_docs' | 'closing_docs' | 'servicing_docs' | 'unexecuted';
 
 const SECTION_CONFIG: Record<SectionKey, {
   icon: React.ReactNode;
   title: string;
   subsections: Record<string, string>;
 }> = {
-  borrower_profile: {
+  borrower_docs: {
     icon: <FileCheck size={20} />,
-    title: 'Borrower Profile',
+    title: 'Borrower Docs',
     subsections: {
-      borrower_information: 'Borrower Information',
+      personal_information: 'Personal Information',
       financial_documentation: 'Financial Documentation',
-      entity_documentation: 'Entity Documentation'
+      entity_documentation: 'Entity Documentation',
+      experience_background: 'Experience & Background',
+      exit_strategy: 'Exit Strategy'
     }
   },
-  property_file: {
+  property_docs: {
     icon: <MapPin size={20} />,
-    title: 'Property File',
+    title: 'Property Docs',
     subsections: {
       property_information: 'Property Information',
       valuation: 'Valuation',
-      property_condition: 'Property Condition'
-    }
-  },
-  project_documentation: {
-    icon: <FileText size={20} />,
-    title: 'Project Documentation',
-    subsections: {
-      fix_and_flip: 'Fix-and-Flip/Construction',
-      rental_commercial: 'Rental/Commercial'
-    }
-  },
-  loan_documents: {
-    icon: <FileText size={20} />,
-    title: 'Loan Documents',
-    subsections: {
-      pre_approval: 'Pre-Approval',
-      loan_agreement: 'Loan Agreement',
-      closing_documents: 'Closing Documents'
-    }
-  },
-  compliance: {
-    icon: <Check size={20} />,
-    title: 'Compliance & State-Specific',
-    subsections: {
-      regulatory_compliance: 'Regulatory Compliance',
+      property_condition: 'Property Condition',
+      project_documentation: 'Project Documentation',
+      income_property: 'Income Property Documents',
       state_specific: 'State-Specific Requirements'
     }
   },
-  loan_servicing: {
+  closing_docs: {
+    icon: <FileText size={20} />,
+    title: 'Closing Docs',
+    subsections: {
+      pre_closing: 'Pre-Closing',
+      loan_agreements: 'Loan Agreements',
+      compliance_documents: 'Compliance Documents',
+      insurance: 'Insurance',
+      funding: 'Funding'
+    }
+  },
+  servicing_docs: {
     icon: <Clock size={20} />,
-    title: 'Loan Servicing',
+    title: 'Servicing Docs',
     subsections: {
       payment_records: 'Payment Records',
       loan_monitoring: 'Loan Monitoring',
-      default_management: 'Default Management'
-    }
-  },
-  exit_strategy: {
-    icon: <FileText size={20} />,
-    title: 'Exit Strategy',
-    subsections: {
-      exit_documentation: 'Exit Documentation'
+      asset_management: 'Asset Management',
+      default_management: 'Default Management',
+      loan_conclusion: 'Loan Conclusion'
     }
   },
   unexecuted: {

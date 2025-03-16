@@ -8,7 +8,7 @@ export interface SimpleDocument {
   fileType?: string;
   fileSize?: number;
   dateUploaded: string;
-  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit' | 'insurance';
   docType: string;
   status: 'pending' | 'approved' | 'rejected';
   content: string; // Base64 encoded content or HTML for generated documents
@@ -24,7 +24,7 @@ const STORAGE_KEY = 'simple_documents';
 // Helper function for document type classification
 function classifyDocument(filename: string): { 
   docType: string; 
-  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit' | 'insurance';
   section?: string;
   subsection?: string;
 } {
@@ -285,7 +285,7 @@ export const simpleDocumentService = {
   // Add a new document
   addDocument: async (file: File, loanId: string, classification?: { 
     docType: string; 
-    category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
+    category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit' | 'insurance';
     section?: string;
     subsection?: string;
   }): Promise<SimpleDocument | null> => {
