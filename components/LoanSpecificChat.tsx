@@ -26,7 +26,7 @@ export default function LoanSpecificChat() {
         return [];
       }
       
-      let allDocs = JSON.parse(storageDocsRaw);
+      const allDocs = JSON.parse(storageDocsRaw);
       if (!Array.isArray(allDocs)) {
         console.log('Invalid document data structure');
         return [];
