@@ -15,7 +15,7 @@ import SimpleDocumentAnalytics from '@/components/document/SimpleDocumentAnalyti
 // Loading component for suspense fallback
 function LoadingState() {
   return (
-    <div className="container mx-auto py-16 px-4 text-center">
+    <div className="text-center">
       <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
       <p className="text-muted-foreground">Loading loan details...</p>
     </div>
@@ -81,13 +81,13 @@ function ManageDocumentsContent({ loanId }: { loanId: string }) {
   }
   
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="space-y-6">
       <div className="mb-6">
-        <Link href={`/loans/${loanId}`} className="flex items-center text-muted-foreground hover:text-foreground">
+        <Link href={`/loans/${loanId}`} className="flex items-center text-gray-400 hover:text-white transition-colors">
           <ArrowLeft size={16} className="mr-2" />
           Back to Loan Details
         </Link>
-        <h1 className="text-2xl font-bold mt-4">
+        <h1 className="text-2xl font-bold mt-4 text-white">
           Document Management: {loanDetails?.borrowerName || `Loan #${loanId}`}
         </h1>
         <p className="text-muted-foreground">
@@ -110,12 +110,12 @@ function ManageDocumentsContent({ loanId }: { loanId: string }) {
             />
           </div>
           
-          <div className="mt-6 p-4 bg-primary/10 rounded-lg border border-primary/20">
-            <h3 className="font-medium flex items-center mb-2">
-              <FileText size={16} className="mr-2 text-primary" />
+          <div className="mt-6 p-4 bg-blue-900/20 rounded-lg border border-blue-800/30">
+            <h3 className="font-medium flex items-center mb-2 text-blue-300">
+              <FileText size={16} className="mr-2 text-blue-400" />
               Document Tips
             </h3>
-            <ul className="text-sm text-muted-foreground space-y-2 ml-5 list-disc">
+            <ul className="text-sm text-gray-300 space-y-2 ml-5 list-disc">
               <li>Upload all required loan documents</li>
               <li>Ensure all pages are properly oriented</li>
               <li>Make sure text is legible in the scanned documents</li>
@@ -126,9 +126,9 @@ function ManageDocumentsContent({ loanId }: { loanId: string }) {
         
         {/* Main content - Document List */}
         <div className="md:col-span-2">
-          <div className="bg-card shadow-sm border border-border rounded-lg">
-            <div className="p-4 border-b border-border">
-              <h2 className="text-lg font-semibold">Loan Documents</h2>
+          <div className="bg-[#1A2234] shadow-md border border-gray-800 rounded-lg">
+            <div className="p-4 border-b border-gray-800 bg-[#0A0F1A]">
+              <h2 className="text-lg font-semibold text-white">Loan Documents</h2>
             </div>
             <div className="p-4">
               <SimpleDocumentList 
