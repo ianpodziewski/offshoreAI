@@ -31,12 +31,29 @@ export async function POST(req: NextRequest) {
 
     console.log(`Request ${hasDocumentContent ? 'includes' : 'does not include'} document content`);
 
+    // Prepare system instructions to help the model process document content
+    let enhancedMessages = [...messages];
+    
+    if (hasDocumentContent) {
+      // Add specific instructions for handling document content
+      enhancedMessages.unshift({
+        role: 'system',
+        content: `You are a loan document assistant with access to loan details and document content. 
+        When answering questions about specific document content:
+        1. Focus on providing precise information from the documents.
+        2. If you see interest rate information in the documents, prioritize that in your answers.
+        3. When comparing loan details to document content, be explicit about what you find.
+        4. If the document content is truncated or incomplete, acknowledge this limitation.
+        5. Quote relevant sections from documents when appropriate.`
+      });
+    }
+
     // Call OpenAI API with appropriate model based on content
     const response = await openai.chat.completions.create({
       model: hasDocumentContent ? 'gpt-4-turbo' : 'gpt-3.5-turbo',
-      messages: messages,
-      temperature: 0.7,
-      max_tokens: 1500,
+      messages: enhancedMessages,
+      temperature: 0.5, // Lower temperature for more precise answers
+      max_tokens: 2000, // Increased token limit for more detailed responses
     });
 
     // Extract the assistant's message
