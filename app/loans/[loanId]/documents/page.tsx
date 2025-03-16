@@ -125,7 +125,7 @@ export default function LoanDocumentsPage() {
   
   return (
     <LayoutWrapper>
-      <div className="container mx-auto py-8 px-4">
+      <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">
           <button
             onClick={() => router.push(`/loans/${loanId}`)}
@@ -142,14 +142,14 @@ export default function LoanDocumentsPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <LoanSidebar loan={loan} activePage="documents" />
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-4 space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold text-white">Document Management</h2>
@@ -162,7 +162,7 @@ export default function LoanDocumentsPage() {
             
             {/* Document Completion Status */}
             {completionStatus && (
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <Card className="bg-[#1A2234] border-gray-800">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg text-white">Overall Progress</CardTitle>
