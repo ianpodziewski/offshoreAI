@@ -9,33 +9,37 @@ import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import { FileText, Upload } from 'lucide-react';
 
 export default function LoanSpecificChat() {
-  const { activeLoan, loanDocuments } = useLoanContext();
+  const { activeLoan, loanDocuments, refreshLoanDocuments: refreshContextDocuments } = useLoanContext();
   const { handleSubmit } = useApp();
   const [loanContext, setLoanContext] = useState<string>('');
+  const [autoSendDisabled, setAutoSendDisabled] = useState(true);
   
   // Function to manually sync loan documents with chat
   const syncLoanDocuments = useCallback((loanId: string) => {
     try {
-      // Get all documents
-      const allDocs = simpleDocumentService.getAllDocuments();
+      console.log(`Syncing documents for loan: ${loanId}`);
+      
+      // Get all documents from localStorage directly to ensure we have the latest data
+      const storageDocsRaw = localStorage.getItem('simple_documents');
+      if (!storageDocsRaw) {
+        console.log('No documents found in localStorage');
+        return [];
+      }
+      
+      let allDocs = JSON.parse(storageDocsRaw);
+      if (!Array.isArray(allDocs)) {
+        console.log('Invalid document data structure');
+        return [];
+      }
       
       // Find documents for this loan
       const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
+      console.log(`Found ${loanDocs.length} documents for loan ${loanId}`);
       
-      // Ensure each loan document is properly tagged for the chat
-      let hasChanges = false;
+      // Log the document details for debugging
       loanDocs.forEach(doc => {
-        // Make sure the document has the correct loanId
-        if (doc.loanId !== loanId) {
-          doc.loanId = loanId;
-          hasChanges = true;
-        }
+        console.log(`Document: ${doc.filename}, Type: ${doc.docType}, Category: ${doc.category}`);
       });
-      
-      // If we made changes, save them back to storage
-      if (hasChanges) {
-        localStorage.setItem('simple_documents', JSON.stringify(allDocs));
-      }
       
       return loanDocs;
     } catch (error) {
@@ -47,8 +51,13 @@ export default function LoanSpecificChat() {
   // Function to refresh loan documents
   const refreshLoanDocuments = useCallback(() => {
     if (activeLoan) {
-      // Sync loan documents first
-      syncLoanDocuments(activeLoan.id);
+      console.log(`Refreshing documents for loan: ${activeLoan.id}`);
+      
+      // First refresh the documents in the context
+      refreshContextDocuments();
+      
+      // Then sync loan documents
+      const loanDocs = syncLoanDocuments(activeLoan.id);
       
       // Format loan data into a context string
       const loanContextStr = `
@@ -63,29 +72,38 @@ export default function LoanSpecificChat() {
         ARV LTV: ${activeLoan.arv_ltv}%
       `;
       
-      // Get the latest documents for this loan
-      const latestLoanDocs = simpleDocumentService.getDocumentsForLoan(activeLoan.id);
-      
       // Provide document context as well
-      const documentContextStr = latestLoanDocs.length > 0 
-        ? latestLoanDocs.map(doc => 
-            `Document: ${doc.filename}, Status: ${doc.status}`
+      const documentContextStr = loanDocs.length > 0 
+        ? loanDocs.map(doc => 
+            `Document: ${doc.filename}, Status: ${doc.status}, Type: ${doc.docType}`
           ).join('\n')
         : 'No documents available for this loan.';
       
-      setLoanContext(`${loanContextStr}\n\nDocuments:\n${documentContextStr}`);
+      const fullContext = `${loanContextStr}\n\nDocuments:\n${documentContextStr}`;
+      setLoanContext(fullContext);
+      
+      console.log('Loan context updated successfully');
+      return fullContext;
     }
-  }, [activeLoan, syncLoanDocuments]);
+    return '';
+  }, [activeLoan, syncLoanDocuments, refreshContextDocuments]);
   
   // Initialize loan context when component mounts or loan changes
   useEffect(() => {
-    refreshLoanDocuments();
+    console.log('LoanSpecificChat component mounted or loan changed');
+    if (activeLoan) {
+      console.log(`Active loan detected: ${activeLoan.id}`);
+      refreshLoanDocuments();
+    }
   }, [activeLoan, refreshLoanDocuments]);
   
   // Function to send loan context to the chat
   const sendLoanContextToChat = () => {
     if (loanContext) {
+      console.log('Sending loan context to chat');
       handleSubmit(`Please use the following loan information as context for our conversation: ${loanContext}`);
+    } else {
+      console.log('No loan context available to send');
     }
   };
   

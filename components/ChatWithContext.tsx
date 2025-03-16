@@ -34,7 +34,7 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
   const [showAllChatDocs, setShowAllChatDocs] = useState(false);
   const [showAllLoanDocs, setShowAllLoanDocs] = useState(false);
   
-  // Use loan-specific context if provided
+  // Use loan-specific context if provided - but don't automatically send it
   useEffect(() => {
     if (loanSpecificContext) {
       // Log the loan context for debugging
@@ -82,18 +82,22 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
       
       // If we have loan-specific context, only show documents for that loan
       // Otherwise, split into chat and loan documents as before
-      if (loanSpecificContext) {
+      if (loanSpecificContext && isLoanSpecific) {
         // Extract loan ID from the context (assuming it's in the format "Active Loan: LOAN_ID")
         const loanIdMatch = loanSpecificContext.match(/Active Loan: ([A-Z0-9-]+)/);
         const loanId = loanIdMatch ? loanIdMatch[1] : null;
         
         if (loanId) {
+          console.log(`Filtering documents for loan ID: ${loanId}`);
           // Only show documents for this specific loan
           const loanSpecificDocs = sortedDocs.filter(doc => doc.loanId === loanId);
+          console.log(`Found ${loanSpecificDocs.length} documents for loan ${loanId}`);
+          
           setLoanDocuments(loanSpecificDocs);
           setChatDocuments([]); // No general chat documents in loan-specific context
         } else {
           // Fallback if we can't extract loan ID
+          console.log('Could not extract loan ID from context');
           setChatDocuments([]);
           setLoanDocuments([]);
         }
@@ -110,7 +114,7 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
     } finally {
       setLoadingDocs(false);
     }
-  }, [loanSpecificContext]);
+  }, [loanSpecificContext, isLoanSpecific]);
   
   // Add a useEffect to clean the localStorage on component mount
   useEffect(() => {
