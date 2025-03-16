@@ -13,7 +13,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     <div className="flex flex-col min-h-screen bg-[#111827]">
       <Navbar />
       {/* Main content area with proper spacing and background */}
-      <main className="flex-grow pt-6 pb-12 bg-[#111827] relative" style={{ zIndex: 1 }}>
+      <main className="flex-grow pt-6 pb-12 bg-[#111827] relative w-full" style={{ zIndex: 1 }}>
         {children}
       </main>
       <footer className="bg-[#0A0F1A] text-gray-300 border-t border-gray-800 py-4 relative" style={{ zIndex: 10 }}>

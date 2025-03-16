@@ -292,7 +292,7 @@ export default function EnhancedDashboard() {
   if (loading) {
     return (
       <LayoutWrapper>
-        <div className="container mx-auto py-8 px-4">
+        <div className="container mx-auto py-8">
           <div className="flex justify-center items-center h-64">
             <div
               className="animate-spin w-8 h-8 border-4 rounded-full"
@@ -312,7 +312,7 @@ export default function EnhancedDashboard() {
 
   return (
     <LayoutWrapper>
-      <div className="container mx-auto py-8 px-4">
+      <div className="container mx-auto py-8">
         {/* MAIN HEADER */}
         <div className="mb-8">
           <h1

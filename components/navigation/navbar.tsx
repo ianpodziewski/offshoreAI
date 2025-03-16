@@ -29,7 +29,7 @@ const Navbar: React.FC = () => {
       className="bg-[#0A0F1A] text-white font-sans border-b border-gray-800 shadow-md relative z-50"
       style={{ fontFamily: 'Work Sans, sans-serif' }}
     >
-      <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+      <div className="container mx-auto py-4 flex items-center justify-between">
         {/* Logo / Title */}
         <div className="text-xl font-bold text-blue-400">
           <Link href="/" className="hover:text-blue-300 transition-colors">
