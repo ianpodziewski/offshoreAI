@@ -31,19 +31,6 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
 
   return (
     <div className="relative sticky top-6">
-      {/* Toggle button */}
-      <button
-        onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -left-3 top-6 bg-[#1a2234] rounded-full p-1 shadow-md z-10 hover:bg-[#232d45] transition-colors"
-        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {isCollapsed ? (
-          <ChevronRight size={16} className="text-gray-400" />
-        ) : (
-          <ChevronLeft size={16} className="text-gray-400" />
-        )}
-      </button>
-      
       <div 
         className={`bg-[#141b2d] rounded-lg shadow-md overflow-hidden transition-all duration-300 ${
           isCollapsed ? 'w-16' : 'w-full'
@@ -70,6 +57,19 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
           </ul>
         </div>
       </div>
+      
+      {/* Toggle button - positioned absolutely and centered vertically */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute -left-3 top-1/2 transform -translate-y-1/2 bg-[#1a2234] rounded-full p-1 shadow-md z-10 hover:bg-[#232d45] transition-colors"
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {isCollapsed ? (
+          <ChevronRight size={16} className="text-gray-400" />
+        ) : (
+          <ChevronLeft size={16} className="text-gray-400" />
+        )}
+      </button>
     </div>
   );
 };
