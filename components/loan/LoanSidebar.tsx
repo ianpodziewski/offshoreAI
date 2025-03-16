@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, Info } from 'lucide-react';
+import { FileText, Info, ChevronRight } from 'lucide-react';
 import { COLORS } from '@/app/theme/colors';
 
 interface LoanSidebarProps {
@@ -10,7 +10,6 @@ interface LoanSidebarProps {
 }
 
 const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
-  const [expanded, setExpanded] = useState(false);
   const pathname = usePathname();
 
   // Determine if the current path is active
@@ -38,7 +37,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
   if (!loan) return null;
 
   return (
-    <div className="bg-[#141b2d] rounded-lg shadow-md overflow-hidden">
+    <div className="md:sticky md:top-20 bg-[#141b2d] rounded-lg shadow-md overflow-hidden">
       {/* Loan header */}
       <div className="p-4 border-b border-gray-700">
         <h3 className="font-semibold text-lg" style={{ color: COLORS.textPrimary }}>
@@ -56,14 +55,15 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
             <li key={item.path}>
               <Link
                 href={`/loans/${loan.id}${item.path === 'overview' ? '' : `/${item.path}`}`}
-                className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+                className={`flex items-center px-3 py-3 rounded-md transition-colors ${
                   isActive(item.path)
                     ? 'bg-[#1a2234] text-white'
                     : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'
                 }`}
               >
                 <span className="mr-3">{item.icon}</span>
-                <span>{item.name}</span>
+                <span className="flex-grow">{item.name}</span>
+                {isActive(item.path) && <ChevronRight size={16} />}
               </Link>
             </li>
           ))}

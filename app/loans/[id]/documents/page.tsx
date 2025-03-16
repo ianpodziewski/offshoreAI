@@ -942,7 +942,7 @@ export default function LoanDocumentsPage() {
   return (
     <LayoutWrapper>
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Sidebar */}
+        {/* Sidebar - positioned consistently on the left */}
         <div className="w-full md:w-64 flex-shrink-0">
           <LoanSidebar loan={loan} activePage="documents" />
         </div>

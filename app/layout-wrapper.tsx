@@ -13,8 +13,8 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     <div className="flex flex-col min-h-screen bg-gray-900">
       <Navbar />
       {/* Modified the main element to add proper spacing and a slightly lighter background */}
-      <main className="flex-grow pt-4 px-4 bg-[#111827]">
-        <div className="container mx-auto">
+      <main className="flex-grow pt-6 pb-12 px-4 bg-[#111827]">
+        <div className="container mx-auto max-w-7xl">
           {children}
         </div>
       </main>
