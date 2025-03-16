@@ -1,4 +1,4 @@
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFPage } from 'pdf-lib';
 import { v4 as uuidv4 } from 'uuid';
 import { SimpleDocument } from './simplifiedDocumentService';
 import pdfParse from 'pdf-parse';
@@ -203,7 +203,7 @@ export const pdfSplitterService = {
         const copiedPages = await newPdfDoc.copyPages(sourcePdfDoc, pageIndicesToCopy);
         
         // Add copied pages to new document
-        copiedPages.forEach(page => {
+        copiedPages.forEach((page: PDFPage) => {
           newPdfDoc.addPage(page);
         });
         
