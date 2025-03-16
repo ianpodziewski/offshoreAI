@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { FileCheck, MapPin, FileText, Upload, Eye, Clock, Check, X } from 'lucide-react';
+import { FileCheck, MapPin, FileText, Upload, Eye, Clock, Check, X, Loader2 } from 'lucide-react';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import SimpleDocumentViewer from '@/components/document/SimpleDocumentViewer';
@@ -151,28 +151,28 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
   };
   
   return (
-    <div className="mb-4">
+    <div className="mb-4 max-w-full">
       {/* Document Display - Long and skinny across the page */}
       <div 
-        className="p-4 rounded-t-md shadow-sm w-full"
+        className="p-3 rounded-t-md shadow-sm w-full"
         style={{ 
           backgroundColor: '#1a2234',
           borderLeft: `3px solid ${COLORS.primary}`,
         }}
       >
-        <div className="flex justify-between items-center">
-          <div className="flex items-center flex-grow">
-            <FileText size={18} style={{ color: COLORS.textMuted }} className="mr-3 flex-shrink-0" />
-            <div className="flex-grow">
-              <p className="font-medium" style={{ color: COLORS.textPrimary }}>{label}</p>
+        <div className="flex justify-between items-center flex-wrap gap-2">
+          <div className="flex items-center min-w-0 flex-1">
+            <FileText size={16} style={{ color: COLORS.textMuted }} className="mr-2 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium truncate" style={{ color: COLORS.textPrimary }}>{label}</p>
               {document && (
-                <p className="text-xs" style={{ color: COLORS.textMuted }}>
+                <p className="text-xs truncate" style={{ color: COLORS.textMuted }}>
                   {document.filename} • {new Date(document.dateUploaded).toLocaleDateString()}
                 </p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {document && getStatusBadge(document.status)}
             {document && (
               <Button 
@@ -180,8 +180,9 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
                 size="sm"
                 onClick={() => onViewDocument(document)}
                 style={{ color: COLORS.textAccent }}
+                className="px-2 h-8"
               >
-                <Eye size={16} className="mr-1" />
+                <Eye size={14} className="mr-1" />
                 View
               </Button>
             )}
@@ -191,7 +192,7 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
       
       {/* Upload Section - Same height underneath */}
       <div 
-        className={`p-4 rounded-b-md shadow-sm w-full ${dragOver ? 'ring-2' : ''}`}
+        className={`p-3 rounded-b-md shadow-sm w-full ${dragOver ? 'ring-2' : ''}`}
         style={{ 
           backgroundColor: '#141b2d',
           borderLeft: `3px solid ${COLORS.primary}`,
@@ -203,14 +204,14 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
         onDrop={handleDrop}
       >
         {!document ? (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center">
-              <Upload size={18} style={{ color: COLORS.textMuted }} className="mr-3" />
+              <Upload size={16} style={{ color: COLORS.textMuted }} className="mr-2" />
               <p className="text-sm" style={{ color: COLORS.textSecondary }}>
                 {dragOver ? 'Drop to upload' : 'Drag & drop a PDF file here'}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <label 
                 className="text-xs cursor-pointer hover:underline"
                 style={{ color: COLORS.textAccent }}
@@ -272,11 +273,11 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <p className="text-sm" style={{ color: COLORS.textSecondary }}>
               Document uploaded. You can replace it by uploading a new file.
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <label 
                 className="text-xs cursor-pointer hover:underline"
                 style={{ color: COLORS.textAccent }}
@@ -452,7 +453,7 @@ const DOCUMENT_TYPES = [
 ];
 
 // Define section icons and titles
-type SectionKey = 'borrower_profile' | 'property_file' | 'project_documentation' | 'loan_documents' | 'compliance' | 'loan_servicing' | 'exit_strategy';
+type SectionKey = 'borrower_profile' | 'property_file' | 'project_documentation' | 'loan_documents' | 'compliance' | 'loan_servicing' | 'exit_strategy' | 'unexecuted';
 
 const SECTION_CONFIG: Record<SectionKey, {
   icon: React.ReactNode;
@@ -517,6 +518,11 @@ const SECTION_CONFIG: Record<SectionKey, {
     subsections: {
       exit_documentation: 'Exit Documentation'
     }
+  },
+  unexecuted: {
+    icon: <FileText size={20} />,
+    title: 'Unexecuted Documents',
+    subsections: {}
   }
 };
 
@@ -537,46 +543,62 @@ const UNEXECUTED_TO_GENERATOR_MAP: Record<string, string> = {
   'loan_agreement_draft': 'promissory_note', // Use promissory note generator as fallback
 };
 
-export default function LoanDocumentsPage() {
-  const params = useParams();
-  const [loan, setLoan] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedDocument, setSelectedDocument] = useState<SimpleDocument | null>(null);
+export default function DocumentsPage({ params }: { params: { id: string } }) {
+  const loanId = params.id;
+  const loan = loanDatabase.getLoanById(loanId);
+  const [activeSection, setActiveSection] = useState<SectionKey>(Object.keys(SECTION_CONFIG)[0] as SectionKey);
+  const [activeSubsection, setActiveSubsection] = useState<string | null>(null);
   const [documents, setDocuments] = useState<SimpleDocument[]>([]);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
-  
+  const [viewingDocument, setViewingDocument] = useState<SimpleDocument | null>(null);
+  const [isGeneratingUnexecuted, setIsGeneratingUnexecuted] = useState(false);
+
+  // Fetch documents on mount and when activeSection changes
   useEffect(() => {
-    if (params?.id) {
-      const loanId = String(params.id);
-      const fetchedLoan = loanDatabase.getLoanById(loanId);
-      
-      if (fetchedLoan) {
-        setLoan(fetchedLoan);
-        // Fetch documents for this loan
-        const loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
-        setDocuments(loanDocuments);
-        
-        // Set active section based on loan type
-        if (fetchedLoan.loanType === 'fix_and_flip' || fetchedLoan.loanType === 'construction') {
-          setActiveSection('project_documentation');
-        } else if (fetchedLoan.loanType === 'rental_brrrr') {
-          setActiveSection('property_file');
-        } else {
-          setActiveSection('loan_documents');
-        }
-      }
-      setLoading(false);
+    if (loan) {
+      const docs = simpleDocumentService.getDocumentsForLoan(loanId);
+      setDocuments(docs);
     }
-  }, [params?.id, refreshTrigger]);
-  
-  const handleDocumentStatusChange = () => {
-    setSelectedDocument(null);
-    setRefreshTrigger(prev => prev + 1);
+  }, [loanId, loan]);
+
+  // Set active subsection when active section changes
+  useEffect(() => {
+    if (activeSection && SECTION_CONFIG[activeSection]) {
+      const subsectionKeys = Object.keys(SECTION_CONFIG[activeSection].subsections);
+      if (subsectionKeys.length > 0) {
+        setActiveSubsection(subsectionKeys[0]);
+      } else {
+        setActiveSubsection(null);
+      }
+    } else {
+      setActiveSubsection(null);
+    }
+  }, [activeSection]);
+
+  // Handle document upload
+  const handleUpload = (docType: string) => {
+    if (loan) {
+      const docs = simpleDocumentService.getDocumentsForLoan(loanId);
+      setDocuments(docs);
+    }
   };
 
-  const handleUpload = (docType: string) => {
-    setRefreshTrigger(prev => prev + 1);
+  // Handle document view
+  const handleViewDocument = (document: SimpleDocument) => {
+    setViewingDocument(document);
+  };
+
+  // Handle document close
+  const handleCloseDocument = () => {
+    setViewingDocument(null);
+  };
+
+  // Handle document status change
+  const handleDocumentStatusChange = () => {
+    setViewingDocument(null);
+    if (loan) {
+      const docs = simpleDocumentService.getDocumentsForLoan(loanId);
+      setDocuments(docs);
+    }
   };
 
   // Get document for a specific docType if it exists
@@ -584,350 +606,129 @@ export default function LoanDocumentsPage() {
     return documents.find(doc => doc.docType === docType);
   };
   
-  const handleGenerateUnexecutedDocuments = () => {
-    if (loan) {
-      // Get all existing documents first
-      const allDocs = simpleDocumentService.getAllDocuments();
-      const updatedDocs = [...allDocs];
-      let docsChanged = false;
+  const handleGenerateUnexecutedDocuments = async () => {
+    if (!loan) return;
+    
+    setIsGeneratingUnexecuted(true);
+    
+    try {
+      // Create unexecuted package
+      const unexecutedPackage = createUnexecutedPackage(loan);
       
-      // Store generated document contents for package creation
-      const generatedContents: Record<string, string> = {};
-      
-      // Generate only unexecuted closing documents (excluding the package itself)
-      const individualDocuments = UNEXECUTED_CLOSING_DOCUMENTS.filter((doc) => doc.docType !== 'unexecuted_package');
-      
-      individualDocuments.forEach((docInfo) => {
-        // Get the corresponding generator document type
-        const generatorDocType = UNEXECUTED_TO_GENERATOR_MAP[docInfo.docType];
+      // Generate each document in the package
+      for (const docType of unexecutedPackage) {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate processing time
         
-        if (generatorDocType) {
-          try {
-            // Check if this unexecuted document already exists
-            const existingDocIndex = updatedDocs.findIndex(doc => 
-              doc.loanId === loan.id && 
-              doc.docType === docInfo.docType
-            );
-            
-            // Generate the document content using the appropriate generator
-            const content = fakeDocumentService.generateDocumentContent(loan, generatorDocType);
-            
-            if (content) {
-              // Store content for package creation
-              generatedContents[docInfo.docType] = content;
-              
-              // Create a new unexecuted document
-              const unexecutedDoc: SimpleDocument = {
-                id: existingDocIndex >= 0 ? updatedDocs[existingDocIndex].id : `fake-${docInfo.docType}-${loan.id}`,
-                loanId: loan.id,
-                docType: docInfo.docType,
-                filename: `${docInfo.docType.replace(/_/g, '-')}.html`,
-                category: docInfo.category,
-                content: content,
-                dateUploaded: new Date().toISOString(),
-                status: 'pending',
-                fileType: 'text/html'
-              };
-              
-              // Update or add the document in our local array
-              if (existingDocIndex >= 0) {
-                updatedDocs[existingDocIndex] = unexecutedDoc;
-              } else {
-                updatedDocs.push(unexecutedDoc);
-              }
-              
-              docsChanged = true;
-            }
-          } catch (error) {
-            console.error(`Error generating document for ${docInfo.docType}:`, error);
-          }
-        } else {
-          console.error(`No generator mapping found for document type: ${docInfo.docType}`);
-        }
-      });
-      
-      // Now create the unexecuted package document that combines all individual documents
-      if (Object.keys(generatedContents).length > 0) {
-        try {
-          // Check if package document already exists
-          const existingPackageIndex = updatedDocs.findIndex(doc => 
-            doc.loanId === loan.id && 
-            doc.docType === 'unexecuted_package'
-          );
-          
-          // Create the combined content with a table of contents
-          const packageContent = createUnexecutedPackage(loan, generatedContents);
-          
-          // Create the package document
-          const packageDoc: SimpleDocument = {
-            id: existingPackageIndex >= 0 ? updatedDocs[existingPackageIndex].id : `fake-unexecuted_package-${loan.id}`,
-            loanId: loan.id,
-            docType: 'unexecuted_package',
-            filename: 'unexecuted-documents-package.html',
-            category: 'loan',
-            content: packageContent,
-            dateUploaded: new Date().toISOString(),
-            status: 'pending',
-            fileType: 'text/html'
-          };
-          
-          // Update or add the package document
-          if (existingPackageIndex >= 0) {
-            updatedDocs[existingPackageIndex] = packageDoc;
-          } else {
-            updatedDocs.push(packageDoc);
-          }
-          
-          docsChanged = true;
-        } catch (error) {
-          console.error('Error creating unexecuted documents package:', error);
+        // Generate fake document
+        const document = fakeDocumentService.generateFakeDocument(loan, docType);
+        
+        if (document) {
+          // Refresh documents list
+          const docs = simpleDocumentService.getDocumentsForLoan(loan.id);
+          setDocuments(docs);
         }
       }
-      
-      // Only update storage if documents were changed
-      if (docsChanged) {
-        // Save all documents back to storage
-        localStorage.setItem('simple_documents', JSON.stringify(updatedDocs));
-        
-        // Refresh the document list
-        setRefreshTrigger(prev => prev + 1);
-      }
+    } catch (error) {
+      console.error("Error generating unexecuted package:", error);
+    } finally {
+      setIsGeneratingUnexecuted(false);
     }
   };
   
   // Function to create a combined package of all unexecuted documents
-  const createUnexecutedPackage = (loan: any, contents: Record<string, string>): string => {
+  const createUnexecutedPackage = (loan: any): string[] => {
     // Get document order from UNEXECUTED_CLOSING_DOCUMENTS (excluding the package itself)
     const documentOrder = UNEXECUTED_CLOSING_DOCUMENTS
       .filter((doc) => doc.docType !== 'unexecuted_package')
-      .map((doc) => ({
-        docType: doc.docType,
-        label: doc.label
-      }));
+      .map((doc) => doc.docType);
     
-    // Create table of contents
-    const tableOfContents = `
-      <div class="toc-section">
-        <h2>Table of Contents</h2>
-        <ol>
-          ${documentOrder.map((doc, index) => `
-            <li>
-              <a href="#document-${index + 1}">${doc.label}</a>
-            </li>
-          `).join('')}
-        </ol>
-      </div>
-    `;
-    
-    // Create document sections in the specified order
-    const documentSections = documentOrder.map((doc, index) => {
-      const content = contents[doc.docType] || `<p>Document content not available for ${doc.label}</p>`;
-      return `
-        <div class="document-section" id="document-${index + 1}">
-          <div class="document-header">
-            <h2>${index + 1}. ${doc.label}</h2>
-          </div>
-          <div class="document-content">
-            ${content}
-          </div>
-          <div class="page-break"></div>
-        </div>
-      `;
-    }).join('');
-    
-    // Create the full package HTML
-    return `
-      <div class="document legal-document unexecuted-package">
-        <style>
-          .document {
-            font-family: 'Times New Roman', Times, serif;
-            line-height: 1.5;
-            color: #333;
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 1rem;
-            position: relative;
-            background-color: white;
-          }
-          
-          .package-header {
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #333;
-            padding-bottom: 1rem;
-            text-align: center;
-          }
-          
-          h1 {
-            font-size: 1.5rem;
-            margin-bottom: 0.5rem;
-            text-transform: uppercase;
-            font-weight: bold;
-          }
-          
-          .toc-section {
-            margin: 2rem 0;
-            padding: 1rem;
-            border: 1px solid #eee;
-            background-color: #f9f9f9;
-          }
-          
-          .toc-section h2 {
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 0.5rem;
-          }
-          
-          .toc-section ol {
-            margin-left: 1.5rem;
-          }
-          
-          .toc-section li {
-            margin-bottom: 0.5rem;
-          }
-          
-          .document-section {
-            margin-top: 3rem;
-            border-top: 1px solid #ccc;
-            padding-top: 1rem;
-          }
-          
-          .document-header {
-            margin-bottom: 1.5rem;
-          }
-          
-          .document-header h2 {
-            font-size: 1.3rem;
-            font-weight: bold;
-          }
-          
-          .page-break {
-            page-break-after: always;
-            height: 0;
-            margin: 3rem 0;
-          }
-          
-          .watermark {
-            position: absolute;
-            top: 50%;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 3rem;
-            color: rgba(255, 0, 0, 0.1);
-            transform: rotate(-45deg);
-            pointer-events: none;
-            z-index: 1;
-          }
-        </style>
-        
-        <div class="watermark">UNEXECUTED DRAFT</div>
-        
-        <div class="package-header">
-          <h1>Unexecuted Loan Documents Package</h1>
-          <div class="document-id">Loan #: ${loan.id.substring(0, 8)}</div>
-          <div class="document-date">Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-          <div class="borrower-info">Borrower: ${loan.borrowerName}</div>
-          <div class="property-info">Property: ${loan.propertyAddress}</div>
-        </div>
-        
-        ${tableOfContents}
-        
-        ${documentSections}
-        
-        <div class="package-footer">
-          <p>This package contains unexecuted draft documents for review purposes only.</p>
-          <p>These documents are not legally binding until properly executed by all parties.</p>
-        </div>
-      </div>
-    `;
+    return documentOrder;
   };
 
-  // Group documents by section and subsection
+  // Render document sections based on active section and subsection
   const renderDocumentSections = () => {
     if (!loan) return null;
+
+    // Special case for unexecuted documents section
+    if (activeSection === 'unexecuted') {
+      return (
+        <div>
+          {UNEXECUTED_CLOSING_DOCUMENTS.map((docInfo) => {
+            const existingDoc = getDocumentForType(docInfo.docType);
+            
+            return (
+              <DocumentSocket
+                key={docInfo.docType}
+                label={docInfo.label}
+                docType={docInfo.docType}
+                category={docInfo.category}
+                loanId={loan.id}
+                document={existingDoc}
+                onViewDocument={handleViewDocument}
+                onUpload={handleUpload}
+              />
+            );
+          })}
+        </div>
+      );
+    }
+
+    // Render documents based on active subsection
+    if (activeSubsection) {
+      // Get document types for this subsection
+      const docTypesForSubsection = DOCUMENT_TYPES.filter(
+        (doc) => doc.section === activeSection && doc.subsection === activeSubsection
+      );
+      
+      return (
+        <div>
+          {docTypesForSubsection.map((docInfo) => {
+            const existingDoc = getDocumentForType(docInfo.docType);
+            
+            return (
+              <DocumentSocket
+                key={docInfo.docType}
+                label={docInfo.label}
+                docType={docInfo.docType}
+                category={docInfo.category}
+                loanId={loan.id}
+                document={existingDoc}
+                onViewDocument={handleViewDocument}
+                onUpload={handleUpload}
+              />
+            );
+          })}
+        </div>
+      );
+    }
     
-    // Get all sections
-    const sections = Object.keys(SECTION_CONFIG) as SectionKey[];
+    // If no subsection is active, show all documents for the section
+    const docTypesForSection = DOCUMENT_TYPES.filter(
+      (doc) => doc.section === activeSection
+    );
     
     return (
-      <div className="space-y-8">
-        {/* Section tabs */}
-        <div className="flex overflow-x-auto pb-2 mb-4" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
-          {sections.map((section) => (
-            <button
-              key={section}
-              className={`px-4 py-2 mr-2 rounded-t-md whitespace-nowrap ${activeSection === section ? 'font-semibold' : ''}`}
-              style={{ 
-                backgroundColor: activeSection === section ? COLORS.primary : 'transparent',
-                color: activeSection === section ? 'white' : COLORS.textPrimary,
-                borderBottom: activeSection === section ? `2px solid ${COLORS.primary}` : 'none'
-              }}
-              onClick={() => setActiveSection(section)}
-            >
-              <div className="flex items-center">
-                <span className="mr-2">{SECTION_CONFIG[section].icon}</span>
-                {SECTION_CONFIG[section].title}
-              </div>
-            </button>
-          ))}
-        </div>
-        
-        {/* Active section content */}
-        {activeSection && (
-          <div className="space-y-8">
-            {Object.entries(SECTION_CONFIG[activeSection].subsections).map(([subsectionKey, subsectionTitle]) => {
-              // Filter documents for this subsection
-              const subsectionDocs = DOCUMENT_TYPES.filter(
-                doc => doc.section === activeSection && doc.subsection === subsectionKey
-              );
-              
-              if (subsectionDocs.length === 0) return null;
-              
-              return (
-                <Section 
-                  key={subsectionKey} 
-                  title={subsectionTitle as string} 
-                  icon={SECTION_CONFIG[activeSection].icon}
-                >
-                  {subsectionDocs.map(docType => {
-                    const existingDoc = getDocumentForType(docType.docType);
-                    return (
-                      <DocumentSocket
-                        key={docType.docType}
-                        label={docType.label}
-                        docType={docType.docType}
-                        category={docType.category}
-                        loanId={loan.id}
-                        document={existingDoc}
-                        onViewDocument={setSelectedDocument}
-                        onUpload={handleUpload}
-                      />
-                    );
-                  })}
-                </Section>
-              );
-            })}
-          </div>
-        )}
+      <div>
+        {docTypesForSection.map((docInfo) => {
+          const existingDoc = getDocumentForType(docInfo.docType);
+          
+          return (
+            <DocumentSocket
+              key={docInfo.docType}
+              label={docInfo.label}
+              docType={docInfo.docType}
+              category={docInfo.category}
+              loanId={loan.id}
+              document={existingDoc}
+              onViewDocument={handleViewDocument}
+              onUpload={handleUpload}
+            />
+          );
+        })}
       </div>
     );
   };
 
-  if (loading) {
-    return (
-      <LayoutWrapper>
-        <div className="container mx-auto py-16 px-4 text-center">
-          <div className="animate-spin w-8 h-8 border-4 rounded-full mx-auto mb-4" style={{
-            borderColor: COLORS.primary,
-            borderTopColor: "transparent"
-          }}></div>
-          <p style={{ color: COLORS.textSecondary }}>Loading loan details...</p>
-        </div>
-      </LayoutWrapper>
-    );
-  }
-  
   if (!loan) {
     return (
       <LayoutWrapper>
@@ -942,67 +743,141 @@ export default function LoanDocumentsPage() {
   return (
     <LayoutWrapper>
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Sidebar - positioned consistently on the left */}
+        {/* Sidebar - fixed on the left */}
         <div className="w-full md:w-64 flex-shrink-0">
           <LoanSidebar loan={loan} activePage="documents" />
         </div>
-        
-        {/* Main content */}
-        <div className="flex-grow">
-          <div className="mb-6 flex justify-between items-center">
-            <h1 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+
+        {/* Main content - takes remaining space */}
+        <div className="flex-grow overflow-hidden">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
               Loan Documents
             </h1>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={handleGenerateUnexecutedDocuments}
-                style={{ 
-                  borderColor: COLORS.border,
-                  color: COLORS.textPrimary
-                }}
-              >
-                Generate Unexecuted Package
-              </Button>
+            <p style={{ color: COLORS.textSecondary }}>
+              View and manage documents for loan {loan.id.substring(0, 8)}
+            </p>
+          </div>
+
+          {/* Section tabs - scrollable container */}
+          <div className="mb-6 border-b border-gray-700">
+            <div className="overflow-x-auto pb-1">
+              <div className="flex min-w-max">
+                {Object.entries(SECTION_CONFIG).map(([key, section]) => (
+                  <button
+                    key={key}
+                    className={`px-4 py-2 text-sm font-medium mr-2 rounded-t-md transition-colors ${
+                      activeSection === key
+                        ? 'bg-blue-900/30 border-b-2 border-blue-500'
+                        : 'hover:bg-gray-800'
+                    }`}
+                    style={{
+                      color: activeSection === key ? COLORS.textPrimary : COLORS.textSecondary,
+                    }}
+                    onClick={() => setActiveSection(key as SectionKey)}
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-1.5">{section.icon}</span>
+                      <span className="truncate max-w-[120px] inline-block">{section.title}</span>
+                    </div>
+                  </button>
+                ))}
+                
+                {/* Special case for unexecuted documents */}
+                <button
+                  className={`px-4 py-2 text-sm font-medium mr-2 rounded-t-md transition-colors ${
+                    activeSection === 'unexecuted'
+                      ? 'bg-blue-900/30 border-b-2 border-blue-500'
+                      : 'hover:bg-gray-800'
+                  }`}
+                  style={{
+                    color: activeSection === 'unexecuted' ? COLORS.textPrimary : COLORS.textSecondary,
+                  }}
+                  onClick={() => setActiveSection('unexecuted' as SectionKey)}
+                >
+                  <div className="flex items-center">
+                    <span className="mr-1.5"><FileText size={16} /></span>
+                    <span className="truncate max-w-[120px] inline-block">Unexecuted Documents</span>
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
-          
-          {loading ? (
-            <div className="text-center py-8">Loading documents...</div>
-          ) : (
-            <>
-              {renderDocumentSections()}
-              
-              {/* Document viewer modal */}
-              {selectedDocument && (
-                <div 
-                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                  onClick={() => setSelectedDocument(null)}
-                >
-                  <div 
-                    className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div className="p-4 border-b flex justify-between items-center">
-                      <h3 className="font-semibold">{selectedDocument.filename}</h3>
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedDocument(null)}>
-                        <X size={18} />
-                      </Button>
-                    </div>
-                    <div className="p-4 overflow-auto max-h-[calc(90vh-8rem)]">
-                      <SimpleDocumentViewer 
-                        document={selectedDocument} 
-                        onStatusChange={handleDocumentStatusChange} 
-                        onClose={() => setSelectedDocument(null)}
-                      />
-                    </div>
-                  </div>
+
+          {/* Subsection tabs if applicable */}
+          {activeSection !== 'unexecuted' && SECTION_CONFIG[activeSection]?.subsections && Object.keys(SECTION_CONFIG[activeSection].subsections).length > 0 && (
+            <div className="mb-6">
+              <div className="overflow-x-auto pb-1">
+                <div className="flex min-w-max">
+                  {Object.entries(SECTION_CONFIG[activeSection].subsections).map(([key, label]) => (
+                    <button
+                      key={key}
+                      className={`px-3 py-1 text-xs font-medium mr-2 rounded-md transition-colors ${
+                        activeSubsection === key
+                          ? 'bg-blue-900/20 border border-blue-500/50'
+                          : 'hover:bg-gray-800 border border-transparent'
+                      }`}
+                      style={{
+                        color: activeSubsection === key ? COLORS.textPrimary : COLORS.textSecondary,
+                      }}
+                      onClick={() => setActiveSubsection(key)}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
-              )}
-            </>
+              </div>
+            </div>
           )}
+
+          {/* Special case for Unexecuted Documents section */}
+          {activeSection === 'unexecuted' && (
+            <div className="mb-6 p-4 rounded-md" style={{ backgroundColor: '#1a2234' }}>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h3 className="text-lg font-medium mb-1" style={{ color: COLORS.textPrimary }}>
+                    Unexecuted Document Package
+                  </h3>
+                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                    Generate and manage the unexecuted document package for this loan.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleGenerateUnexecutedDocuments}
+                  disabled={isGeneratingUnexecuted}
+                  className="whitespace-nowrap"
+                >
+                  {isGeneratingUnexecuted ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Generate Package
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Document list */}
+          <div className="overflow-y-auto pr-1">
+            {renderDocumentSections()}
+          </div>
         </div>
       </div>
+
+      {/* Document viewer */}
+      {viewingDocument && (
+        <SimpleDocumentViewer
+          document={viewingDocument}
+          onClose={handleCloseDocument}
+          onStatusChange={handleDocumentStatusChange}
+        />
+      )}
     </LayoutWrapper>
   );
 } 
