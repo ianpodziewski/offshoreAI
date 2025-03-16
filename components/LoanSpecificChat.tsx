@@ -44,12 +44,38 @@ export default function LoanSpecificChat() {
       const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
       console.log(`Found ${loanDocs.length} documents for loan ${loanId}`);
       
-      // Log the document details for debugging
-      loanDocs.forEach(doc => {
+      // Try to enhance documents with content
+      const enhancedDocs = loanDocs.map(doc => {
+        // Log the document details for debugging
         console.log(`Document: ${doc.filename}, Type: ${doc.docType}, Category: ${doc.category}, Status: ${doc.status}`);
+        
+        // Try to get document content if not already present
+        if (!doc.content && doc.documentId) {
+          try {
+            // Try to get content from localStorage first
+            const docContentKey = `document_content_${doc.documentId}`;
+            const storedContent = localStorage.getItem(docContentKey);
+            
+            if (storedContent) {
+              console.log(`Found content for document ${doc.filename} in localStorage`);
+              doc.content = storedContent;
+            } else {
+              // Try to get content from simpleDocumentService
+              const simpleDoc = simpleDocumentService.getDocumentById(doc.documentId);
+              if (simpleDoc && simpleDoc.content) {
+                console.log(`Found content for document ${doc.filename} in simpleDocumentService`);
+                doc.content = simpleDoc.content;
+              }
+            }
+          } catch (error) {
+            console.error(`Error retrieving content for document ${doc.filename}:`, error);
+          }
+        }
+        
+        return doc;
       });
       
-      return loanDocs;
+      return enhancedDocs;
     } catch (error) {
       console.error('Error syncing loan documents with chat:', error);
       return [];
@@ -81,12 +107,59 @@ export default function LoanSpecificChat() {
       ARV LTV: ${activeLoan.arv_ltv}%
     `;
     
-    // Provide document context as well
-    const documentContextStr = loanDocs.length > 0 
-      ? loanDocs.map(doc => 
-          `Document: ${doc.filename}, Status: ${doc.status}, Type: ${doc.docType}`
-        ).join('\n')
-      : 'No documents available for this loan.';
+    // Provide document context with content
+    let documentContextStr = '';
+    
+    if (loanDocs.length > 0) {
+      documentContextStr = loanDocs.map(doc => {
+        // Try to get document content if available
+        let contentStr = '';
+        if (doc.content) {
+          // Limit content length to avoid token limits
+          contentStr = `\nContent: ${typeof doc.content === 'string' ? 
+            doc.content.substring(0, 1000) + (doc.content.length > 1000 ? '...(truncated)' : '') : 
+            'Content not available in text format'}`;
+        } else if (doc.extractedData) {
+          // If we have extracted data, use that instead
+          contentStr = `\nExtracted Data: ${
+            typeof doc.extractedData === 'object' ? 
+              JSON.stringify(doc.extractedData).substring(0, 1000) : 
+              String(doc.extractedData).substring(0, 1000)
+          }`;
+        }
+        
+        return `Document: ${doc.filename}, Status: ${doc.status}, Type: ${doc.docType}${contentStr}`;
+      }).join('\n\n');
+    } else {
+      documentContextStr = 'No documents available for this loan.';
+    }
+    
+    // Try to get additional document content from simpleDocumentService
+    try {
+      const simpleDocuments = simpleDocumentService.getDocumentsForLoan(activeLoan.id);
+      if (simpleDocuments && simpleDocuments.length > 0) {
+        console.log(`Found ${simpleDocuments.length} documents in simpleDocumentService`);
+        
+        // Add any documents that weren't already included
+        const existingDocNames = new Set(loanDocs.map(doc => doc.filename));
+        const additionalDocs = simpleDocuments.filter(doc => !existingDocNames.has(doc.filename));
+        
+        if (additionalDocs.length > 0) {
+          documentContextStr += '\n\nAdditional Documents:\n' + additionalDocs.map(doc => {
+            let contentStr = '';
+            if (doc.content) {
+              contentStr = `\nContent: ${typeof doc.content === 'string' ? 
+                doc.content.substring(0, 1000) + (doc.content.length > 1000 ? '...(truncated)' : '') : 
+                'Content not available in text format'}`;
+            }
+            
+            return `Document: ${doc.filename}, Type: ${doc.docType}${contentStr}`;
+          }).join('\n\n');
+        }
+      }
+    } catch (error) {
+      console.error('Error getting documents from simpleDocumentService:', error);
+    }
     
     const fullContext = `${loanContextStr}\n\nDocuments:\n${documentContextStr}`;
     setLoanContext(fullContext);
@@ -138,6 +211,9 @@ export default function LoanSpecificChat() {
       // Get current documents without triggering state updates
       const currentDocs = activeLoan ? syncLoanDocuments(activeLoan.id) : [];
       
+      // Check if we have any documents with content
+      const docsWithContent = currentDocs.filter(doc => doc.content || doc.extractedData);
+      
       // Add a system message indicating context was loaded
       setMessages(prev => [
         ...prev,
@@ -145,8 +221,11 @@ export default function LoanSpecificChat() {
           role: 'assistant',
           content: `Loan context loaded successfully. I now have information about loan #${activeLoan?.id}.\n\nAvailable documents: ${
             currentDocs.length > 0 
-              ? currentDocs.map(doc => `\n- ${doc.filename} (${doc.docType})`).join('') 
+              ? currentDocs.map(doc => `\n- ${doc.filename} (${doc.docType})${doc.content || doc.extractedData ? ' ✓' : ''}`).join('') 
               : '\nNo documents available for this loan.'
+          }\n\n${docsWithContent.length > 0 
+            ? `✓ Document content has been loaded for ${docsWithContent.length} document(s). I can now answer specific questions about these documents.` 
+            : 'No document content is available. I can only answer general questions about the loan.'
           }\n\nYou can now ask questions about this specific loan and its documents.`,
           timestamp: new Date()
         }

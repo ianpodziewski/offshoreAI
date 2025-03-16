@@ -23,9 +23,17 @@ export async function POST(req: NextRequest) {
       firstFewMessages: messages.slice(0, 2).map(m => ({ role: m.role, contentPreview: m.content.substring(0, 50) }))
     });
 
-    // Call OpenAI API
+    // Check if we have a system message with document content
+    const hasDocumentContent = messages.some(m => 
+      m.role === 'system' && 
+      (m.content.includes('Content:') || m.content.includes('Extracted Data:'))
+    );
+
+    console.log(`Request ${hasDocumentContent ? 'includes' : 'does not include'} document content`);
+
+    // Call OpenAI API with appropriate model based on content
     const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo',
+      model: hasDocumentContent ? 'gpt-4-turbo' : 'gpt-3.5-turbo',
       messages: messages,
       temperature: 0.7,
       max_tokens: 1500,
@@ -38,6 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       message: assistantMessage,
       usage: response.usage,
+      modelUsed: hasDocumentContent ? 'gpt-4-turbo' : 'gpt-3.5-turbo'
     });
   } catch (error) {
     console.error('Error in loan-specific chat API:', error);
