@@ -29,17 +29,17 @@ interface SectionProps {
 }
 
 const Section: React.FC<SectionProps> = ({ title, icon, children, actionButton }) => (
-  <div className="mb-8">
-    <div className="flex items-center justify-between mb-4 pb-2" style={{ 
+  <div className="mb-8 relative">
+    <div className="flex items-center justify-between mb-4 pb-2 relative z-10" style={{ 
       borderBottom: `1px solid ${COLORS.border}`,
     }}>
       <div className="flex items-center">
         <span className="mr-2" style={{ color: COLORS.primary }}>{icon}</span>
         <h2 className="text-lg font-semibold" style={{ color: COLORS.textPrimary }}>{title}</h2>
       </div>
-      {actionButton}
+      {actionButton && <div className="relative z-10">{actionButton}</div>}
     </div>
-    <div className="space-y-4">
+    <div className="space-y-4 relative z-10">
       {children}
     </div>
   </div>
@@ -772,133 +772,102 @@ export default function DocumentsPage({ params }: { params: { id: string } }) {
   return (
     <LayoutWrapper>
       <div className="flex flex-col md:flex-row gap-6">
-        {/* Sidebar - fixed on the left */}
+        {/* Sidebar - positioned on the left with consistent width */}
         <div className="w-full md:w-64 flex-shrink-0">
           <LoanSidebar loan={loan} activePage="documents" />
         </div>
-
+        
         {/* Main content - takes remaining space */}
-        <div className="flex-grow overflow-hidden">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
-              Loan Documents
-            </h1>
-            <p style={{ color: COLORS.textSecondary }}>
-              View and manage documents for loan {loan.id.substring(0, 8)}
-            </p>
-          </div>
-
-          {/* Section tabs - scrollable container */}
-          <div className="mb-6 border-b border-gray-700">
-            <div className="overflow-x-auto pb-1">
-              <div className="flex min-w-max">
-                {Object.entries(SECTION_CONFIG).map(([key, section]) => (
-                  <button
+        <div className="flex-grow relative">
+          <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+            Loan Documents
+          </h1>
+          <p className="text-sm mb-6" style={{ color: COLORS.textMuted }}>
+            View and manage documents for loan {loan?.id}
+          </p>
+          
+          {/* Section tabs - improved scrolling with better containment */}
+          <div className="mb-8 relative z-20">
+            <div className="overflow-x-auto pb-2">
+              <div className="flex space-x-2 min-w-max">
+                {Object.entries(SECTION_CONFIG).map(([key, config]) => (
+                  <Button
                     key={key}
-                    className={`px-4 py-2 text-sm font-medium mr-2 rounded-t-md transition-colors ${
-                      activeSection === key
-                        ? 'bg-blue-900/30 border-b-2 border-blue-500'
-                        : 'hover:bg-gray-800'
-                    }`}
-                    style={{
-                      color: activeSection === key ? COLORS.textPrimary : COLORS.textSecondary,
-                    }}
+                    variant={activeSection === key ? "default" : "outline"}
+                    className="flex items-center px-4 py-2 whitespace-nowrap"
                     onClick={() => setActiveSection(key as SectionKey)}
                   >
-                    <div className="flex items-center">
-                      <span className="mr-1.5">{section.icon}</span>
-                      <span className="truncate max-w-[120px] inline-block">{section.title}</span>
-                    </div>
-                  </button>
+                    {config.icon}
+                    <span className="ml-2 truncate max-w-[150px]">{config.title}</span>
+                  </Button>
                 ))}
-                
-                {/* Special case for unexecuted documents */}
-                <button
-                  className={`px-4 py-2 text-sm font-medium mr-2 rounded-t-md transition-colors ${
-                    activeSection === 'unexecuted'
-                      ? 'bg-blue-900/30 border-b-2 border-blue-500'
-                      : 'hover:bg-gray-800'
-                  }`}
-                  style={{
-                    color: activeSection === 'unexecuted' ? COLORS.textPrimary : COLORS.textSecondary,
-                  }}
-                  onClick={() => setActiveSection('unexecuted' as SectionKey)}
-                >
-                  <div className="flex items-center">
-                    <span className="mr-1.5"><FileText size={16} /></span>
-                    <span className="truncate max-w-[120px] inline-block">Unexecuted Documents</span>
-                  </div>
-                </button>
               </div>
             </div>
           </div>
-
+          
           {/* Subsection tabs if applicable */}
-          {activeSection !== 'unexecuted' && SECTION_CONFIG[activeSection]?.subsections && Object.keys(SECTION_CONFIG[activeSection].subsections).length > 0 && (
-            <div className="mb-6">
-              <div className="overflow-x-auto pb-1">
-                <div className="flex min-w-max">
-                  {Object.entries(SECTION_CONFIG[activeSection].subsections).map(([key, label]) => (
-                    <button
+          {activeSection && SECTION_CONFIG[activeSection].subsections && (
+            <div className="mb-6 relative z-20">
+              <div className="overflow-x-auto pb-2">
+                <div className="flex space-x-2 min-w-max">
+                  {Object.entries(SECTION_CONFIG[activeSection].subsections || {}).map(([key, title]) => (
+                    <Button
                       key={key}
-                      className={`px-3 py-1 text-xs font-medium mr-2 rounded-md transition-colors ${
-                        activeSubsection === key
-                          ? 'bg-blue-900/20 border border-blue-500/50'
-                          : 'hover:bg-gray-800 border border-transparent'
-                      }`}
-                      style={{
-                        color: activeSubsection === key ? COLORS.textPrimary : COLORS.textSecondary,
-                      }}
+                      variant={activeSubsection === key ? "secondary" : "ghost"}
+                      className="text-sm"
                       onClick={() => setActiveSubsection(key)}
                     >
-                      {label}
-                    </button>
+                      {title}
+                    </Button>
                   ))}
                 </div>
               </div>
             </div>
           )}
-
-          {/* Special case for Unexecuted Documents section */}
-          {activeSection === 'unexecuted' && (
-            <div className="mb-6 p-4 rounded-md" style={{ backgroundColor: '#1a2234' }}>
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                  <h3 className="text-lg font-medium mb-1" style={{ color: COLORS.textPrimary }}>
-                    Unexecuted Document Package
-                  </h3>
-                  <p className="text-sm" style={{ color: COLORS.textSecondary }}>
-                    Generate and manage the unexecuted document package for this loan.
-                  </p>
+          
+          {/* Document content area */}
+          <div className="relative z-10">
+            {/* Special case for Unexecuted Documents section */}
+            {activeSection === 'unexecuted' && (
+              <div className="mb-6 p-4 rounded-md" style={{ backgroundColor: '#1a2234' }}>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h3 className="text-lg font-medium mb-1" style={{ color: COLORS.textPrimary }}>
+                      Unexecuted Document Package
+                    </h3>
+                    <p className="text-sm" style={{ color: COLORS.textSecondary }}>
+                      Generate and manage the unexecuted document package for this loan.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleGenerateUnexecutedDocuments}
+                    disabled={isGeneratingUnexecuted}
+                    className="whitespace-nowrap"
+                  >
+                    {isGeneratingUnexecuted ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Package
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <Button
-                  onClick={handleGenerateUnexecutedDocuments}
-                  disabled={isGeneratingUnexecuted}
-                  className="whitespace-nowrap"
-                >
-                  {isGeneratingUnexecuted ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="mr-2 h-4 w-4" />
-                      Generate Package
-                    </>
-                  )}
-                </Button>
               </div>
+            )}
+            
+            {/* Document list */}
+            <div className="overflow-y-auto pr-1">
+              {renderDocumentSections()}
             </div>
-          )}
-
-          {/* Document list */}
-          <div className="overflow-y-auto pr-1">
-            {renderDocumentSections()}
           </div>
         </div>
       </div>
-
+      
       {/* Document viewer */}
       {viewingDocument && (
         <SimpleDocumentViewer

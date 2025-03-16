@@ -17,7 +17,14 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
     if (activePage) {
       return activePage === path;
     }
-    return pathname?.includes(path) || false;
+    
+    if (path === 'overview') {
+      // For overview, check if the path ends with the loan ID or has /overview
+      return pathname === `/loans/${loan.id}` || pathname?.endsWith('/overview');
+    }
+    
+    // For other paths, check if the pathname includes the path segment
+    return pathname?.includes(`/${path}`) || false;
   };
 
   // Navigation items
@@ -51,22 +58,30 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
       {/* Navigation */}
       <nav className="p-2">
         <ul className="space-y-1">
-          {navItems.map((item) => (
-            <li key={item.path}>
-              <Link
-                href={`/loans/${loan.id}${item.path === 'overview' ? '' : `/${item.path}`}`}
-                className={`flex items-center px-3 py-3 rounded-md transition-colors ${
-                  isActive(item.path)
-                    ? 'bg-[#1a2234] text-white'
-                    : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'
-                }`}
-              >
-                <span className="mr-3">{item.icon}</span>
-                <span className="flex-grow">{item.name}</span>
-                {isActive(item.path) && <ChevronRight size={16} />}
-              </Link>
-            </li>
-          ))}
+          {navItems.map((item) => {
+            // Construct the correct URL for each navigation item
+            const href = item.path === 'overview' 
+              ? `/loans/${loan.id}` 
+              : `/loans/${loan.id}/${item.path}`;
+              
+            return (
+              <li key={item.path}>
+                <Link
+                  href={href}
+                  className={`flex items-center px-3 py-3 rounded-md transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-[#1a2234] text-white'
+                      : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'
+                  }`}
+                  style={{ zIndex: 10 }} // Ensure links are clickable
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  <span className="flex-grow">{item.name}</span>
+                  {isActive(item.path) && <ChevronRight size={16} />}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
     </div>

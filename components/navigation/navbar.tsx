@@ -32,17 +32,21 @@ const Navbar: React.FC = () => {
         border-b
         border-gray-800
         shadow-md
+        relative
+        z-50
       "
       style={{ fontFamily: 'Work Sans, sans-serif' }} // Use your font setup
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
         {/* Logo / Title */}
         <div className="text-xl font-bold text-blue-400">
-          DocuLendAI
+          <Link href="/" className="hover:text-blue-300 transition-colors">
+            DocuLendAI
+          </Link>
         </div>
 
         {/* Navigation Links */}
-        <div className="flex space-x-4">
+        <div className="flex space-x-4 relative z-10">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -53,6 +57,7 @@ const Navbar: React.FC = () => {
                 href={item.href}
                 className={`
                   flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200
+                  relative z-10
                   ${active 
                     ? 'bg-blue-900/40 text-blue-300 border border-blue-800/50' 
                     : 'hover:bg-gray-800/50 hover:text-blue-200'}

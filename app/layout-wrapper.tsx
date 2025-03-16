@@ -13,12 +13,12 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
     <div className="flex flex-col min-h-screen bg-gray-900">
       <Navbar />
       {/* Modified the main element to add proper spacing and a slightly lighter background */}
-      <main className="flex-grow pt-6 pb-12 px-4 bg-[#111827]">
+      <main className="flex-grow pt-6 pb-12 px-4 bg-[#111827] relative z-0">
         <div className="container mx-auto max-w-7xl">
           {children}
         </div>
       </main>
-      <footer className="bg-[#0A0F1A] text-gray-300 border-t border-gray-800 py-4">
+      <footer className="bg-[#0A0F1A] text-gray-300 border-t border-gray-800 py-4 relative z-10">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div>
