@@ -104,6 +104,11 @@ export default function LoanDocumentsPage() {
     }
   };
   
+  // Filter documents by category
+  const getFilteredDocuments = (category: DocumentCategory) => {
+    return documents.filter(doc => doc.category === category);
+  };
+  
   // Render loading state
   if (!loan) {
     return (
@@ -200,6 +205,7 @@ export default function LoanDocumentsPage() {
               uploadedDocuments={documents}
               onUploadDocument={handleUploadDocument}
               onViewDocument={handleViewDocument}
+              category="borrower"
             />
           </TabsContent>
           
@@ -210,6 +216,7 @@ export default function LoanDocumentsPage() {
               uploadedDocuments={documents}
               onUploadDocument={handleUploadDocument}
               onViewDocument={handleViewDocument}
+              category="property"
             />
           </TabsContent>
           
@@ -220,6 +227,7 @@ export default function LoanDocumentsPage() {
               uploadedDocuments={documents}
               onUploadDocument={handleUploadDocument}
               onViewDocument={handleViewDocument}
+              category="closing"
             />
           </TabsContent>
           
@@ -230,6 +238,7 @@ export default function LoanDocumentsPage() {
               uploadedDocuments={documents}
               onUploadDocument={handleUploadDocument}
               onViewDocument={handleViewDocument}
+              category="servicing"
             />
           </TabsContent>
         </Tabs>

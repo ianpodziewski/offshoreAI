@@ -35,6 +35,7 @@ interface LoanDocumentStructureProps {
   uploadedDocuments?: any[];
   onUploadDocument?: (category: string, section: string, docType: string) => void;
   onViewDocument?: (documentId: string) => void;
+  category?: DocumentCategory;
 }
 
 export function LoanDocumentStructure({
@@ -42,7 +43,8 @@ export function LoanDocumentStructure({
   loanType,
   uploadedDocuments = [],
   onUploadDocument,
-  onViewDocument
+  onViewDocument,
+  category = 'borrower'
 }: LoanDocumentStructureProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   
@@ -128,6 +130,16 @@ export function LoanDocumentStructure({
     return null;
   };
   
+  // Get the sections for the current category
+  const getCategorySections = () => {
+    // Type-safe access to DOCUMENT_STRUCTURE
+    if (category === 'borrower') return DOCUMENT_STRUCTURE.borrower;
+    if (category === 'property') return DOCUMENT_STRUCTURE.property;
+    if (category === 'closing') return DOCUMENT_STRUCTURE.closing;
+    if (category === 'servicing') return DOCUMENT_STRUCTURE.servicing;
+    return {};
+  };
+  
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -182,54 +194,40 @@ export function LoanDocumentStructure({
         </Card>
       </div>
       
-      <Accordion type="multiple" className="w-full">
-        {Object.entries(DOCUMENT_STRUCTURE).map(([category, sections]) => (
-          <AccordionItem key={category} value={category}>
-            <AccordionTrigger className="text-lg font-semibold">
-              <div className="flex items-center">
-                <FolderOpen className="h-5 w-5 mr-2" />
-                {category.charAt(0).toUpperCase() + category.slice(1)} Documents
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="pl-4 space-y-4">
-                {Object.entries(sections).map(([sectionKey, sectionData]) => {
-                  const { title, documents } = sectionData as { 
-                    title: string; 
-                    documents: { docType: string; label: string; isRequired: boolean; }[] 
-                  };
-                  
-                  return (
-                    <Card key={sectionKey} className="overflow-hidden">
-                      <CardHeader className="bg-slate-50 py-3">
-                        <CardTitle className="text-md font-medium">{title}</CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <ul className="divide-y">
-                          {documents.map((doc) => (
-                            <li key={doc.docType} className="flex items-center justify-between p-3 hover:bg-slate-50">
-                              <div className="flex items-center">
-                                <FileText className="h-4 w-4 mr-2 text-slate-400" />
-                                <span className="text-sm">{doc.label}</span>
-                                <div className="ml-2">
-                                  {renderStatusBadge(doc.docType, doc.isRequired)}
-                                </div>
-                              </div>
-                              <div>
-                                {renderDocumentAction(category, sectionKey, doc.docType)}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+      <div className="space-y-4">
+        {Object.entries(getCategorySections()).map(([sectionKey, sectionData]) => {
+          const { title, documents } = sectionData as { 
+            title: string; 
+            documents: { docType: string; label: string; isRequired: boolean; }[] 
+          };
+          
+          return (
+            <Card key={sectionKey} className="overflow-hidden">
+              <CardHeader className="bg-slate-50 py-3">
+                <CardTitle className="text-md font-medium">{title}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ul className="divide-y">
+                  {documents.map((doc) => (
+                    <li key={doc.docType} className="flex items-center justify-between p-3 hover:bg-slate-50">
+                      <div className="flex items-center">
+                        <FileText className="h-4 w-4 mr-2 text-slate-400" />
+                        <span className="text-sm">{doc.label}</span>
+                        <div className="ml-2">
+                          {renderStatusBadge(doc.docType, doc.isRequired)}
+                        </div>
+                      </div>
+                      <div>
+                        {renderDocumentAction(category, sectionKey, doc.docType)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 } 
