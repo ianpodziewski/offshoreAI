@@ -9,6 +9,9 @@ interface LoanChatMessage {
   timestamp: Date;
 }
 
+// Storage key for loan documents
+const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
+
 export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: any[]) {
   // Independent state for the loan-specific chat
   const [messages, setMessages] = useState<LoanChatMessage[]>([]);
@@ -69,63 +72,38 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
     setInput(e.target.value);
   }, []);
   
-  // Function to upload loan documents to the API
-  const uploadLoanDocumentsToAPI = useCallback(async () => {
+  // Function to store loan documents in localStorage
+  const storeLoanDocuments = useCallback(async () => {
     if (!activeLoan || loanDocuments.length === 0) return;
     
-    console.log(`Uploading ${loanDocuments.length} documents for loan ${activeLoan.id} to API`);
+    console.log(`Storing ${loanDocuments.length} documents for loan ${activeLoan.id} in localStorage`);
     
-    // For each document, create a FormData and send it to the loan-chat API
-    for (const doc of loanDocuments) {
-      try {
-        // Skip if no content
-        if (!doc.content) {
-          console.log(`Skipping document ${doc.filename} - no content`);
-          continue;
-        }
-        
-        // Create a blob from the document content
-        let blob;
-        if (doc.content.startsWith('data:')) {
-          // Handle base64 data URLs
-          const base64Data = doc.content.split(',')[1];
-          const binaryString = atob(base64Data);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          blob = new Blob([bytes], { type: 'application/pdf' });
-        } else {
-          // Handle HTML content
-          blob = new Blob([doc.content], { type: 'text/html' });
-        }
-        
-        // Create a File object from the blob
-        const file = new File([blob], doc.filename, { 
-          type: doc.fileType || 'application/pdf',
-          lastModified: new Date().getTime()
-        });
-        
-        // Create FormData
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('loanId', activeLoan.id);
-        formData.append('docType', doc.docType);
-        
-        // Send to API
-        const response = await fetch('/api/loan-chat/upload-document', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to upload document ${doc.filename}`);
-        }
-        
-        console.log(`Successfully uploaded document ${doc.filename} to loan-chat API`);
-      } catch (error) {
-        console.error(`Error uploading document ${doc.filename}:`, error);
+    try {
+      // Get existing documents from localStorage
+      let existingDocs = [];
+      const storedDocsRaw = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+      if (storedDocsRaw) {
+        existingDocs = JSON.parse(storedDocsRaw);
+        // Filter out documents for this loan to avoid duplicates
+        existingDocs = existingDocs.filter((doc: any) => doc.loanId !== activeLoan.id);
       }
+      
+      // Prepare documents for storage
+      const docsToStore = loanDocuments.map(doc => ({
+        loanId: activeLoan.id,
+        docType: doc.docType || doc.type || 'unknown',
+        fileName: doc.filename || doc.name || 'unnamed',
+        content: doc.content || '',
+        dateAdded: new Date().toISOString()
+      }));
+      
+      // Combine with existing documents and store
+      const allDocs = [...existingDocs, ...docsToStore];
+      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+      
+      console.log(`Successfully stored ${docsToStore.length} documents for loan ${activeLoan.id}`);
+    } catch (error) {
+      console.error('Error storing loan documents:', error);
     }
   }, [activeLoan, loanDocuments]);
   
@@ -147,11 +125,43 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
     setIsLoading(true);
     
     try {
-      // Prepare the API request with the loan context
+      // Get loan documents from localStorage
+      let documentContents = '';
+      if (activeLoan) {
+        try {
+          const loanDocumentsRaw = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+          if (loanDocumentsRaw) {
+            const loanDocuments = JSON.parse(loanDocumentsRaw);
+            const documentsForLoan = loanDocuments.filter((doc: any) => doc.loanId === activeLoan.id);
+            
+            if (documentsForLoan.length > 0) {
+              console.log(`Found ${documentsForLoan.length} documents for loan ${activeLoan.id}`);
+              
+              // Extract content from each document
+              documentContents = documentsForLoan.map((doc: any) => {
+                try {
+                  return `Document: ${doc.fileName}, Type: ${doc.docType}${doc.content ? '\nContent: ' + doc.content.substring(0, 500) + '...' : ''}`;
+                } catch (error) {
+                  console.error(`Error extracting content from document ${doc.fileName}:`, error);
+                  return `Document: ${doc.fileName} (content extraction failed)`;
+                }
+              }).join('\n\n');
+            }
+          }
+        } catch (error) {
+          console.error('Error retrieving loan documents:', error);
+        }
+      }
+      
+      // Enhance loan context with document contents
+      const enhancedContext = documentContents 
+        ? `${loanContext}\n\nDocument Contents:\n${documentContents}`
+        : loanContext;
+      
+      // Prepare the API request with the enhanced loan context
       const apiRequestBody = {
         message: userMessage.content,
-        loanContext: loanContext,
-        loanId: activeLoan?.id || ''
+        loanContext: enhancedContext
       };
       
       // Make API call to your backend
@@ -235,12 +245,12 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
     }
   }, [activeLoan?.id]);
   
-  // Upload loan documents to API when loan changes
+  // Store loan documents in localStorage when loan changes
   useEffect(() => {
     if (activeLoan && loanDocuments.length > 0) {
-      uploadLoanDocumentsToAPI();
+      storeLoanDocuments();
     }
-  }, [activeLoan?.id, loanDocuments, uploadLoanDocumentsToAPI]);
+  }, [activeLoan?.id, loanDocuments, storeLoanDocuments]);
   
   return {
     messages,

@@ -6,14 +6,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '',
 });
 
-// Storage for loan documents
-const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
-
 export async function POST(req: NextRequest) {
   try {
     // Parse the request body
     const body = await req.json();
-    const { message, loanContext, loanId } = body;
+    const { message, loanContext } = body;
     
     if (!message) {
       return NextResponse.json(
@@ -22,43 +19,11 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    // Get loan documents from storage
-    let documentContents = '';
-    if (loanId) {
-      try {
-        const loanDocumentsRaw = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
-        if (loanDocumentsRaw) {
-          const loanDocuments = JSON.parse(loanDocumentsRaw);
-          const documentsForLoan = loanDocuments.filter((doc: any) => doc.loanId === loanId);
-          
-          if (documentsForLoan.length > 0) {
-            console.log(`Found ${documentsForLoan.length} documents for loan ${loanId}`);
-            
-            // Extract content from each document
-            documentContents = documentsForLoan.map((doc: any) => {
-              try {
-                // For simplicity, we're just using the filename and docType
-                // In a real implementation, you would extract and process the actual content
-                return `Document: ${doc.fileName}, Type: ${doc.docType}`;
-              } catch (error) {
-                console.error(`Error extracting content from document ${doc.fileName}:`, error);
-                return `Document: ${doc.fileName} (content extraction failed)`;
-              }
-            }).join('\n\n');
-          }
-        }
-      } catch (error) {
-        console.error('Error retrieving loan documents:', error);
-      }
-    }
-    
-    // Create system message with loan context and document contents
+    // Create system message with loan context
     const systemMessage = `You are a loan underwriting assistant. Your task is to help with loan analysis and provide information about the specific loan. 
     
 Here is the context about the current loan:
 ${loanContext || 'No loan context provided.'}
-
-${documentContents ? `Here are the documents associated with this loan:\n${documentContents}` : ''}
 
 Respond only to questions related to this loan or general loan underwriting questions. If asked about other topics, politely redirect the conversation back to loan-related topics.`;
     
