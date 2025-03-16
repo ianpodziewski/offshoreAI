@@ -89,13 +89,55 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
       }
       
       // Prepare documents for storage
-      const docsToStore = loanDocuments.map(doc => ({
-        loanId: activeLoan.id,
-        docType: doc.docType || doc.type || 'unknown',
-        fileName: doc.filename || doc.name || 'unnamed',
-        content: doc.content || '',
-        dateAdded: new Date().toISOString()
-      }));
+      const docsToStore = loanDocuments.map(doc => {
+        // Process HTML content to extract text
+        let processedContent = doc.content || '';
+        
+        // If it's HTML content, try to extract the text
+        if (typeof processedContent === 'string' && 
+            (processedContent.includes('<html') || 
+             processedContent.includes('<!DOCTYPE') || 
+             processedContent.includes('<body'))) {
+          try {
+            // Create a DOM parser
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(processedContent, 'text/html');
+            
+            // Extract text content
+            processedContent = htmlDoc.body.textContent || '';
+            
+            // Look for specific sections in promissory notes
+            if (doc.docType?.toLowerCase().includes('promissory') || 
+                doc.fileName?.toLowerCase().includes('promissory')) {
+              // Try to find interest rate information
+              const interestRateMatch = processedContent.match(/interest\s+rate\s*(?:of|:)?\s*(\d+\.?\d*)\s*%/i);
+              const principalMatch = processedContent.match(/principal\s*(?:amount|sum|:)?\s*(?:of)?\s*\$?\s*(\d+[,\d]*\.?\d*)/i);
+              const termMatch = processedContent.match(/(?:term|duration|period)\s*(?:of|:)?\s*(\d+)\s*(?:months|years)/i);
+              
+              if (interestRateMatch || principalMatch || termMatch) {
+                console.log(`Found key information in promissory note: ${doc.fileName}`);
+                let keyInfo = "KEY INFORMATION EXTRACTED:\n";
+                if (interestRateMatch) keyInfo += `Interest Rate: ${interestRateMatch[1]}%\n`;
+                if (principalMatch) keyInfo += `Principal Amount: $${principalMatch[1]}\n`;
+                if (termMatch) keyInfo += `Term: ${termMatch[1]} ${processedContent.match(/(\d+)\s*(months|years)/i)?.[2] || 'period'}\n`;
+                
+                // Add key information at the beginning of the content
+                processedContent = keyInfo + "\n\nFULL DOCUMENT TEXT:\n" + processedContent;
+              }
+            }
+          } catch (error) {
+            console.error(`Error processing HTML content for ${doc.filename || doc.name}:`, error);
+          }
+        }
+        
+        return {
+          loanId: activeLoan.id,
+          docType: doc.docType || doc.type || 'unknown',
+          fileName: doc.filename || doc.name || 'unnamed',
+          content: processedContent,
+          dateAdded: new Date().toISOString()
+        };
+      });
       
       // Combine with existing documents and store
       const allDocs = [...existingDocs, ...docsToStore];
@@ -140,7 +182,25 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
               // Extract content from each document
               documentContents = documentsForLoan.map((doc: any) => {
                 try {
-                  return `Document: ${doc.fileName}, Type: ${doc.docType}${doc.content ? '\nContent: ' + doc.content.substring(0, 500) + '...' : ''}`;
+                  // Check if this is a promissory note or other important document
+                  const isImportantDoc = 
+                    (doc.docType?.toLowerCase().includes('promissory') || 
+                     doc.docType?.toLowerCase().includes('note') ||
+                     doc.docType?.toLowerCase().includes('deed') ||
+                     doc.docType?.toLowerCase().includes('agreement') ||
+                     doc.fileName?.toLowerCase().includes('promissory') ||
+                     doc.fileName?.toLowerCase().includes('note') ||
+                     doc.fileName?.toLowerCase().includes('deed') ||
+                     doc.fileName?.toLowerCase().includes('agreement'));
+                  
+                  // For important documents, include more content
+                  const contentPreview = doc.content 
+                    ? (isImportantDoc 
+                        ? doc.content 
+                        : doc.content.substring(0, 1000) + '...')
+                    : 'No content available';
+                  
+                  return `Document: ${doc.fileName}, Type: ${doc.docType}\nContent: ${contentPreview}`;
                 } catch (error) {
                   console.error(`Error extracting content from document ${doc.fileName}:`, error);
                   return `Document: ${doc.fileName} (content extraction failed)`;

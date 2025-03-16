@@ -25,6 +25,12 @@ export async function POST(req: NextRequest) {
 Here is the context about the current loan:
 ${loanContext || 'No loan context provided.'}
 
+When analyzing loan documents:
+1. Pay special attention to interest rates, terms, and conditions in promissory notes
+2. Look for specific details in legal documents that might be relevant to the user's question
+3. If you find conflicting information between the loan data and documents, highlight this discrepancy
+4. If document content is incomplete or unclear, acknowledge this limitation
+
 Respond only to questions related to this loan or general loan underwriting questions. If asked about other topics, politely redirect the conversation back to loan-related topics.`;
     
     // Create the messages array for the OpenAI API
@@ -35,12 +41,12 @@ Respond only to questions related to this loan or general loan underwriting ques
     
     console.log('Sending to OpenAI with system message:', systemMessage.substring(0, 200) + '...');
     
-    // Call the OpenAI API
+    // Call the OpenAI API with increased max_tokens
     const completion = await openai.chat.completions.create({
       model: 'gpt-4-turbo',
       messages: messages as any,
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 4000,
     });
     
     // Extract the assistant's response
