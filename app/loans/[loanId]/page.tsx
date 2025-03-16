@@ -176,26 +176,42 @@ export default function LoanPage() {
             Back to Loans
           </button>
           <h1 className="text-3xl font-bold mt-4" style={{ color: COLORS.textPrimary }}>
-            Loan #{loan.id.substring(0, 8)}
+            #{loan.id}
           </h1>
-          <div className="flex items-center mt-2">
-            <span className="text-sm mr-2" style={{ color: COLORS.textMuted }}>
-              Status:
-            </span>
-            {getStatusDisplay(loan.status)}
-          </div>
         </div>
 
         <div className="flex flex-col-reverse lg:flex-row gap-6">
           {/* Main Content */}
           <div className="w-full lg:w-3/4">
-            <Tabs defaultValue="overview" onValueChange={setActiveTab}>
-              <TabsList className="mb-6">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="property">Property</TabsTrigger>
-                <TabsTrigger value="financials">Financials</TabsTrigger>
-                <TabsTrigger value="borrower">Borrower</TabsTrigger>
-              </TabsList>
+            <Tabs defaultValue="overview" onValueChange={setActiveTab} className="mb-8">
+              <div className="flex justify-center mb-2">
+                <TabsList className="bg-[#1a2234] p-1 rounded-lg">
+                  <TabsTrigger 
+                    value="overview" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="property" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    Property
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="financials" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    Financials
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="borrower" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    Borrower
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* Overview Tab */}
               <TabsContent value="overview">
@@ -208,6 +224,7 @@ export default function LoanPage() {
                       <InfoItem label="Loan Term" value={`${loan.loanTerm} months`} />
                       <InfoItem label="Origination Date" value={new Date(loan.dateCreated).toLocaleDateString()} />
                       <InfoItem label="Maturity Date" value={loan.maturityDate ? new Date(loan.maturityDate).toLocaleDateString() : 'Not specified'} />
+                      <InfoItem label="Status" value={getStatusDisplay(loan.status)} />
                     </Section>
                   </div>
 

@@ -30,7 +30,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
   ];
 
   return (
-    <div className="relative">
+    <div className="relative sticky top-6">
       {/* Toggle button */}
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
@@ -49,32 +49,14 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
           isCollapsed ? 'w-16' : 'w-full'
         }`}
       >
-        {/* Loan header */}
-        <div className="p-4 border-b border-gray-700">
-          {!isCollapsed ? (
-            <>
-              <h3 className="font-semibold text-lg" style={{ color: COLORS.textPrimary }}>
-                {loan.borrowerName}
-              </h3>
-              <p className="text-sm" style={{ color: COLORS.textMuted }}>
-                Loan #{loan.id.substring(0, 8)}
-              </p>
-            </>
-          ) : (
-            <div className="flex justify-center">
-              <FileText size={24} className="text-gray-400" />
-            </div>
-          )}
-        </div>
-        
         {/* Navigation */}
-        <div className="p-2">
-          <ul className="space-y-1">
+        <div className="p-4">
+          <ul className="space-y-3">
             {navItems.map((item) => (
               <li key={item.name}>
                 <Link
                   href={item.path}
-                  className={`flex items-center px-3 py-3 rounded-md transition-colors ${
+                  className={`flex items-center px-4 py-3 rounded-md transition-colors ${
                     item.isActive
                       ? 'bg-[#1a2234] text-white'
                       : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'

@@ -135,10 +135,10 @@ export default function LoanDocumentsPage() {
             Back to Loan Overview
           </button>
           <h1 className="text-3xl font-bold mt-4 text-white">
-            Loan #{loanId.substring(0, 8)} Documents
+            #{loanId} Documents
           </h1>
           <p className="text-muted-foreground">
-            Manage documents for loan {loanId} - {loan.propertyAddress}
+            Manage documents for {loan.propertyAddress}
           </p>
         </div>
 
@@ -198,24 +198,38 @@ export default function LoanDocumentsPage() {
               onValueChange={(value) => setActiveTab(value as DocumentCategory)}
               className="bg-[#1A2234] p-4 rounded-lg border border-gray-800"
             >
-              <TabsList className="grid grid-cols-4 mb-4 bg-[#0A0F1A]">
-                <TabsTrigger value="borrower" className="flex items-center data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Borrower
-                </TabsTrigger>
-                <TabsTrigger value="property" className="flex items-center data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300">
-                  <FolderOpen className="h-4 w-4 mr-2" />
-                  Property
-                </TabsTrigger>
-                <TabsTrigger value="closing" className="flex items-center data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Closing
-                </TabsTrigger>
-                <TabsTrigger value="servicing" className="flex items-center data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  Servicing
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex justify-center mb-4">
+                <TabsList className="grid grid-cols-4 bg-[#0A0F1A]">
+                  <TabsTrigger 
+                    value="borrower" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Borrower
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="property" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    <FolderOpen className="h-4 w-4 mr-2" />
+                    Property
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="closing" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Closing
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="servicing" 
+                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                  >
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                    Servicing
+                  </TabsTrigger>
+                </TabsList>
+              </div>
               
               <TabsContent value="borrower">
                 <LoanDocumentStructure
