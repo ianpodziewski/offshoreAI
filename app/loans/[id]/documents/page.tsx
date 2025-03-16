@@ -7,6 +7,7 @@ import { FileCheck, MapPin, FileText, Clock } from 'lucide-react';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { COLORS } from '@/app/theme/colors';
 import LoanSidebar from '@/components/loan/LoanSidebar';
+import LayoutWrapper from '@/app/layout-wrapper';
 
 // Define section icons and titles
 type SectionKey = 'borrower_docs' | 'property_docs' | 'closing_docs' | 'servicing_docs' | 'unexecuted';
@@ -45,15 +46,17 @@ export default function DocumentsPage() {
 
   if (!loan) {
     return (
-      <div className="container mx-auto py-16 px-4 text-center">
-        <h2 className="text-2xl font-bold mb-4" style={{ color: COLORS.textPrimary }}>Loan Not Found</h2>
-        <p className="mb-6" style={{ color: COLORS.textSecondary }}>The loan you're looking for doesn't exist or has been removed.</p>
-      </div>
+      <LayoutWrapper>
+        <div className="container mx-auto py-16 px-4 text-center">
+          <h2 className="text-2xl font-bold mb-4" style={{ color: COLORS.textPrimary }}>Loan Not Found</h2>
+          <p className="mb-6" style={{ color: COLORS.textSecondary }}>The loan you're looking for doesn't exist or has been removed.</p>
+        </div>
+      </LayoutWrapper>
     );
   }
   
   return (
-    <div className="container mx-auto">
+    <LayoutWrapper>
       <div className="flex flex-col md:flex-row gap-6">
         {/* Sidebar */}
         <div className="w-full md:w-64 flex-shrink-0">
@@ -97,6 +100,6 @@ export default function DocumentsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 } 

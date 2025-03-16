@@ -10,9 +10,9 @@ interface LayoutWrapperProps {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-900">
+    <div className="flex flex-col min-h-screen bg-[#111827]">
       <Navbar />
-      {/* Modified the main element to add proper spacing and a slightly lighter background */}
+      {/* Main content area with proper spacing and background */}
       <main className="flex-grow pt-6 pb-12 px-4 bg-[#111827] relative" style={{ zIndex: 1 }}>
         <div className="container mx-auto max-w-7xl">
           {children}
@@ -24,9 +24,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
             <div>
               <Link 
                 href="/terms" 
-                className="text-sm text-gray-400 hover:text-gray-200 transition-colors pointer-events-auto"
-                style={{ position: 'relative', zIndex: 10, pointerEvents: 'auto' }}
-                onClick={(e) => e.stopPropagation()}
+                className="text-sm text-gray-400 hover:text-gray-200 transition-colors"
               >
                 Terms of Service
               </Link>
@@ -36,9 +34,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
                 href="http://www.ringel.ai" 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors pointer-events-auto"
-                style={{ position: 'relative', zIndex: 10, pointerEvents: 'auto' }}
-                onClick={(e) => e.stopPropagation()}
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
               >
                 powered by ringel.AI
               </a>
