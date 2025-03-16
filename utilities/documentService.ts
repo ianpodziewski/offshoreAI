@@ -100,7 +100,7 @@ export function generateLoanDocuments(loan: LoanData): LoanDocument[] {
       });
       break;
     
-    case 'rental':
+    case 'rental_brrrr':
       documents.push({
         id: `rental-pro-forma-${loan.id}`,
         loanId: loan.id,
@@ -126,31 +126,8 @@ export function generateLoanDocuments(loan: LoanData): LoanDocument[] {
       });
       break;
     
-    case 'land':
-      documents.push({
-        id: `land-feasibility-${loan.id}`,
-        loanId: loan.id,
-        docType: 'land_feasibility',
-        category: 'property',
-        filename: 'land_feasibility_study.pdf',
-        dateCreated: loan.dateCreated,
-        status: 'pending',
-        content: `<div class="document">Land Feasibility Study for ${loan.borrowerName}</div>`
-      });
-      break;
-    
-    case 'rehab':
-      documents.push({
-        id: `rehab-assessment-${loan.id}`,
-        loanId: loan.id,
-        docType: 'rehab_assessment',
-        category: 'property',
-        filename: 'rehab_assessment.pdf',
-        dateCreated: loan.dateCreated,
-        status: 'pending',
-        content: `<div class="document">Rehab Property Assessment for ${loan.borrowerName}</div>`
-      });
-      break;
+    default:
+      // Note: Removed 'land' and 'rehab' cases as they're not valid LoanType values
   }
   
   return documents;
