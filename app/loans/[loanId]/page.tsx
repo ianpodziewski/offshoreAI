@@ -185,28 +185,28 @@ export default function LoanPage() {
           <div className="w-full lg:w-3/4">
             <Tabs defaultValue="overview" onValueChange={setActiveTab} className="mb-8">
               <div className="flex justify-center mb-2">
-                <TabsList className="bg-[#1a2234] p-1 rounded-lg">
+                <TabsList className="bg-[#1a2234] p-0 rounded-lg">
                   <TabsTrigger 
                     value="overview" 
-                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
                   >
                     Overview
                   </TabsTrigger>
                   <TabsTrigger 
                     value="property" 
-                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
                   >
                     Property
                   </TabsTrigger>
                   <TabsTrigger 
                     value="financials" 
-                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
                   >
                     Financials
                   </TabsTrigger>
                   <TabsTrigger 
                     value="borrower" 
-                    className="text-base px-6 py-3 data-[state=active]:bg-blue-900/40 data-[state=active]:text-blue-300"
+                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
                   >
                     Borrower
                   </TabsTrigger>

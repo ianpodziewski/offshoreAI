@@ -58,7 +58,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
                   href={item.path}
                   className={`flex items-center px-4 py-3 rounded-md transition-colors ${
                     item.isActive
-                      ? 'bg-[#1a2234] text-white'
+                      ? 'bg-blue-900/70 text-blue-300 font-medium'
                       : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'
                   }`}
                 >
