@@ -12,7 +12,7 @@ import LoanSidebar from '@/components/loan/LoanSidebar';
 import { LoanData, OriginatorInfo } from '@/utilities/loanGenerator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoanContextProvider from '@/components/LoanContextProvider';
-import LoanSpecificChat from '@/components/LoanSpecificChat';
+import LoanChat from '@/components/LoanChat';
 import ReviewProcessFlow from '@/components/ReviewProcessFlow';
 
 /**
@@ -307,7 +307,7 @@ export default function LoanDetailPage() {
               
               <TabsContent value="chat">
                 <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
-                  <LoanSpecificChat />
+                  <LoanChat />
                 </div>
               </TabsContent>
             </Tabs>
