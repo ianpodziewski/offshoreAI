@@ -135,21 +135,16 @@ export default function LoanDocumentsPage() {
             Back to Loan Overview
           </button>
           <h1 className="text-3xl font-bold mt-4 text-white">
-            {loan.borrowerName}'s Loan Documents
+            Loan #{loanId.substring(0, 8)} Documents
           </h1>
           <p className="text-muted-foreground">
-            Manage documents for loan {loan.id} - {loan.propertyAddress}
+            Manage documents for loan {loanId} - {loan.propertyAddress}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <LoanSidebar loan={loan} activePage="documents" />
-          </div>
-
+        <div className="flex flex-col-reverse lg:flex-row gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-4 space-y-6">
+          <div className="w-full lg:w-3/4 space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold text-white">Document Management</h2>
@@ -266,19 +261,26 @@ export default function LoanDocumentsPage() {
                 />
               </TabsContent>
             </Tabs>
-            
-            {/* Document Uploader Dialog */}
-            <DocumentUploader
-              loanId={loanId}
-              isOpen={isUploaderOpen}
-              onClose={() => setIsUploaderOpen(false)}
-              onUpload={handleDocumentUploaded}
-              category={uploadConfig.category}
-              section={uploadConfig.section}
-              docType={uploadConfig.docType}
-            />
+          </div>
+          
+          {/* Sidebar */}
+          <div className="w-full lg:w-1/4">
+            <LoanSidebar loan={loan} activePage="documents" />
           </div>
         </div>
+        
+        {/* Document Uploader Modal */}
+        {isUploaderOpen && (
+          <DocumentUploader
+            loanId={loanId}
+            isOpen={isUploaderOpen}
+            category={uploadConfig.category}
+            section={uploadConfig.section}
+            docType={uploadConfig.docType}
+            onClose={() => setIsUploaderOpen(false)}
+            onUpload={handleDocumentUploaded}
+          />
+        )}
       </div>
     </LayoutWrapper>
   );

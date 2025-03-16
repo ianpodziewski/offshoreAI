@@ -176,7 +176,7 @@ export default function LoanPage() {
             Back to Loans
           </button>
           <h1 className="text-3xl font-bold mt-4" style={{ color: COLORS.textPrimary }}>
-            {loan.borrowerName}'s Loan
+            Loan #{loan.id.substring(0, 8)}
           </h1>
           <div className="flex items-center mt-2">
             <span className="text-sm mr-2" style={{ color: COLORS.textMuted }}>
@@ -186,14 +186,9 @@ export default function LoanPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <LoanSidebar loan={loan} />
-          </div>
-
+        <div className="flex flex-col-reverse lg:flex-row gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3">
+          <div className="w-full lg:w-3/4">
             <Tabs defaultValue="overview" onValueChange={setActiveTab}>
               <TabsList className="mb-6">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -376,6 +371,11 @@ export default function LoanPage() {
                 </Section>
               </TabsContent>
             </Tabs>
+          </div>
+
+          {/* Sidebar */}
+          <div className="w-full lg:w-1/4">
+            <LoanSidebar loan={loan} />
           </div>
         </div>
       </div>
