@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     console.log(`Request ${hasDocumentContent ? 'includes' : 'does not include'} document content`);
 
     // Prepare system instructions to help the model process document content
-    let enhancedMessages = [...messages];
+    const enhancedMessages = [...messages];
     
     if (hasDocumentContent) {
       // Add specific instructions for handling document content

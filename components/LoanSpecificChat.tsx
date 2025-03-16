@@ -22,75 +22,8 @@ export default function LoanSpecificChat() {
   const [hasInitialized, setHasInitialized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Function to manually sync loan documents with chat - removed loanDocuments dependency
-  const syncLoanDocuments = useCallback((loanId: string) => {
-    try {
-      console.log(`Syncing documents for loan: ${loanId}`);
-      
-      // Get all documents from localStorage directly to ensure we have the latest data
-      const storageDocsRaw = localStorage.getItem('simple_documents');
-      if (!storageDocsRaw) {
-        console.log('No documents found in localStorage');
-        return [];
-      }
-      
-      const allDocs = JSON.parse(storageDocsRaw);
-      if (!Array.isArray(allDocs)) {
-        console.log('Invalid document data structure');
-        return [];
-      }
-      
-      // Find documents for this loan
-      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
-      console.log(`Found ${loanDocs.length} documents for loan ${loanId}`);
-      
-      // Try to enhance documents with content
-      const enhancedDocs = loanDocs.map(doc => {
-        // Log the document details for debugging
-        console.log(`Document: ${doc.filename}, Type: ${doc.docType}, Category: ${doc.category}, Status: ${doc.status}`);
-        
-        // Try to get document content if not already present
-        if (!doc.content && doc.documentId) {
-          try {
-            // Try to get content from localStorage first
-            const docContentKey = `document_content_${doc.documentId}`;
-            const storedContent = localStorage.getItem(docContentKey);
-            
-            if (storedContent) {
-              console.log(`Found content for document ${doc.filename} in localStorage`);
-              doc.content = storedContent;
-            } else {
-              // Try to get content from simpleDocumentService
-              const simpleDoc = simpleDocumentService.getDocumentById(doc.documentId);
-              if (simpleDoc && simpleDoc.content) {
-                console.log(`Found content for document ${doc.filename} in simpleDocumentService`);
-                doc.content = simpleDoc.content;
-              } else {
-                // Try to get content directly from the document service
-                const docContent = getDocumentContent(doc.filename, loanId);
-                if (docContent) {
-                  console.log(`Found content for document ${doc.filename} from document service`);
-                  doc.content = docContent;
-                }
-              }
-            }
-          } catch (error) {
-            console.error(`Error retrieving content for document ${doc.filename}:`, error);
-          }
-        }
-        
-        return doc;
-      });
-      
-      return enhancedDocs;
-    } catch (error) {
-      console.error('Error syncing loan documents with chat:', error);
-      return [];
-    }
-  }, []); // Removed loanDocuments dependency
-  
-  // Helper function to get document content directly
-  const getDocumentContent = (filename: string, loanId: string): string | null => {
+  // Helper function to get document content directly - moved up before it's used
+  const getDocumentContent = useCallback((filename: string, loanId: string): string | null => {
     try {
       // Check if we have mock document content in localStorage
       const mockContentKey = `mock_document_${loanId}_${filename.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -160,7 +93,74 @@ export default function LoanSpecificChat() {
       console.error('Error getting document content:', error);
       return null;
     }
-  };
+  }, [activeLoan]);
+  
+  // Function to manually sync loan documents with chat
+  const syncLoanDocuments = useCallback((loanId: string) => {
+    try {
+      console.log(`Syncing documents for loan: ${loanId}`);
+      
+      // Get all documents from localStorage directly to ensure we have the latest data
+      const storageDocsRaw = localStorage.getItem('simple_documents');
+      if (!storageDocsRaw) {
+        console.log('No documents found in localStorage');
+        return [];
+      }
+      
+      const allDocs = JSON.parse(storageDocsRaw);
+      if (!Array.isArray(allDocs)) {
+        console.log('Invalid document data structure');
+        return [];
+      }
+      
+      // Find documents for this loan
+      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
+      console.log(`Found ${loanDocs.length} documents for loan ${loanId}`);
+      
+      // Try to enhance documents with content
+      const enhancedDocs = loanDocs.map(doc => {
+        // Log the document details for debugging
+        console.log(`Document: ${doc.filename}, Type: ${doc.docType}, Category: ${doc.category}, Status: ${doc.status}`);
+        
+        // Try to get document content if not already present
+        if (!doc.content && doc.documentId) {
+          try {
+            // Try to get content from localStorage first
+            const docContentKey = `document_content_${doc.documentId}`;
+            const storedContent = localStorage.getItem(docContentKey);
+            
+            if (storedContent) {
+              console.log(`Found content for document ${doc.filename} in localStorage`);
+              doc.content = storedContent;
+            } else {
+              // Try to get content from simpleDocumentService
+              const simpleDoc = simpleDocumentService.getDocumentById(doc.documentId);
+              if (simpleDoc && simpleDoc.content) {
+                console.log(`Found content for document ${doc.filename} in simpleDocumentService`);
+                doc.content = simpleDoc.content;
+              } else {
+                // Try to get content directly from the document service
+                const docContent = getDocumentContent(doc.filename, loanId);
+                if (docContent) {
+                  console.log(`Found content for document ${doc.filename} from document service`);
+                  doc.content = docContent;
+                }
+              }
+            }
+          } catch (error) {
+            console.error(`Error retrieving content for document ${doc.filename}:`, error);
+          }
+        }
+        
+        return doc;
+      });
+      
+      return enhancedDocs;
+    } catch (error) {
+      console.error('Error syncing loan documents with chat:', error);
+      return [];
+    }
+  }, [getDocumentContent]);
   
   // Function to refresh loan documents
   const refreshLoanDocuments = useCallback(() => {
@@ -355,7 +355,7 @@ export default function LoanSpecificChat() {
     // Load documents and context
     refreshLoanDocuments();
     setHasInitialized(true);
-  }, [activeLoan, hasInitialized]); // Removed refreshLoanDocuments from dependencies
+  }, [activeLoan, hasInitialized, refreshLoanDocuments]); // Added refreshLoanDocuments dependency
   
   // Handle loan changes after initial load
   useEffect(() => {
@@ -372,7 +372,7 @@ export default function LoanSpecificChat() {
     
     // Load documents and context for new loan
     refreshLoanDocuments();
-  }, [activeLoan?.id]); // Only depend on the loan ID changing
+  }, [activeLoan, activeLoan?.id, hasInitialized, refreshLoanDocuments]); // Added missing dependencies
   
   // Function to send loan context to the chat
   const sendLoanContextToChat = () => {
