@@ -380,7 +380,7 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
                         )}
                       </div>
                     ) : (
-                      // Main chat - show both chat uploads and loan documents
+                      // Main chat - show only chat uploads
                       <>
                         {/* Chat Documents Section */}
                         <div className="mb-5 mt-2">
@@ -410,33 +410,7 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
                           )}
                         </div>
                         
-                        {/* Loan Documents Section */}
-                        <div className="mb-5">
-                          <div className="bg-gray-800/70 px-3 py-2.5 rounded-md mb-3 border-l-2 border-blue-500">
-                            <h3 className="text-xs font-medium text-gray-200">Loan Documents</h3>
-                          </div>
-                          
-                          {loanDocuments.length > 0 ? (
-                            <>
-                              <ul className="space-y-2.5">
-                                {(showAllLoanDocs ? loanDocuments : loanDocuments.slice(0, 3)).map(renderDocumentItem)}
-                              </ul>
-                              {loanDocuments.length > 3 && (
-                                <button 
-                                  onClick={() => setShowAllLoanDocs(!showAllLoanDocs)}
-                                  className="text-xs text-blue-400 hover:underline mt-3 flex items-center justify-center w-full py-1.5 px-2 bg-gray-800/30 rounded-md"
-                                >
-                                  {showAllLoanDocs ? 'Show Less' : 'More +'}
-                                  <ChevronRight size={12} className={`ml-1 transition-transform ${showAllLoanDocs ? 'rotate-90' : ''}`} />
-                                </button>
-                              )}
-                            </>
-                          ) : (
-                            <div className="text-center py-4 text-gray-500 text-xs bg-gray-800/30 rounded-md">
-                              <p>No loan documents available</p>
-                            </div>
-                          )}
-                        </div>
+                        {/* Removed Loan Documents Section */}
                       </>
                     )}
                     

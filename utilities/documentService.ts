@@ -200,5 +200,10 @@ export const documentService = {
     localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
     
     return allDocs[docIndex];
+  },
+  
+  // Clear all documents (for testing and reset)
+  clearAllDocuments: (): void => {
+    localStorage.removeItem(DOCUMENTS_STORAGE_KEY);
   }
 };

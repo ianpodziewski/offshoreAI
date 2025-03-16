@@ -76,6 +76,32 @@ export const loanDatabase = {
   
   // Reset the database (useful for testing)
   reset: (count = DEFAULT_LOAN_COUNT) => {
+    // Clear all existing documents first
+    if (typeof localStorage !== 'undefined') {
+      // Clear document database using the documentService
+      documentService.clearAllDocuments();
+      
+      // Also clear simplified document service if it exists in the global scope
+      try {
+        const simplifiedDocService = require('./simplifiedDocumentService').simpleDocumentService;
+        if (simplifiedDocService && typeof simplifiedDocService.clearAllDocuments === 'function') {
+          simplifiedDocService.clearAllDocuments();
+        }
+      } catch (error) {
+        console.warn('Could not clear simplified document service:', error);
+      }
+      
+      // Clear document database
+      try {
+        const docDatabase = require('./documentDatabase').default;
+        if (docDatabase && typeof docDatabase.clearAllData === 'function') {
+          docDatabase.clearAllData();
+        }
+      } catch (error) {
+        console.warn('Could not clear document database:', error);
+      }
+    }
+    
     const initialLoans = generateLoans(count);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initialLoans));
     
