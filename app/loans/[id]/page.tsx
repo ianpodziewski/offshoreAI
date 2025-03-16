@@ -314,8 +314,10 @@ export default function LoanDetailPage() {
           </div>
         </div>
         
-        {/* Sidebar Navigation */}
-        <LoanSidebar loanId={loan.id} />
+        {/* Sidebar */}
+        <div className="w-full md:w-64 flex-shrink-0">
+          <LoanSidebar loan={loan} activePage="overview" />
+        </div>
       </LayoutWrapper>
     </LoanContextProvider>
   );

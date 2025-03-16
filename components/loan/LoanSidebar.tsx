@@ -5,64 +5,70 @@ import { FileText, Info } from 'lucide-react';
 import { COLORS } from '@/app/theme/colors';
 
 interface LoanSidebarProps {
-  loanId: string;
+  loan: any;
+  activePage?: string;
 }
 
-const LoanSidebar: React.FC<LoanSidebarProps> = ({ loanId }) => {
+const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
   const [expanded, setExpanded] = useState(false);
   const pathname = usePathname();
 
   // Determine if the current path is active
   const isActive = (path: string) => {
-    return pathname === path;
+    if (activePage) {
+      return activePage === path;
+    }
+    return pathname?.includes(path) || false;
   };
 
   // Navigation items
   const navItems = [
     {
-      name: 'Loan',
-      icon: <Info size={expanded ? 18 : 16} />,
-      path: `/loans/${loanId}`,
+      name: 'Overview',
+      path: 'overview',
+      icon: <Info size={18} />
     },
     {
       name: 'Documents',
-      icon: <FileText size={expanded ? 18 : 16} />,
-      path: `/loans/${loanId}/documents`,
-    },
+      path: 'documents',
+      icon: <FileText size={18} />
+    }
   ];
 
+  if (!loan) return null;
+
   return (
-    <div 
-      className={`fixed right-0 top-1/4 flex h-auto transition-all duration-300 z-10 ${expanded ? 'w-48' : 'w-12'}`}
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-    >
-      {/* Sidebar content */}
-      <div 
-        className={`flex flex-col w-full rounded-l-lg shadow-lg overflow-hidden`}
-        style={{ backgroundColor: COLORS.bgDark, borderColor: COLORS.border }}
-      >
-        {navItems.map((item) => (
-          <Link 
-            key={item.name} 
-            href={item.path}
-            className={`flex items-center ${expanded ? 'px-4' : 'justify-center'} py-3 transition-colors ${
-              isActive(item.path) 
-                ? 'text-white' 
-                : 'text-gray-400 hover:text-white'
-            }`}
-            style={{ 
-              backgroundColor: isActive(item.path) ? COLORS.primary : 'transparent',
-              borderBottom: `1px solid ${COLORS.border}`
-            }}
-          >
-            <span className={expanded ? "mr-3" : ""}>{item.icon}</span>
-            {expanded && (
-              <span className="whitespace-nowrap">{item.name}</span>
-            )}
-          </Link>
-        ))}
+    <div className="bg-[#141b2d] rounded-lg shadow-md overflow-hidden">
+      {/* Loan header */}
+      <div className="p-4 border-b border-gray-700">
+        <h3 className="font-semibold text-lg" style={{ color: COLORS.textPrimary }}>
+          {loan.borrowerName}
+        </h3>
+        <p className="text-sm" style={{ color: COLORS.textMuted }}>
+          Loan #{loan.id.substring(0, 8)}
+        </p>
       </div>
+      
+      {/* Navigation */}
+      <nav className="p-2">
+        <ul className="space-y-1">
+          {navItems.map((item) => (
+            <li key={item.path}>
+              <Link
+                href={`/loans/${loan.id}${item.path === 'overview' ? '' : `/${item.path}`}`}
+                className={`flex items-center px-3 py-2 rounded-md transition-colors ${
+                  isActive(item.path)
+                    ? 'bg-[#1a2234] text-white'
+                    : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'
+                }`}
+              >
+                <span className="mr-3">{item.icon}</span>
+                <span>{item.name}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
     </div>
   );
 };

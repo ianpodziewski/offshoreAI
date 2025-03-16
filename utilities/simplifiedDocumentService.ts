@@ -8,12 +8,14 @@ export interface SimpleDocument {
   fileType?: string;
   fileSize?: number;
   dateUploaded: string;
-  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
   docType: string;
   status: 'pending' | 'approved' | 'rejected';
   content: string; // Base64 encoded content or HTML for generated documents
   notes?: string;
   assignedTo?: string;
+  section?: string;
+  subsection?: string;
 }
 
 // Constants for storage keys
@@ -22,7 +24,9 @@ const STORAGE_KEY = 'simple_documents';
 // Helper function for document type classification
 function classifyDocument(filename: string): { 
   docType: string; 
-  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
+  section?: string;
+  subsection?: string;
 } {
   const lowerName = filename.toLowerCase();
   
@@ -31,28 +35,132 @@ function classifyDocument(filename: string): {
     return { docType: 'chat_document', category: 'chat' };
   }
   
-  // Simple classification rules
-  if (lowerName.includes('note') || lowerName.includes('promissory')) {
-    return { docType: 'promissory_note', category: 'loan' };
-  }
-  if (lowerName.includes('deed') || lowerName.includes('trust')) {
-    return { docType: 'deed_of_trust', category: 'legal' };
-  }
-  if (lowerName.includes('disclosure') || lowerName.includes('closing')) {
-    return { docType: 'closing_disclosure', category: 'financial' };
-  }
-  if (lowerName.includes('income') || lowerName.includes('statement')) {
-    return { docType: 'income_verification', category: 'financial' };
-  }
-  if (lowerName.includes('insurance')) {
-    return { docType: 'insurance_policy', category: 'legal' };
-  }
-  if (lowerName.includes('appraisal')) {
-    return { docType: 'property_appraisal', category: 'financial' };
+  // Borrower Profile
+  if (lowerName.includes('application') || lowerName.includes('form')) {
+    return { 
+      docType: 'application_form', 
+      category: 'borrower',
+      section: 'borrower_profile',
+      subsection: 'borrower_information'
+    };
   }
   
-  // Default
-  return { docType: 'general_document', category: 'misc' };
+  if (lowerName.includes('id') || lowerName.includes('license') || lowerName.includes('passport')) {
+    return { 
+      docType: 'government_id', 
+      category: 'borrower',
+      section: 'borrower_profile',
+      subsection: 'borrower_information'
+    };
+  }
+  
+  if (lowerName.includes('tax') && lowerName.includes('return')) {
+    return { 
+      docType: 'tax_returns', 
+      category: 'financial',
+      section: 'borrower_profile',
+      subsection: 'financial_documentation'
+    };
+  }
+  
+  if (lowerName.includes('bank') && lowerName.includes('statement')) {
+    return { 
+      docType: 'bank_statements', 
+      category: 'financial',
+      section: 'borrower_profile',
+      subsection: 'financial_documentation'
+    };
+  }
+  
+  // Property File
+  if (lowerName.includes('appraisal')) {
+    return { 
+      docType: 'appraisal_report', 
+      category: 'property',
+      section: 'property_file',
+      subsection: 'valuation'
+    };
+  }
+  
+  if (lowerName.includes('inspection')) {
+    return { 
+      docType: 'inspection_report', 
+      category: 'property',
+      section: 'property_file',
+      subsection: 'property_condition'
+    };
+  }
+  
+  if (lowerName.includes('purchase') && lowerName.includes('contract')) {
+    return { 
+      docType: 'purchase_contract', 
+      category: 'property',
+      section: 'property_file',
+      subsection: 'property_information'
+    };
+  }
+  
+  // Loan Documents
+  if (lowerName.includes('note') || lowerName.includes('promissory')) {
+    return { 
+      docType: 'promissory_note', 
+      category: 'loan',
+      section: 'loan_documents',
+      subsection: 'loan_agreement'
+    };
+  }
+  
+  if (lowerName.includes('deed') || lowerName.includes('trust') || lowerName.includes('mortgage')) {
+    return { 
+      docType: 'deed_of_trust', 
+      category: 'legal',
+      section: 'loan_documents',
+      subsection: 'loan_agreement'
+    };
+  }
+  
+  if (lowerName.includes('disclosure') || lowerName.includes('closing')) {
+    return { 
+      docType: 'closing_disclosure', 
+      category: 'loan',
+      section: 'loan_documents',
+      subsection: 'closing_documents'
+    };
+  }
+  
+  if (lowerName.includes('insurance')) {
+    return { 
+      docType: 'insurance_certificates', 
+      category: 'loan',
+      section: 'loan_documents',
+      subsection: 'closing_documents'
+    };
+  }
+  
+  // Project Documentation
+  if (lowerName.includes('budget') || lowerName.includes('renovation') || lowerName.includes('construction')) {
+    return { 
+      docType: 'renovation_budget', 
+      category: 'project',
+      section: 'project_documentation',
+      subsection: 'fix_and_flip'
+    };
+  }
+  
+  if (lowerName.includes('lease') || lowerName.includes('rental')) {
+    return { 
+      docType: 'lease_agreements', 
+      category: 'project',
+      section: 'project_documentation',
+      subsection: 'rental_commercial'
+    };
+  }
+  
+  // Default fallback
+  return { 
+    docType: 'misc_document', 
+    category: 'misc' 
+  };
 }
 
 // Helper function to read file as base64
@@ -175,7 +283,12 @@ export const simpleDocumentService = {
   },
   
   // Add a new document
-  addDocument: async (file: File, loanId: string, classification?: { docType: string; category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' }): Promise<SimpleDocument | null> => {
+  addDocument: async (file: File, loanId: string, classification?: { 
+    docType: string; 
+    category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
+    section?: string;
+    subsection?: string;
+  }): Promise<SimpleDocument | null> => {
     try {
       // Read file as base64
       const content = await readFileAsBase64(file);
@@ -188,18 +301,27 @@ export const simpleDocumentService = {
       }
       
       // Special handling for chat-uploads, mark them with the chat category
-      let docClassification = classification;
-      if (loanId === 'chat-uploads') {
-        docClassification = { 
-          docType: 'chat_document', 
-          category: 'chat' 
-        };
-      } else {
-        // Use provided classification or classify automatically
-        docClassification = classification || classifyDocument(file.name);
-      }
+      let docType = 'misc_document';
+      let category: SimpleDocument['category'] = 'misc';
+      let section: string | undefined = undefined;
+      let subsection: string | undefined = undefined;
       
-      const { docType, category } = docClassification;
+      if (loanId === 'chat-uploads') {
+        docType = 'chat_document';
+        category = 'chat';
+      } else if (classification) {
+        docType = classification.docType;
+        category = classification.category;
+        section = classification.section;
+        subsection = classification.subsection;
+      } else {
+        // Auto-classify document if not provided
+        const autoClassification = classifyDocument(file.name);
+        docType = autoClassification.docType;
+        category = autoClassification.category;
+        section = autoClassification.section;
+        subsection = autoClassification.subsection;
+      }
       
       // Get all existing documents
       const allDocs = simpleDocumentService.getAllDocuments();
@@ -221,7 +343,9 @@ export const simpleDocumentService = {
           fileType: file.type || 'application/pdf',
           fileSize: file.size,
           dateUploaded: new Date().toISOString(),
-          content: formattedContent
+          content: formattedContent,
+          section,
+          subsection
         };
         
         // Replace in array
@@ -245,7 +369,9 @@ export const simpleDocumentService = {
         category,
         docType,
         status: 'pending',
-        content: formattedContent
+        content: formattedContent,
+        section,
+        subsection
       };
       
       // Add the new document

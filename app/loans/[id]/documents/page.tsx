@@ -49,7 +49,7 @@ const Section: React.FC<SectionProps> = ({ title, icon, children, actionButton }
 interface DocumentSocketProps {
   label: string;
   docType: string;
-  category: 'loan' | 'legal' | 'financial' | 'misc';
+  category: 'loan' | 'legal' | 'financial' | 'misc' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit';
   loanId: string;
   document?: SimpleDocument;
   onViewDocument: (doc: SimpleDocument) => void;
@@ -324,30 +324,209 @@ const DocumentSocket: React.FC<DocumentSocketProps> = ({
   );
 };
 
-// Define document types for each section
-const INITIAL_DOCUMENTS = [
-  { docType: 'borrower_identification', label: 'Borrower Identification', category: 'loan' as const },
-  { docType: 'credit_report', label: 'Credit Report', category: 'financial' as const },
-  { docType: 'property_appraisal', label: 'Property Appraisal', category: 'financial' as const },
-  { docType: 'purchase_contract', label: 'Purchase Contract', category: 'legal' as const },
-  { docType: 'insurance_proof', label: 'Proof of Insurance', category: 'misc' as const },
-  { docType: 'income_verification', label: 'Income Verification', category: 'financial' as const },
+// Updated document types based on the recommended loan system file structure
+const DOCUMENT_TYPES = [
+  // 1. BORROWER PROFILE
+  // Borrower Information
+  { docType: 'application_form', label: 'Application Form', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
+  { docType: 'government_id', label: 'Government ID', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
+  { docType: 'credit_authorization', label: 'Credit Authorization', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
+  { docType: 'personal_financial_statement', label: 'Personal Financial Statement', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
+  { docType: 'background_check', label: 'Background Check Results', category: 'borrower' as const, section: 'borrower_profile', subsection: 'borrower_information' },
+  
+  // Financial Documentation
+  { docType: 'tax_returns', label: 'Tax Returns', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
+  { docType: 'bank_statements', label: 'Bank Statements', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
+  { docType: 'income_verification', label: 'Income Verification', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
+  { docType: 'debt_schedule', label: 'Debt Schedule', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
+  { docType: 'real_estate_portfolio', label: 'Real Estate Portfolio', category: 'financial' as const, section: 'borrower_profile', subsection: 'financial_documentation' },
+  
+  // Entity Documentation
+  { docType: 'formation_documents', label: 'Formation Documents', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
+  { docType: 'operating_agreement', label: 'Operating Agreement', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
+  { docType: 'resolution_to_borrow', label: 'Resolution to Borrow', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
+  { docType: 'certificate_good_standing', label: 'Certificate of Good Standing', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
+  { docType: 'ein_documentation', label: 'EIN Documentation', category: 'legal' as const, section: 'borrower_profile', subsection: 'entity_documentation' },
+  
+  // 2. PROPERTY FILE
+  // Property Information
+  { docType: 'property_details', label: 'Property Details Summary', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
+  { docType: 'purchase_contract', label: 'Purchase Contract', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
+  { docType: 'property_photos', label: 'Property Photos', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
+  { docType: 'preliminary_title', label: 'Preliminary Title Report', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
+  { docType: 'survey_plot_plan', label: 'Survey/Plot Plan', category: 'property' as const, section: 'property_file', subsection: 'property_information' },
+  
+  // Valuation
+  { docType: 'appraisal_report', label: 'Appraisal Report', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
+  { docType: 'comparative_market_analysis', label: 'Comparative Market Analysis', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
+  { docType: 'broker_price_opinion', label: 'Broker Price Opinion (BPO)', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
+  { docType: 'historical_property_values', label: 'Historical Property Values', category: 'property' as const, section: 'property_file', subsection: 'valuation' },
+  
+  // Property Condition
+  { docType: 'inspection_report', label: 'Inspection Report', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
+  { docType: 'environmental_assessment', label: 'Environmental Assessment', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
+  { docType: 'engineering_report', label: 'Engineering Report', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
+  { docType: 'pest_inspection', label: 'Pest Inspection', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
+  { docType: 'natural_hazard_disclosures', label: 'Natural Hazard Disclosures', category: 'property' as const, section: 'property_file', subsection: 'property_condition' },
+  
+  // 3. PROJECT DOCUMENTATION
+  // Fix-and-Flip/Construction
+  { docType: 'renovation_budget', label: 'Renovation/Construction Budget', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
+  { docType: 'project_timeline', label: 'Timeline and Milestones', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
+  { docType: 'contractor_information', label: 'Contractor Information', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
+  { docType: 'permits_approvals', label: 'Permits and Approvals', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
+  { docType: 'architectural_plans', label: 'Architectural Plans', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
+  { docType: 'draw_schedule', label: 'Draw Schedule', category: 'project' as const, section: 'project_documentation', subsection: 'fix_and_flip' },
+  
+  // Rental/Commercial
+  { docType: 'rent_roll', label: 'Rent Roll', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
+  { docType: 'lease_agreements', label: 'Lease Agreements', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
+  { docType: 'operating_expenses', label: 'Operating Expenses', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
+  { docType: 'dscr_calculations', label: 'DSCR Calculations', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
+  { docType: 'property_management_plan', label: 'Property Management Plan', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
+  { docType: 'market_rental_analysis', label: 'Market Rental Analysis', category: 'project' as const, section: 'project_documentation', subsection: 'rental_commercial' },
+  
+  // 4. LOAN DOCUMENTS
+  // Pre-Approval
+  { docType: 'pre_qualification_letter', label: 'Pre-qualification Letter', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
+  { docType: 'term_sheet', label: 'Term Sheet', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
+  { docType: 'rate_lock_agreement', label: 'Rate Lock Agreement', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
+  { docType: 'fee_disclosure', label: 'Fee Disclosure', category: 'loan' as const, section: 'loan_documents', subsection: 'pre_approval' },
+  
+  // Loan Agreement
+  { docType: 'promissory_note', label: 'Promissory Note', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
+  { docType: 'deed_of_trust', label: 'Mortgage/Deed of Trust', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
+  { docType: 'security_agreement', label: 'Security Agreement', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
+  { docType: 'personal_guarantee', label: 'Personal Guarantee', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
+  { docType: 'assignment_rents', label: 'Assignment of Rents/Leases', category: 'loan' as const, section: 'loan_documents', subsection: 'loan_agreement' },
+  
+  // Closing Documents
+  { docType: 'closing_disclosure', label: 'Closing Disclosure', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
+  { docType: 'title_insurance_policy', label: 'Title Insurance Policy', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
+  { docType: 'insurance_certificates', label: 'Insurance Certificates', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
+  { docType: 'funding_authorization', label: 'Funding Authorization', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
+  { docType: 'disbursement_instructions', label: 'Disbursement Instructions', category: 'loan' as const, section: 'loan_documents', subsection: 'closing_documents' },
+  
+  // 5. COMPLIANCE & STATE-SPECIFIC
+  // Regulatory Compliance
+  { docType: 'state_disclosures', label: 'State-specific Disclosures', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
+  { docType: 'federal_disclosures', label: 'Federal Disclosures', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
+  { docType: 'aml_documentation', label: 'Anti-money Laundering Documentation', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
+  { docType: 'ofac_check', label: 'OFAC Check Results', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
+  { docType: 'patriot_act_compliance', label: 'Patriot Act Compliance', category: 'compliance' as const, section: 'compliance', subsection: 'regulatory_compliance' },
+  
+  // State-Specific Requirements
+  { docType: 'ca_documentation', label: 'CA Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
+  { docType: 'fl_documentation', label: 'FL Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
+  { docType: 'ny_documentation', label: 'NY Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
+  { docType: 'tx_documentation', label: 'TX Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
+  { docType: 'az_documentation', label: 'AZ Documentation Socket', category: 'compliance' as const, section: 'compliance', subsection: 'state_specific' },
+  
+  // 6. LOAN SERVICING
+  // Payment Records
+  { docType: 'payment_history', label: 'Payment History', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
+  { docType: 'late_notices', label: 'Late Notices', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
+  { docType: 'modification_requests', label: 'Modification Requests', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
+  { docType: 'payoff_statements', label: 'Payoff Statements', category: 'servicing' as const, section: 'loan_servicing', subsection: 'payment_records' },
+  
+  // Loan Monitoring
+  { docType: 'monitoring_inspection_reports', label: 'Inspection Reports', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
+  { docType: 'draw_request_documentation', label: 'Draw Request Documentation', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
+  { docType: 'project_update_reports', label: 'Project Update Reports', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
+  { docType: 'insurance_renewal_tracking', label: 'Insurance Renewal Tracking', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
+  { docType: 'tax_payment_verification', label: 'Tax Payment Verification', category: 'servicing' as const, section: 'loan_servicing', subsection: 'loan_monitoring' },
+  
+  // Default Management
+  { docType: 'default_notices', label: 'Default Notices', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
+  { docType: 'workout_documentation', label: 'Workout Documentation', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
+  { docType: 'forbearance_agreements', label: 'Forbearance Agreements', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
+  { docType: 'foreclosure_documentation', label: 'Foreclosure Documentation', category: 'servicing' as const, section: 'loan_servicing', subsection: 'default_management' },
+  
+  // 7. EXIT STRATEGY
+  // Exit Documentation
+  { docType: 'exit_strategy_statement', label: 'Exit Strategy Statement', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
+  { docType: 'sale_documentation', label: 'Sale Documentation', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
+  { docType: 'refinance_documentation', label: 'Refinance Documentation', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
+  { docType: 'leaseup_documentation', label: 'Lease-up Documentation', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
+  { docType: 'marketing_materials', label: 'Marketing Materials', category: 'exit' as const, section: 'exit_strategy', subsection: 'exit_documentation' },
 ];
 
+// Define section icons and titles
+type SectionKey = 'borrower_profile' | 'property_file' | 'project_documentation' | 'loan_documents' | 'compliance' | 'loan_servicing' | 'exit_strategy';
+
+const SECTION_CONFIG: Record<SectionKey, {
+  icon: React.ReactNode;
+  title: string;
+  subsections: Record<string, string>;
+}> = {
+  borrower_profile: {
+    icon: <FileCheck size={20} />,
+    title: 'Borrower Profile',
+    subsections: {
+      borrower_information: 'Borrower Information',
+      financial_documentation: 'Financial Documentation',
+      entity_documentation: 'Entity Documentation'
+    }
+  },
+  property_file: {
+    icon: <MapPin size={20} />,
+    title: 'Property File',
+    subsections: {
+      property_information: 'Property Information',
+      valuation: 'Valuation',
+      property_condition: 'Property Condition'
+    }
+  },
+  project_documentation: {
+    icon: <FileText size={20} />,
+    title: 'Project Documentation',
+    subsections: {
+      fix_and_flip: 'Fix-and-Flip/Construction',
+      rental_commercial: 'Rental/Commercial'
+    }
+  },
+  loan_documents: {
+    icon: <FileText size={20} />,
+    title: 'Loan Documents',
+    subsections: {
+      pre_approval: 'Pre-Approval',
+      loan_agreement: 'Loan Agreement',
+      closing_documents: 'Closing Documents'
+    }
+  },
+  compliance: {
+    icon: <Check size={20} />,
+    title: 'Compliance & State-Specific',
+    subsections: {
+      regulatory_compliance: 'Regulatory Compliance',
+      state_specific: 'State-Specific Requirements'
+    }
+  },
+  loan_servicing: {
+    icon: <Clock size={20} />,
+    title: 'Loan Servicing',
+    subsections: {
+      payment_records: 'Payment Records',
+      loan_monitoring: 'Loan Monitoring',
+      default_management: 'Default Management'
+    }
+  },
+  exit_strategy: {
+    icon: <FileText size={20} />,
+    title: 'Exit Strategy',
+    subsections: {
+      exit_documentation: 'Exit Documentation'
+    }
+  }
+};
+
+// Define unexecuted closing documents
 const UNEXECUTED_CLOSING_DOCUMENTS = [
+  { docType: 'promissory_note_draft', label: 'Promissory Note (Draft)', category: 'loan' as const },
+  { docType: 'deed_of_trust_draft', label: 'Deed of Trust (Draft)', category: 'loan' as const },
+  { docType: 'closing_disclosure_draft', label: 'Closing Disclosure (Draft)', category: 'loan' as const },
+  { docType: 'loan_agreement_draft', label: 'Loan Agreement (Draft)', category: 'loan' as const },
   { docType: 'unexecuted_package', label: 'Unexecuted Documents Package', category: 'loan' as const },
-  { docType: 'promissory_note_draft', label: 'Promissory Note (Draft)', category: 'legal' as const },
-  { docType: 'deed_of_trust_draft', label: 'Deed of Trust (Draft)', category: 'legal' as const },
-  { docType: 'closing_disclosure_draft', label: 'Closing Disclosure (Draft)', category: 'financial' as const },
-  { docType: 'loan_agreement_draft', label: 'Loan Agreement (Draft)', category: 'legal' as const },
-];
-
-const EXECUTED_CLOSING_DOCUMENTS = [
-  { docType: 'executed_package', label: 'Executed Documents Package', category: 'loan' as const },
-  { docType: 'promissory_note', label: 'Promissory Note', category: 'legal' as const },
-  { docType: 'deed_of_trust', label: 'Deed of Trust', category: 'legal' as const },
-  { docType: 'closing_disclosure', label: 'Closing Disclosure', category: 'financial' as const },
-  { docType: 'loan_agreement', label: 'Loan Agreement', category: 'legal' as const },
 ];
 
 // Map unexecuted document types to their corresponding generator types
@@ -365,6 +544,7 @@ export default function LoanDocumentsPage() {
   const [selectedDocument, setSelectedDocument] = useState<SimpleDocument | null>(null);
   const [documents, setDocuments] = useState<SimpleDocument[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
   
   useEffect(() => {
     if (params?.id) {
@@ -376,6 +556,15 @@ export default function LoanDocumentsPage() {
         // Fetch documents for this loan
         const loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
         setDocuments(loanDocuments);
+        
+        // Set active section based on loan type
+        if (fetchedLoan.loanType === 'fix_and_flip' || fetchedLoan.loanType === 'construction') {
+          setActiveSection('project_documentation');
+        } else if (fetchedLoan.loanType === 'rental_brrrr') {
+          setActiveSection('property_file');
+        } else {
+          setActiveSection('loan_documents');
+        }
       }
       setLoading(false);
     }
@@ -406,9 +595,9 @@ export default function LoanDocumentsPage() {
       const generatedContents: Record<string, string> = {};
       
       // Generate only unexecuted closing documents (excluding the package itself)
-      const individualDocuments = UNEXECUTED_CLOSING_DOCUMENTS.filter(doc => doc.docType !== 'unexecuted_package');
+      const individualDocuments = UNEXECUTED_CLOSING_DOCUMENTS.filter((doc) => doc.docType !== 'unexecuted_package');
       
-      individualDocuments.forEach(docInfo => {
+      individualDocuments.forEach((docInfo) => {
         // Get the corresponding generator document type
         const generatorDocType = UNEXECUTED_TO_GENERATOR_MAP[docInfo.docType];
         
@@ -510,8 +699,8 @@ export default function LoanDocumentsPage() {
   const createUnexecutedPackage = (loan: any, contents: Record<string, string>): string => {
     // Get document order from UNEXECUTED_CLOSING_DOCUMENTS (excluding the package itself)
     const documentOrder = UNEXECUTED_CLOSING_DOCUMENTS
-      .filter(doc => doc.docType !== 'unexecuted_package')
-      .map(doc => ({
+      .filter((doc) => doc.docType !== 'unexecuted_package')
+      .map((doc) => ({
         docType: doc.docType,
         label: doc.label
       }));
@@ -654,6 +843,77 @@ export default function LoanDocumentsPage() {
     `;
   };
 
+  // Group documents by section and subsection
+  const renderDocumentSections = () => {
+    if (!loan) return null;
+    
+    // Get all sections
+    const sections = Object.keys(SECTION_CONFIG) as SectionKey[];
+    
+    return (
+      <div className="space-y-8">
+        {/* Section tabs */}
+        <div className="flex overflow-x-auto pb-2 mb-4" style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+          {sections.map((section) => (
+            <button
+              key={section}
+              className={`px-4 py-2 mr-2 rounded-t-md whitespace-nowrap ${activeSection === section ? 'font-semibold' : ''}`}
+              style={{ 
+                backgroundColor: activeSection === section ? COLORS.primary : 'transparent',
+                color: activeSection === section ? 'white' : COLORS.textPrimary,
+                borderBottom: activeSection === section ? `2px solid ${COLORS.primary}` : 'none'
+              }}
+              onClick={() => setActiveSection(section)}
+            >
+              <div className="flex items-center">
+                <span className="mr-2">{SECTION_CONFIG[section].icon}</span>
+                {SECTION_CONFIG[section].title}
+              </div>
+            </button>
+          ))}
+        </div>
+        
+        {/* Active section content */}
+        {activeSection && (
+          <div className="space-y-8">
+            {Object.entries(SECTION_CONFIG[activeSection].subsections).map(([subsectionKey, subsectionTitle]) => {
+              // Filter documents for this subsection
+              const subsectionDocs = DOCUMENT_TYPES.filter(
+                doc => doc.section === activeSection && doc.subsection === subsectionKey
+              );
+              
+              if (subsectionDocs.length === 0) return null;
+              
+              return (
+                <Section 
+                  key={subsectionKey} 
+                  title={subsectionTitle as string} 
+                  icon={SECTION_CONFIG[activeSection].icon}
+                >
+                  {subsectionDocs.map(docType => {
+                    const existingDoc = getDocumentForType(docType.docType);
+                    return (
+                      <DocumentSocket
+                        key={docType.docType}
+                        label={docType.label}
+                        docType={docType.docType}
+                        category={docType.category}
+                        loanId={loan.id}
+                        document={existingDoc}
+                        onViewDocument={setSelectedDocument}
+                        onUpload={handleUpload}
+                      />
+                    );
+                  })}
+                </Section>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <LayoutWrapper>
@@ -681,105 +941,68 @@ export default function LoanDocumentsPage() {
   
   return (
     <LayoutWrapper>
-      <div className="container mx-auto py-8 px-4">
-        <div className="mb-6">
-          <div className="p-6 rounded-lg mb-6 flex flex-col md:flex-row justify-between items-start md:items-center" 
-               style={{ backgroundColor: COLORS.bgDark }}>
-            <div>
-              <h1 className="text-3xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
-                Loan #{loan.id} Documents
-              </h1>
-              <div className="flex items-center">
-                <MapPin size={16} className="mr-2" style={{ color: COLORS.textSecondary }} />
-                <span style={{ color: COLORS.textSecondary }}>{loan.propertyAddress}</span>
-              </div>
-            </div>
-          </div>
-        
-          <div className="rounded-lg p-6" style={{ backgroundColor: COLORS.bgDarker }}>
-            {/* Initial Documents */}
-            <Section title="Initial Documents" icon={<Clock size={20} />}>
-              {INITIAL_DOCUMENTS.map((docInfo) => (
-                <DocumentSocket
-                  key={docInfo.docType}
-                  label={docInfo.label}
-                  docType={docInfo.docType}
-                  category={docInfo.category}
-                  loanId={loan.id}
-                  document={getDocumentForType(docInfo.docType)}
-                  onViewDocument={setSelectedDocument}
-                  onUpload={handleUpload}
-                />
-              ))}
-            </Section>
-
-            {/* Unexecuted Closing Documents */}
-            <Section 
-              title="Unexecuted Closing Documents" 
-              icon={<FileText size={20} />}
-              actionButton={
-                <Button
-                  onClick={handleGenerateUnexecutedDocuments}
-                  className="flex items-center gap-2"
-                  size="sm"
-                  style={{ 
-                    backgroundColor: COLORS.primary, 
-                    color: COLORS.textPrimary 
-                  }}
-                >
-                  <FileCheck size={14} className="mr-1" />
-                  Generate Unexecuted Documents
-                </Button>
-              }
-            >
-              {UNEXECUTED_CLOSING_DOCUMENTS.map((docInfo) => (
-                <DocumentSocket
-                  key={docInfo.docType}
-                  label={docInfo.label}
-                  docType={docInfo.docType}
-                  category={docInfo.category}
-                  loanId={loan.id}
-                  document={getDocumentForType(docInfo.docType)}
-                  onViewDocument={setSelectedDocument}
-                  onUpload={handleUpload}
-                />
-              ))}
-            </Section>
-
-            {/* Executed Closing Documents */}
-            <Section title="Executed Closing Documents" icon={<Check size={20} />}>
-              {EXECUTED_CLOSING_DOCUMENTS.map((docInfo) => (
-                <DocumentSocket
-                  key={docInfo.docType}
-                  label={docInfo.label}
-                  docType={docInfo.docType}
-                  category={docInfo.category}
-                  loanId={loan.id}
-                  document={getDocumentForType(docInfo.docType)}
-                  onViewDocument={setSelectedDocument}
-                  onUpload={handleUpload}
-                />
-              ))}
-            </Section>
-          </div>
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Sidebar */}
+        <div className="w-full md:w-64 flex-shrink-0">
+          <LoanSidebar loan={loan} activePage="documents" />
         </div>
         
-        {/* Document Viewer Modal */}
-        {selectedDocument && (
-          <SimpleDocumentViewer 
-            document={selectedDocument}
-            onClose={() => setSelectedDocument(null)}
-            onStatusChange={handleDocumentStatusChange}
-            onDelete={() => {
-              setSelectedDocument(null);
-              setRefreshTrigger(prev => prev + 1);
-            }}
-          />
-        )}
+        {/* Main content */}
+        <div className="flex-grow">
+          <div className="mb-6 flex justify-between items-center">
+            <h1 className="text-2xl font-bold" style={{ color: COLORS.textPrimary }}>
+              Loan Documents
+            </h1>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleGenerateUnexecutedDocuments}
+                style={{ 
+                  borderColor: COLORS.border,
+                  color: COLORS.textPrimary
+                }}
+              >
+                Generate Unexecuted Package
+              </Button>
+            </div>
+          </div>
+          
+          {loading ? (
+            <div className="text-center py-8">Loading documents...</div>
+          ) : (
+            <>
+              {renderDocumentSections()}
+              
+              {/* Document viewer modal */}
+              {selectedDocument && (
+                <div 
+                  className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                  onClick={() => setSelectedDocument(null)}
+                >
+                  <div 
+                    className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div className="p-4 border-b flex justify-between items-center">
+                      <h3 className="font-semibold">{selectedDocument.filename}</h3>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedDocument(null)}>
+                        <X size={18} />
+                      </Button>
+                    </div>
+                    <div className="p-4 overflow-auto max-h-[calc(90vh-8rem)]">
+                      <SimpleDocumentViewer 
+                        document={selectedDocument} 
+                        onStatusChange={handleDocumentStatusChange} 
+                        onClose={() => setSelectedDocument(null)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-      
-      {/* Sidebar Navigation */}
-      <LoanSidebar loanId={loan.id} />
     </LayoutWrapper>
   );
 } 
