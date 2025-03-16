@@ -116,13 +116,28 @@ const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4"
+      onClick={(e) => {
+        // Only close if clicking the backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+        e.stopPropagation();
+      }}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="p-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-semibold">{document.filename}</h2>
           <button 
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             className="p-1 rounded-full hover:bg-gray-200 text-gray-600"
             aria-label="Close"
           >

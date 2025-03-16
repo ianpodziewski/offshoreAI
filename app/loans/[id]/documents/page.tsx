@@ -773,16 +773,16 @@ export default function DocumentsPage({ params }: { params: { id: string } }) {
     <LayoutWrapper>
       <div className="flex flex-col md:flex-row gap-6 relative">
         {/* Sidebar - positioned on the left with consistent width */}
-        <div className="w-full md:w-64 flex-shrink-0 relative z-30">
+        <div className="w-full md:w-64 flex-shrink-0 relative z-40">
           <LoanSidebar loan={loan} activePage="documents" />
         </div>
         
         {/* Main content - takes remaining space */}
-        <div className="flex-grow relative z-20">
-          <h1 className="text-2xl font-bold mb-2" style={{ color: COLORS.textPrimary }}>
+        <div className="flex-grow relative z-20 pointer-events-auto">
+          <h1 className="text-2xl font-bold mb-2 pointer-events-none" style={{ color: COLORS.textPrimary }}>
             Loan Documents
           </h1>
-          <p className="text-sm mb-6" style={{ color: COLORS.textMuted }}>
+          <p className="text-sm mb-6 pointer-events-none" style={{ color: COLORS.textMuted }}>
             View and manage documents for loan {loan?.id}
           </p>
           
@@ -794,7 +794,7 @@ export default function DocumentsPage({ params }: { params: { id: string } }) {
                   <Button
                     key={key}
                     variant={activeSection === key ? "default" : "outline"}
-                    className="flex items-center px-4 py-2 whitespace-nowrap"
+                    className="flex items-center px-4 py-2 whitespace-nowrap pointer-events-auto"
                     onClick={() => setActiveSection(key as SectionKey)}
                   >
                     {config.icon}

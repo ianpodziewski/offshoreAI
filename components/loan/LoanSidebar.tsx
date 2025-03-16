@@ -44,7 +44,10 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
   if (!loan) return null;
 
   return (
-    <div className="md:sticky md:top-20 bg-[#141b2d] rounded-lg shadow-md overflow-hidden relative z-30">
+    <div 
+      className="md:sticky md:top-20 bg-[#141b2d] rounded-lg shadow-md overflow-hidden relative z-50"
+      style={{ position: 'relative', zIndex: 50 }}
+    >
       {/* Loan header */}
       <div className="p-4 border-b border-gray-700">
         <h3 className="font-semibold text-lg" style={{ color: COLORS.textPrimary }}>
@@ -56,7 +59,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
       </div>
       
       {/* Navigation */}
-      <nav className="p-2">
+      <nav className="p-2 relative z-50" style={{ position: 'relative', zIndex: 50 }}>
         <ul className="space-y-1">
           {navItems.map((item) => {
             // Construct the correct URL for each navigation item
@@ -65,7 +68,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
               : `/loans/${loan.id}/${item.path}`;
               
             return (
-              <li key={item.path} className="relative z-30">
+              <li key={item.path} className="relative z-50" style={{ position: 'relative', zIndex: 50 }}>
                 <Link
                   href={href}
                   className={`flex items-center px-3 py-3 rounded-md transition-colors pointer-events-auto ${
@@ -73,7 +76,15 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
                       ? 'bg-[#1a2234] text-white'
                       : 'text-gray-400 hover:bg-[#1a2234] hover:text-white'
                   }`}
-                  style={{ zIndex: 30 }} // Ensure links are clickable
+                  style={{ 
+                    position: 'relative', 
+                    zIndex: 50,
+                    pointerEvents: 'auto'
+                  }}
+                  onClick={(e) => {
+                    // Ensure the click is not prevented
+                    e.stopPropagation();
+                  }}
                 >
                   <span className="mr-3">{item.icon}</span>
                   <span className="flex-grow">{item.name}</span>
