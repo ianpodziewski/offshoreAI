@@ -187,45 +187,34 @@ export const getPhotoIdTemplate = (loanData: LoanData): string => {
   return `${baseStyle}
     <div class="document">
       <div class="document-header">
-        <div style="text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">STATE OF CALIFORNIA</div>
-        <div class="document-title">DRIVER LICENSE</div>
+        <div class="document-title">PHOTO ID</div>
+        <div class="document-subtitle">Date: ${formattedDate}</div>
       </div>
       
-      <div style="display: flex; margin-top: 20px;">
-        <div style="flex: 1;">
-          <div style="background-color: #f5f5f5; width: 120px; height: 150px; border: 1px solid #ddd; display: flex; justify-content: center; align-items: center;">
-            <div style="font-size: 12px; color: #999;">PHOTO</div>
-          </div>
-        </div>
-        
-        <div style="flex: 2;">
-          <table class="info-table">
-            <tr>
-              <th>DL:</th>
-              <td>${loanData.borrowerName.toUpperCase()}</td>
-            </tr>
-            <tr>
-              <th>NAME:</th>
-              <td>${loanData.borrowerName}</td>
-            </tr>
-            <tr>
-              <th>ADDRESS:</th>
-              <td>${loanData.borrowerAddress || '123 Main St, Anytown, CA 90210'}</td>
-            </tr>
-            <tr>
-              <th>ISSUED:</th>
-              <td>${formattedDate}</td>
-            </tr>
-            <tr>
-              <th>EXPIRES:</th>
-              <td>${new Date(new Date().setFullYear(new Date().getFullYear() + 5)).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-              })}</td>
-            </tr>
-          </table>
-        </div>
+      <div class="document-section">
+        <div class="section-title">Loan Details</div>
+        <table class="info-table">
+          <tr>
+            <th>Borrower:</th>
+            <td>${loanData.borrowerName}</td>
+          </tr>
+          <tr>
+            <th>Loan ID:</th>
+            <td>${loanData.id || 'DEMO-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000)}</td>
+          </tr>
+          <tr>
+            <th>Loan Type:</th>
+            <td>${loanData.loanType.toUpperCase()}</td>
+          </tr>
+          <tr>
+            <th>Loan Amount:</th>
+            <td>${formatCurrency(loanData.loanAmount)}</td>
+          </tr>
+          <tr>
+            <th>Property Address:</th>
+            <td>${loanData.propertyAddress}</td>
+          </tr>
+        </table>
       </div>
     </div>
   `;
@@ -360,10 +349,14 @@ export const documentTemplates: { [key: string]: (loanData: LoanData) => string 
 
 // This function provides a convenient way to get the right template
 export const getDocumentTemplate = (docType: string, loanData: LoanData): string => {
+  console.log('Document template requested for type:', docType);
+  
   const templateFunction = documentTemplates[docType];
   if (templateFunction) {
+    console.log('Found template function for:', docType);
     return templateFunction(loanData);
   } else {
+    console.log('No template found for:', docType, 'Using fallback template');
     // Fallback for unknown document types
     return `${baseStyle}
       <div class="document">
