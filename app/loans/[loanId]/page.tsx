@@ -275,11 +275,11 @@ export default function LoanPage() {
                     <Section title="Property Details" icon={<Home size={20} style={{ color: COLORS.primary }} />}>
                       <InfoItem label="Property Address" value={loan.propertyAddress} />
                       <InfoItem label="Property Type" value={toTitleCase(loan.propertyType)} />
-                      <InfoItem label="Year Built" value="Not available" />
-                      <InfoItem label="Square Footage" value="Not available" />
-                      <InfoItem label="Lot Size" value="Not available" />
-                      <InfoItem label="Bedrooms" value="Not available" />
-                      <InfoItem label="Bathrooms" value="Not available" />
+                      <InfoItem label="Year Built" value={loan.yearBuilt || 'Not available'} />
+                      <InfoItem label="Square Footage" value={loan.squareFootage ? `${loan.squareFootage.toLocaleString()} sq ft` : 'Not available'} />
+                      <InfoItem label="Lot Size" value={loan.lotSize || 'Not available'} />
+                      <InfoItem label="Bedrooms" value={loan.bedrooms || 'Not available'} />
+                      <InfoItem label="Bathrooms" value={loan.bathrooms || 'Not available'} />
                     </Section>
                   </div>
 
@@ -297,16 +297,16 @@ export default function LoanPage() {
                 <Section title="Location Information" icon={<MapPin size={20} style={{ color: COLORS.primary }} />}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <InfoItem label="City" value="Not available" />
-                      <InfoItem label="State" value="Not available" />
-                      <InfoItem label="Zip Code" value="Not available" />
-                      <InfoItem label="County" value="Not available" />
+                      <InfoItem label="City" value={loan.city || 'Not available'} />
+                      <InfoItem label="State" value={loan.state || 'Not available'} />
+                      <InfoItem label="Zip Code" value={loan.zipCode || 'Not available'} />
+                      <InfoItem label="County" value={loan.county || 'Not available'} />
                     </div>
                     <div>
-                      <InfoItem label="Neighborhood" value="Not available" />
-                      <InfoItem label="School District" value="Not available" />
-                      <InfoItem label="Flood Zone" value="Not available" />
-                      <InfoItem label="Zoning" value="Not available" />
+                      <InfoItem label="Neighborhood" value={loan.neighborhood || 'Not available'} />
+                      <InfoItem label="School District" value={loan.schoolDistrict || 'Not available'} />
+                      <InfoItem label="Flood Zone" value={loan.floodZone || 'Not available'} />
+                      <InfoItem label="Zoning" value={loan.zoning || 'Not available'} />
                     </div>
                   </div>
                 </Section>
@@ -321,18 +321,18 @@ export default function LoanPage() {
                       <InfoItem label="Interest Rate" value={`${loan.interestRate}%`} />
                       <InfoItem label="Loan Term" value={`${loan.loanTerm} months`} />
                       <InfoItem label="Origination Fee" value={`${loan.originationFee}%`} />
-                      <InfoItem label="Prepayment Penalty" value="Not available" />
-                      <InfoItem label="Extension Options" value="Not available" />
+                      <InfoItem label="Prepayment Penalty" value={loan.prepaymentPenalty || 'Not available'} />
+                      <InfoItem label="Extension Options" value={loan.extensionOptions || 'Not available'} />
                     </Section>
                   </div>
 
                   <div>
                     <Section title="Payment Details" icon={<Calendar size={20} style={{ color: COLORS.primary }} />}>
-                      <InfoItem label="Monthly Payment" value="Not available" />
-                      <InfoItem label="Payment Schedule" value="Not available" />
-                      <InfoItem label="First Payment Date" value="Not available" />
-                      <InfoItem label="Balloon Payment" value="Not available" />
-                      <InfoItem label="Late Fee" value="Not available" />
+                      <InfoItem label="Monthly Payment" value={loan.monthlyPayment ? `$${loan.monthlyPayment.toLocaleString()}` : 'Not available'} />
+                      <InfoItem label="Payment Schedule" value={loan.paymentSchedule || 'Not available'} />
+                      <InfoItem label="First Payment Date" value={loan.firstPaymentDate ? new Date(loan.firstPaymentDate).toLocaleDateString() : 'Not available'} />
+                      <InfoItem label="Balloon Payment" value={loan.balloonPayment ? `$${loan.balloonPayment.toLocaleString()}` : 'Not available'} />
+                      <InfoItem label="Late Fee" value={loan.lateFee || 'Not available'} />
                     </Section>
                   </div>
                 </div>
@@ -349,7 +349,7 @@ export default function LoanPage() {
                       <InfoItem label="Potential Profit" value={`$${(loan.afterRepairValue - loan.purchasePrice - loan.rehabBudget).toLocaleString()}`} />
                       <InfoItem label="ROI" value={`${Math.round(((loan.afterRepairValue - loan.purchasePrice - loan.rehabBudget) / (loan.purchasePrice + loan.rehabBudget)) * 100)}%`} />
                       <InfoItem label="Cash Required" value={`$${(loan.purchasePrice + loan.rehabBudget - loan.loanAmount).toLocaleString()}`} />
-                      <InfoItem label="Holding Costs" value="Not available" />
+                      <InfoItem label="Holding Costs" value={loan.holdingCosts ? `$${loan.holdingCosts.toLocaleString()}` : 'Not available'} />
                     </div>
                   </div>
                 </Section>
@@ -362,20 +362,21 @@ export default function LoanPage() {
                     <Section title="Borrower Information" icon={<User size={20} style={{ color: COLORS.primary }} />}>
                       <InfoItem label="Borrower Name" value={loan.borrowerName} />
                       <InfoItem label="Email" value={loan.borrowerEmail} />
-                      <InfoItem label="Phone" value="Not available" />
-                      <InfoItem label="Address" value="Not available" />
+                      <InfoItem label="Phone" value={loan.borrowerPhone || 'Not available'} />
+                      <InfoItem label="Address" value={loan.borrowerAddress || 'Not available'} />
                       <InfoItem label="Credit Score" value={loan.creditScore || 'Not available'} />
-                      <InfoItem label="Experience Level" value={toTitleCase(loan.borrowerExperience)} />
+                      <InfoItem label="Experience Level" value={loan.borrowerExperience} />
+                      <InfoItem label="Cash Reserves" value={loan.cashReserves ? `${loan.cashReserves} months` : 'Not available'} />
                     </Section>
                   </div>
 
                   <div>
                     <Section title="Entity Information" icon={<Briefcase size={20} style={{ color: COLORS.primary }} />}>
-                      <InfoItem label="Entity Name" value="Not available" />
-                      <InfoItem label="Entity Type" value="Not available" />
-                      <InfoItem label="EIN" value="Not available" />
-                      <InfoItem label="State of Formation" value="Not available" />
-                      <InfoItem label="Year Established" value="Not available" />
+                      <InfoItem label="Entity Name" value={loan.entityName || 'Not available'} />
+                      <InfoItem label="Entity Type" value={loan.entityType || 'Not available'} />
+                      <InfoItem label="EIN" value={loan.ein || 'Not available'} />
+                      <InfoItem label="State of Formation" value={loan.stateOfFormation || 'Not available'} />
+                      <InfoItem label="Year Established" value={loan.yearEstablished || 'Not available'} />
                     </Section>
                   </div>
                 </div>
