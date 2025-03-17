@@ -43,55 +43,41 @@ export const DOCUMENT_STRUCTURE = {
     personal_information: {
       title: "Personal Information",
       documents: [
-        { docType: "loan_application", label: "Completed loan application", isRequired: true },
-        { docType: "photo_id", label: "Government-issued photo ID", isRequired: true },
-        { docType: "credit_authorization", label: "Credit authorization", isRequired: true },
-        { docType: "background_check", label: "Background check results", isRequired: true },
-        { docType: "contact_information", label: "Contact information sheet", isRequired: true }
+        { docType: "loan_application", label: "Loan Application", isRequired: true },
+        { docType: "photo_id", label: "Identification", isRequired: true },
+        { docType: "credit_authorization", label: "Credit Authorization", isRequired: true },
+        { docType: "contact_information", label: "Contact Info Sheet", isRequired: true }
       ]
     },
     financial_documentation: {
       title: "Financial Documentation",
       documents: [
-        { docType: "financial_statement", label: "Personal financial statement", isRequired: true },
-        { docType: "personal_tax_returns", label: "Last 2 years personal tax returns", isRequired: true },
-        { docType: "business_tax_returns", label: "Last 2 years business tax returns", isRequired: false },
-        { docType: "bank_statements", label: "Last 3 months bank statements", isRequired: true },
-        { docType: "income_verification", label: "Income verification documents", isRequired: true },
-        { docType: "real_estate_schedule", label: "Schedule of real estate owned", isRequired: true },
-        { docType: "debt_schedule", label: "Debt schedule", isRequired: true },
-        { docType: "credit_explanation", label: "Credit explanation letters", isRequired: false }
+        { docType: "financial_statement", label: "Personal Financial Statement", isRequired: true },
+        { docType: "personal_tax_returns", label: "Personal Tax Returns", isRequired: true },
+        { docType: "business_tax_returns", label: "Business Tax Returns", isRequired: false },
+        { docType: "bank_statements", label: "Bank Statements", isRequired: true },
+        { docType: "income_verification", label: "Income Verification", isRequired: true },
+        { docType: "real_estate_schedule", label: "Schedule of REO", isRequired: true },
+        { docType: "investment_history", label: "RE Track Record", isRequired: true },
+        { docType: "debt_schedule", label: "Debt Schedule", isRequired: true },
+        { docType: "credit_explanation", label: "Credit LOE(s)", isRequired: false }
       ]
     },
     entity_documentation: {
       title: "Entity Documentation",
       documents: [
-        { docType: "formation_documents", label: "Business formation documents", isRequired: false },
-        { docType: "operating_agreement", label: "Operating agreement/bylaws", isRequired: false },
-        { docType: "certificate_good_standing", label: "Certificate of good standing", isRequired: false },
-        { docType: "ein_documentation", label: "EIN documentation", isRequired: false },
-        { docType: "resolution_to_borrow", label: "Resolution to borrow", isRequired: false },
-        { docType: "corporate_structure", label: "Corporate structure chart", isRequired: false }
+        { docType: "formation_documents", label: "Certificate of Formation", isRequired: false },
+        { docType: "operating_agreement", label: "Operating Agreement/Bylaws", isRequired: false },
+        { docType: "certificate_good_standing", label: "Certificate of Good Standing", isRequired: false },
+        { docType: "ein_documentation", label: "EIN", isRequired: false },
+        { docType: "resolution_to_borrow", label: "Resolution to Borrow", isRequired: false }
       ]
     },
     experience_background: {
-      title: "Experience & Background",
+      title: "Credit & Background",
       documents: [
-        { docType: "investment_history", label: "Real estate investment history", isRequired: true },
-        { docType: "project_portfolio", label: "Past project portfolio", isRequired: true },
-        { docType: "professional_credentials", label: "Professional credentials", isRequired: false },
-        { docType: "references", label: "References", isRequired: true },
-        { docType: "risk_assessment", label: "Risk tier assessment", isRequired: true }
-      ]
-    },
-    exit_strategy: {
-      title: "Exit Strategy",
-      documents: [
-        { docType: "exit_strategy", label: "Exit strategy statement", isRequired: true },
-        { docType: "project_timeline", label: "Timeline for project completion", isRequired: true },
-        { docType: "refinance_qualification", label: "Refinance qualification", isRequired: false },
-        { docType: "sales_comparables", label: "Sales comparables", isRequired: false },
-        { docType: "marketing_plan", label: "Marketing plan", isRequired: false }
+        { docType: "credit_report", label: "Credit Report", isRequired: true },
+        { docType: "background_check", label: "Background Check", isRequired: true }
       ]
     }
   },
@@ -100,67 +86,38 @@ export const DOCUMENT_STRUCTURE = {
     property_information: {
       title: "Property Information",
       documents: [
-        { docType: "property_summary", label: "Property summary sheet", isRequired: true },
-        { docType: "purchase_contract", label: "Purchase contract", isRequired: true },
-        { docType: "property_photos", label: "Property photos (interior/exterior)", isRequired: true },
-        { docType: "preliminary_title", label: "Preliminary title report", isRequired: true },
-        { docType: "survey_plot", label: "Survey/plot plan", isRequired: true },
-        { docType: "legal_description", label: "Legal description", isRequired: true },
-        { docType: "zoning_verification", label: "Zoning verification", isRequired: true }
+        { docType: "purchase_contract", label: "Purchase Contract", isRequired: true },
+        { docType: "preliminary_title", label: "Preliminary Title Report", isRequired: true },
       ]
     },
     valuation: {
       title: "Valuation",
       documents: [
-        { docType: "appraisal_report", label: "Appraisal report", isRequired: true },
-        { docType: "comparative_market_analysis", label: "Comparative market analysis", isRequired: true },
-        { docType: "arv_assessment", label: "After-repair value assessment", isRequired: false },
-        { docType: "broker_price_opinion", label: "Broker price opinion", isRequired: false },
-        { docType: "value_justification", label: "Value justification analysis", isRequired: true }
-      ]
-    },
-    property_condition: {
-      title: "Property Condition",
-      documents: [
-        { docType: "inspection_report", label: "Inspection report", isRequired: true },
-        { docType: "environmental_assessment", label: "Environmental assessment", isRequired: true },
-        { docType: "engineering_report", label: "Engineering report", isRequired: false },
-        { docType: "pest_inspection", label: "Pest inspection", isRequired: true },
-        { docType: "natural_hazard_disclosure", label: "Natural hazard disclosures", isRequired: true },
-        { docType: "lead_asbestos_testing", label: "Lead/asbestos testing", isRequired: false },
-        { docType: "soil_reports", label: "Soil reports", isRequired: false }
+        { docType: "appraisal_report", label: "Appraisal Report", isRequired: true },
+        { docType: "broker_price_opinion", label: "Broker Price Opinion", isRequired: false }
       ]
     },
     project_documentation: {
       title: "Project Documentation",
       documents: [
-        { docType: "renovation_budget", label: "Renovation/construction budget", isRequired: false },
-        { docType: "scope_of_work", label: "Scope of work", isRequired: false },
-        { docType: "architectural_plans", label: "Architectural plans", isRequired: false },
-        { docType: "contractor_bids", label: "Contractor bids and credentials", isRequired: false },
-        { docType: "construction_timeline", label: "Construction timeline", isRequired: false },
-        { docType: "permits_approvals", label: "Permits and approvals", isRequired: false },
-        { docType: "draw_schedule", label: "Draw schedule", isRequired: false }
+        { docType: "renovation_budget", label: "Renovation/Construction Budget", isRequired: false },
+        { docType: "draw_schedule", label: "Draw Schedule", isRequired: false }
       ]
     },
     income_property_documents: {
       title: "Income Property Documents",
       documents: [
-        { docType: "rent_roll", label: "Rent roll", isRequired: false },
-        { docType: "lease_agreements", label: "Lease agreements", isRequired: false },
-        { docType: "operating_expense_history", label: "Operating expense history", isRequired: false },
-        { docType: "dscr_calculation", label: "DSCR calculation worksheet", isRequired: false },
-        { docType: "property_management_agreement", label: "Property management agreement", isRequired: false },
-        { docType: "market_rental_analysis", label: "Market rental analysis", isRequired: false },
-        { docType: "tenant_estoppel", label: "Tenant estoppel certificates", isRequired: false }
+        { docType: "lease_agreements", label: "Lease Agreements", isRequired: false },
+        { docType: "dscr_calculation", label: "DSCR Calculation Worksheet", isRequired: false },
+        { docType: "property_management_agreement", label: "Property Management Agreement", isRequired: false }
       ]
     },
     state_specific_requirements: {
       title: "State-Specific Property Requirements",
       documents: [
-        { docType: "state_disclosures", label: "State-specific property disclosures", isRequired: false },
-        { docType: "regional_certifications", label: "Regional certifications", isRequired: false },
-        { docType: "local_compliance", label: "Local compliance documentation", isRequired: false }
+        { docType: "state_disclosures", label: "State-Specific property Disclosures", isRequired: false },
+        { docType: "regional_certifications", label: "Regional Certifications", isRequired: false },
+        { docType: "local_compliance", label: "Local Compliance Documentation", isRequired: false }
       ]
     }
   },
@@ -169,54 +126,55 @@ export const DOCUMENT_STRUCTURE = {
     pre_closing: {
       title: "Pre-Closing",
       documents: [
-        { docType: "pre_approval_letter", label: "Pre-approval letter", isRequired: true },
-        { docType: "term_sheet", label: "Term sheet", isRequired: true },
-        { docType: "fee_disclosure", label: "Fee disclosure", isRequired: true },
-        { docType: "rate_lock_agreement", label: "Rate lock agreement", isRequired: false },
-        { docType: "underwriting_approval", label: "Underwriting approval", isRequired: true },
-        { docType: "closing_checklist", label: "Closing checklist", isRequired: true }
+        { docType: "pre_approval_letter", label: "Pre-Approval Letter", isRequired: true },
+        { docType: "term_sheet", label: "Term Sheet", isRequired: true },
+        { docType: "fee_disclosure", label: "Fee Disclosure", isRequired: true },
+        { docType: "rate_lock_agreement", label: "Rate Lock Agreement", isRequired: false },
+        { docType: "underwriting_approval", label: "Underwriting Approval", isRequired: true },
+
       ]
     },
     loan_agreements: {
       title: "Loan Agreements",
       documents: [
-        { docType: "promissory_note", label: "Promissory note", isRequired: true },
-        { docType: "mortgage_deed_of_trust", label: "Mortgage/Deed of trust", isRequired: true },
-        { docType: "security_agreement", label: "Security agreement", isRequired: true },
-        { docType: "personal_guarantee", label: "Personal guarantee", isRequired: false },
-        { docType: "assignment_rents_leases", label: "Assignment of rents and leases", isRequired: false },
-        { docType: "loan_servicing_agreement", label: "Loan servicing agreement", isRequired: true }
+        { docType: "closing_checklist", label: "Lender's Closing Checklist", isRequired: true },
+        { docType: "promissory_note", label: "Promissory Note", isRequired: true },
+        { docType: "mortgage_deed_of_trust", label: "Mortgage/Deed of Trust", isRequired: true },
+        { docType: "security_agreement", label: "Security Agreement", isRequired: true },
+        { docType: "personal_guarantee", label: "Personal Guarantee", isRequired: false },
+        { docType: "assignment_rents_leases", label: "Assignment of Leases & Rents", isRequired: false },
+        { docType: "loan_servicing_agreement", label: "Loan Agreement", isRequired: true }
       ]
     },
     compliance_documents: {
       title: "Compliance Documents",
       documents: [
-        { docType: "state_lending_disclosures", label: "State-specific lending disclosures", isRequired: true },
-        { docType: "federal_lending_disclosures", label: "Federal lending disclosures", isRequired: true },
-        { docType: "aml_documentation", label: "Anti-money laundering documentation", isRequired: true },
-        { docType: "ofac_check", label: "OFAC check results", isRequired: true },
-        { docType: "patriot_act_compliance", label: "Patriot Act compliance verification", isRequired: true }
+        { docType: "state_lending_disclosures", label: "State-Specific Lending Disclosures", isRequired: true },
+        { docType: "federal_lending_disclosures", label: "Federal Lending Disclosures", isRequired: true },
+        { docType: "aml_documentation", label: "Anti-Money Laundering Documentation", isRequired: true },
+        { docType: "ofac_check", label: "OFAC Check", isRequired: true },
+        { docType: "patriot_act_compliance", label: "Patriot Act", isRequired: true }
       ]
     },
     insurance: {
       title: "Insurance",
       documents: [
-        { docType: "property_insurance", label: "Property insurance policy", isRequired: true },
-        { docType: "flood_insurance", label: "Flood insurance", isRequired: false },
-        { docType: "builders_risk_policy", label: "Builder's risk policy", isRequired: false },
-        { docType: "liability_insurance", label: "Liability insurance", isRequired: true },
-        { docType: "insurance_binder", label: "Insurance binder naming lender", isRequired: true }
+        { docType: "property_insurance", label: "Property Insurance Policy", isRequired: true },
+        { docType: "flood_insurance", label: "Flood Insurance", isRequired: false },
+        { docType: "builders_risk_policy", label: "Builder's Risk Policy", isRequired: false },
+        { docType: "liability_insurance", label: "Liability Insurance", isRequired: true },
+        { docType: "insurance_binder", label: "Insurance Binder Naming Lender", isRequired: true }
       ]
     },
     funding: {
       title: "Funding",
       documents: [
-        { docType: "closing_disclosure", label: "Closing disclosure", isRequired: true },
-        { docType: "final_title_policy", label: "Final title policy", isRequired: true },
-        { docType: "disbursement_instructions", label: "Disbursement instructions", isRequired: true },
-        { docType: "funding_authorization", label: "Funding authorization", isRequired: true },
-        { docType: "escrow_agreements", label: "Escrow agreements", isRequired: false },
-        { docType: "wiring_instructions", label: "Wiring instructions", isRequired: true }
+        { docType: "closing_disclosure", label: "Closing Disclosure", isRequired: true },
+        { docType: "final_title_policy", label: "Final Title Policy", isRequired: true },
+        { docType: "disbursement_instructions", label: "Disbursement Instructions", isRequired: true },
+        { docType: "funding_authorization", label: "Funding Authorization", isRequired: true },
+        { docType: "escrow_agreements", label: "Escrow Agreements", isRequired: false },
+        { docType: "wiring_instructions", label: "Wiring Instructions", isRequired: true }
       ]
     }
   },
