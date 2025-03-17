@@ -424,7 +424,7 @@ export default function LoanDocumentsPage() {
               {/* Header */}
               <div className="p-4 border-b flex justify-between items-center">
                 <div className="relative">
-                  <h2 className="text-xl font-semibold">{selectedDocument.filename.replace('SAMPLE_', '')}</h2>
+                  <h2 className="text-xl font-semibold">{selectedDocument.filename}</h2>
                 </div>
                 <button 
                   onClick={() => setSelectedDocument(null)}
@@ -460,7 +460,7 @@ export default function LoanDocumentsPage() {
                           This is a sample document for demonstration purposes.
                         </p>
                         <p className="text-sm text-gray-400">
-                          Filename: {selectedDocument.filename.replace('SAMPLE_', '')}
+                          Filename: {selectedDocument.filename}
                         </p>
                       </div>
                     </div>

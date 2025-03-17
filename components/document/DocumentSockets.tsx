@@ -301,11 +301,6 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                     <div>
                       <div className="relative">
                         <p className="font-medium" style={{ color: COLORS.textPrimary }}>{document.filename}</p>
-                        {document.filename.startsWith('SAMPLE_') && (
-                          <span className="absolute -top-1 -right-1 text-[8px] text-red-500 font-bold border border-red-500 px-1 rotate-[-10deg] opacity-80">
-                            SAMPLE
-                          </span>
-                        )}
                       </div>
                       <p className="text-xs" style={{ color: COLORS.textMuted }}>
                         {new Date(document.dateUploaded).toLocaleDateString()}

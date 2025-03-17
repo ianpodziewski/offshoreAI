@@ -154,13 +154,6 @@ export function LoanDocumentStructure({
     
     return (
       <div key={docType} className="flex items-start justify-between py-3 border-b border-gray-700 relative">
-        {isUploaded && document && (
-          <div className="absolute -rotate-12 opacity-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            <div className="border-2 border-red-500 text-red-500 font-bold text-xl px-4 py-1 rounded">
-              SAMPLE
-            </div>
-          </div>
-        )}
         <div className="flex-1">
           <div className="flex items-center">
             <FileText className="h-4 w-4 mr-2 text-gray-400" />
