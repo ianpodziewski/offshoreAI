@@ -519,6 +519,138 @@ export const loanDocumentService = {
               </div>
             `;
             
+          case 'photo_id':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">GOVERNMENT-ISSUED PHOTO ID</div>
+                  <div class="document-subtitle">Driver's License</div>
+                </div>
+                
+                <div class="document-section" style="border: 2px solid #ccc; padding: 15px; border-radius: 8px; background-color: #f8f9fa;">
+                  <div style="display: flex; justify-content: space-between;">
+                    <div>
+                      <div style="text-transform: uppercase; font-weight: bold; margin-bottom: 5px;">STATE OF CALIFORNIA</div>
+                      <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">DRIVER LICENSE</div>
+                    </div>
+                    <div>
+                      <div style="font-weight: bold;">CLASS C</div>
+                      <div>EXPIRES: 01/15/2027</div>
+                    </div>
+                  </div>
+                  
+                  <div style="display: flex; margin-top: 10px;">
+                    <div style="width: 100px; height: 120px; background-color: #ddd; margin-right: 20px; display: flex; align-items: center; justify-content: center;">
+                      <div style="font-size: 10px; text-align: center;">[PHOTO]</div>
+                    </div>
+                    <div>
+                      <table style="border-collapse: collapse; width: 100%;">
+                        <tr>
+                          <td style="font-weight: bold; padding: 3px 0;">DL#:</td>
+                          <td>X12345678</td>
+                        </tr>
+                        <tr>
+                          <td style="font-weight: bold; padding: 3px 0;">NAME:</td>
+                          <td>${loanData.borrowerName.toUpperCase()}</td>
+                        </tr>
+                        <tr>
+                          <td style="font-weight: bold; padding: 3px 0;">ADDRESS:</td>
+                          <td>123 MAIN ST</td>
+                        </tr>
+                        <tr>
+                          <td></td>
+                          <td>ANYTOWN, CA 12345</td>
+                        </tr>
+                        <tr>
+                          <td style="font-weight: bold; padding: 3px 0;">DOB:</td>
+                          <td>01/15/1980</td>
+                        </tr>
+                        <tr>
+                          <td style="font-weight: bold; padding: 3px 0;">ISSUED:</td>
+                          <td>01/15/2022</td>
+                        </tr>
+                      </table>
+                    </div>
+                  </div>
+                  
+                  <div style="margin-top: 20px; font-size: 11px; border-top: 1px solid #ccc; padding-top: 10px;">
+                    <strong>RESTRICTIONS:</strong> NONE
+                  </div>
+                </div>
+                
+                <div class="document-section" style="margin-top: 20px;">
+                  <p><strong>Note:</strong> This is a placeholder for a government-issued ID. In a real loan application, this would be a scanned copy or photo of the borrower's actual ID document. For privacy and security reasons, this is represented as a sample template.</p>
+                </div>
+              </div>
+            `;
+            
+          case 'credit_authorization':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">CREDIT AUTHORIZATION FORM</div>
+                  <div class="document-subtitle">Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <p>I/We hereby authorize <strong>ATLAS LENDING</strong> and its designated agents and representatives to verify my/our credit background through one or more credit reporting agencies for the purpose of extending, updating, reviewing, or collecting credit.</p>
+                  
+                  <div class="section-title">Borrower Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Full Legal Name:</th>
+                      <td>${loanData.borrowerName}</td>
+                    </tr>
+                    <tr>
+                      <th>Social Security Number:</th>
+                      <td>XXX-XX-XXXX</td>
+                    </tr>
+                    <tr>
+                      <th>Date of Birth:</th>
+                      <td>XX/XX/XXXX</td>
+                    </tr>
+                    <tr>
+                      <th>Current Address:</th>
+                      <td>123 Main Street, Anytown, USA 12345</td>
+                    </tr>
+                    <tr>
+                      <th>Previous Address:</th>
+                      <td>(If less than 2 years at current address)</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Loan Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Loan Type:</th>
+                      <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Amount:</th>
+                      <td>${formatCurrency(loanData.loanAmount)}</td>
+                    </tr>
+                    <tr>
+                      <th>Property Address:</th>
+                      <td>${loanData.propertyAddress}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <p>This authorization is valid for 120 days from the date below. A copy of this authorization may be accepted as an original.</p>
+                  <p>I/We understand that I/we have a right to dispute the accuracy of information obtained from the credit reporting agency. I/We may contact the credit reporting agency to verify the accuracy of the information and/or obtain a copy of my/our credit report.</p>
+                </div>
+                
+                <div class="signature-section">
+                  <div class="signature-line"></div>
+                  <div>${loanData.borrowerName}, Borrower</div>
+                  <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+                </div>
+              </div>
+            `;
+            
           case 'promissory_note':
             return `${baseStyle}
               <div class="document">
@@ -667,6 +799,438 @@ export const loanDocumentService = {
                       <td>${formatCurrency(loanData.purchasePrice)}</td>
                     </tr>
                   </table>
+                </div>
+              </div>
+            `;
+            
+          case 'property_appraisal':
+            const appraisalValue = Math.round(loanData.purchasePrice * 1.1);
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">PROPERTY APPRAISAL REPORT</div>
+                  <div class="document-subtitle">Appraisal Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Subject Property Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Property Address:</th>
+                      <td>${loanData.propertyAddress}</td>
+                    </tr>
+                    <tr>
+                      <th>Property Type:</th>
+                      <td>${loanData.propertyType.replace(/_/g, ' ')}</td>
+                    </tr>
+                    <tr>
+                      <th>Legal Description:</th>
+                      <td>Lot 7, Block 3, Smithville Addition, City of ${loanData.propertyAddress.split(',')[0]?.trim().split(' ').pop() || 'Anytown'}</td>
+                    </tr>
+                    <tr>
+                      <th>Year Built:</th>
+                      <td>${1950 + Math.floor(Math.random() * 70)}</td>
+                    </tr>
+                    <tr>
+                      <th>Square Footage:</th>
+                      <td>${1200 + Math.floor(Math.random() * 3000)} sq. ft.</td>
+                    </tr>
+                    <tr>
+                      <th>Lot Size:</th>
+                      <td>${Math.floor(Math.random() * 0.5 * 100) / 100 + 0.1} acres</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Appraisal Summary</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Market Value "As Is":</th>
+                      <td>${formatCurrency(loanData.purchasePrice)}</td>
+                    </tr>
+                    <tr>
+                      <th>Market Value "After Repairs":</th>
+                      <td>${formatCurrency(appraisalValue)}</td>
+                    </tr>
+                    <tr>
+                      <th>Purchase Price:</th>
+                      <td>${formatCurrency(loanData.purchasePrice)}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan-to-Value Ratio:</th>
+                      <td>${Math.round((loanData.loanAmount / loanData.purchasePrice) * 100)}%</td>
+                    </tr>
+                    <tr>
+                      <th>Loan-to-ARV Ratio:</th>
+                      <td>${Math.round((loanData.loanAmount / appraisalValue) * 100)}%</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Comparable Sales Analysis</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Comp #</th>
+                      <th>Address</th>
+                      <th>Sale Date</th>
+                      <th>Sale Price</th>
+                      <th>Sq. Ft.</th>
+                      <th>Price/Sq. Ft.</th>
+                    </tr>
+                    <tr>
+                      <td>1</td>
+                      <td>123 Nearby St</td>
+                      <td>${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
+                      <td>${formatCurrency(Math.round(loanData.purchasePrice * 0.95))}</td>
+                      <td>2,100</td>
+                      <td>${formatCurrency(Math.round((loanData.purchasePrice * 0.95) / 2100))}</td>
+                    </tr>
+                    <tr>
+                      <td>2</td>
+                      <td>456 Similar Ave</td>
+                      <td>${new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
+                      <td>${formatCurrency(Math.round(loanData.purchasePrice * 1.02))}</td>
+                      <td>2,250</td>
+                      <td>${formatCurrency(Math.round((loanData.purchasePrice * 1.02) / 2250))}</td>
+                    </tr>
+                    <tr>
+                      <td>3</td>
+                      <td>789 Comparable Ln</td>
+                      <td>${new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
+                      <td>${formatCurrency(Math.round(loanData.purchasePrice * 1.05))}</td>
+                      <td>1,950</td>
+                      <td>${formatCurrency(Math.round((loanData.purchasePrice * 1.05) / 1950))}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Property Condition</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Overall Condition:</th>
+                      <td>Average</td>
+                    </tr>
+                    <tr>
+                      <th>Estimated Repair Cost:</th>
+                      <td>${formatCurrency(Math.round(loanData.purchasePrice * 0.1))}</td>
+                    </tr>
+                    <tr>
+                      <th>Major Repairs Needed:</th>
+                      <td>Kitchen renovation, bathroom updates, roof repair, HVAC replacement</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Appraiser's Comments</div>
+                  <p>The subject property is located in a stable neighborhood with good market demand. Based on the analysis of comparable sales and current market conditions, the appraised value accurately reflects the property's market value. The property requires some repairs to maximize its value, but overall presents a good investment opportunity in this market.</p>
+                </div>
+                
+                <div class="signature-section">
+                  <p>This appraisal report is prepared for the sole purpose of providing an opinion of value for the subject property as of the effective date stated herein.</p>
+                  <div class="signature-line"></div>
+                  <div>John Appraiser, State Certified Appraiser</div>
+                  <div>License #: AP12345678</div>
+                  <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+                </div>
+              </div>
+            `;
+            
+          case 'financial_statement':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">PERSONAL FINANCIAL STATEMENT</div>
+                  <div class="document-subtitle">As of: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Borrower Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Name:</th>
+                      <td>${loanData.borrowerName}</td>
+                    </tr>
+                    <tr>
+                      <th>Address:</th>
+                      <td>123 Main Street, Anytown, USA 12345</td>
+                    </tr>
+                    <tr>
+                      <th>Phone:</th>
+                      <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Email:</th>
+                      <td>${loanData.borrowerName.replace(' ', '.').toLowerCase()}@example.com</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Assets</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Cash and Cash Equivalents:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.3))}</td>
+                    </tr>
+                    <tr>
+                      <th>Investment Accounts:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.5))}</td>
+                    </tr>
+                    <tr>
+                      <th>Real Estate Owned (Market Value):</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 2.5))}</td>
+                    </tr>
+                    <tr>
+                      <th>Retirement Accounts:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 1.2))}</td>
+                    </tr>
+                    <tr>
+                      <th>Vehicles:</th>
+                      <td>${formatCurrency(85000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Other Assets:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.2))}</td>
+                    </tr>
+                    <tr>
+                      <th style="font-weight: bold;">TOTAL ASSETS:</th>
+                      <td style="font-weight: bold;">${formatCurrency(Math.round(loanData.loanAmount * 4.7 + 85000))}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Liabilities</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Mortgage Loans:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 1.5))}</td>
+                    </tr>
+                    <tr>
+                      <th>Auto Loans:</th>
+                      <td>${formatCurrency(45000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Credit Card Debt:</th>
+                      <td>${formatCurrency(15000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Student Loans:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.1))}</td>
+                    </tr>
+                    <tr>
+                      <th>Other Liabilities:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.05))}</td>
+                    </tr>
+                    <tr>
+                      <th style="font-weight: bold;">TOTAL LIABILITIES:</th>
+                      <td style="font-weight: bold;">${formatCurrency(Math.round(loanData.loanAmount * 1.65 + 60000))}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Net Worth Summary</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Total Assets:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 4.7 + 85000))}</td>
+                    </tr>
+                    <tr>
+                      <th>Total Liabilities:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 1.65 + 60000))}</td>
+                    </tr>
+                    <tr>
+                      <th style="font-weight: bold;">NET WORTH:</th>
+                      <td style="font-weight: bold;">${formatCurrency(Math.round(loanData.loanAmount * 3.05 + 25000))}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Annual Income</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Salary/Wages:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.8))}</td>
+                    </tr>
+                    <tr>
+                      <th>Business Income:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.6))}</td>
+                    </tr>
+                    <tr>
+                      <th>Rental Income:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.3))}</td>
+                    </tr>
+                    <tr>
+                      <th>Investment Income:</th>
+                      <td>${formatCurrency(Math.round(loanData.loanAmount * 0.15))}</td>
+                    </tr>
+                    <tr>
+                      <th style="font-weight: bold;">TOTAL ANNUAL INCOME:</th>
+                      <td style="font-weight: bold;">${formatCurrency(Math.round(loanData.loanAmount * 1.85))}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="signature-section">
+                  <p>I certify that the information provided in this statement is true and correct to the best of my knowledge.</p>
+                  <div class="signature-line"></div>
+                  <div>${loanData.borrowerName}, Borrower</div>
+                  <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+                </div>
+              </div>
+            `;
+            
+          case 'contact_information':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">BORROWER CONTACT INFORMATION SHEET</div>
+                  <div class="document-subtitle">Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Primary Borrower Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Full Legal Name:</th>
+                      <td>${loanData.borrowerName}</td>
+                    </tr>
+                    <tr>
+                      <th>Date of Birth:</th>
+                      <td>01/15/${1960 + Math.floor(Math.random() * 40)}</td>
+                    </tr>
+                    <tr>
+                      <th>Social Security Number:</th>
+                      <td>XXX-XX-XXXX</td>
+                    </tr>
+                    <tr>
+                      <th>Home Phone:</th>
+                      <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Cell Phone:</th>
+                      <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Email Address:</th>
+                      <td>${loanData.borrowerName.replace(' ', '.').toLowerCase()}@example.com</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Current Residence</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Street Address:</th>
+                      <td>123 Main Street</td>
+                    </tr>
+                    <tr>
+                      <th>City, State, ZIP:</th>
+                      <td>Anytown, CA 12345</td>
+                    </tr>
+                    <tr>
+                      <th>Residence Type:</th>
+                      <td>Own / Rent</td>
+                    </tr>
+                    <tr>
+                      <th>Years at Address:</th>
+                      <td>${Math.floor(Math.random() * 15) + 1}</td>
+                    </tr>
+                    <tr>
+                      <th>Monthly Payment:</th>
+                      <td>${formatCurrency(2500 + Math.floor(Math.random() * 3000))}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Employment Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Employer Name:</th>
+                      <td>ABC Corporation</td>
+                    </tr>
+                    <tr>
+                      <th>Position/Title:</th>
+                      <td>Senior Manager</td>
+                    </tr>
+                    <tr>
+                      <th>Business Phone:</th>
+                      <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Years at Company:</th>
+                      <td>${Math.floor(Math.random() * 15) + 3}</td>
+                    </tr>
+                    <tr>
+                      <th>Business Address:</th>
+                      <td>456 Corporate Blvd, Suite 300, Anytown, CA 12345</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Emergency Contact</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Name:</th>
+                      <td>Jane Smith</td>
+                    </tr>
+                    <tr>
+                      <th>Relationship:</th>
+                      <td>Spouse</td>
+                    </tr>
+                    <tr>
+                      <th>Phone:</th>
+                      <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Email:</th>
+                      <td>jane.smith@example.com</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">References</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Professional Reference:</th>
+                      <td>Robert Johnson, (555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                    <tr>
+                      <th>Personal Reference:</th>
+                      <td>Sarah Williams, (555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Preferred Communication</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Preferred Method:</th>
+                      <td>Email</td>
+                    </tr>
+                    <tr>
+                      <th>Best Time to Contact:</th>
+                      <td>Weekdays, 9:00 AM - 5:00 PM</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="signature-section">
+                  <p>I certify that the information provided above is true and correct to the best of my knowledge.</p>
+                  <div class="signature-line"></div>
+                  <div>${loanData.borrowerName}, Borrower</div>
+                  <div style="margin-top: 10px;">Date: ${formattedDate}</div>
                 </div>
               </div>
             `;
