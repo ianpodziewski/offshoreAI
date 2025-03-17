@@ -19,7 +19,8 @@ import {
   CheckCircle, 
   AlertCircle,
   RefreshCw,
-  ArrowLeft
+  ArrowLeft,
+  X
 } from 'lucide-react';
 import { LoanDocumentStructure } from '@/components/document/LoanDocumentStructure';
 import { DocumentUploader } from '@/components/document/DocumentUploader';
@@ -44,6 +45,7 @@ export default function LoanDocumentsPage() {
     section?: string;
     docType?: string;
   }>({});
+  const [selectedDocument, setSelectedDocument] = useState<LoanDocument | null>(null);
   
   // Load loan data
   useEffect(() => {
@@ -91,8 +93,10 @@ export default function LoanDocumentsPage() {
   
   // Handle document view
   const handleViewDocument = (documentId: string) => {
-    // Implement document viewing logic
-    console.log('View document:', documentId);
+    const document = documents.find(doc => doc.id === documentId);
+    if (document) {
+      setSelectedDocument(document);
+    }
   };
   
   // Handle document upload completion
@@ -336,6 +340,67 @@ export default function LoanDocumentsPage() {
             onClose={() => setIsUploaderOpen(false)}
             onUpload={handleDocumentUploaded}
           />
+        )}
+        
+        {/* Document Viewer Modal */}
+        {selectedDocument && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+              {/* Header */}
+              <div className="p-4 border-b flex justify-between items-center">
+                <div className="relative">
+                  <h2 className="text-xl font-semibold">{selectedDocument.filename}</h2>
+                  {selectedDocument.filename.startsWith('SAMPLE_') && (
+                    <span className="absolute -top-1 -right-1 text-xs text-red-500 font-bold border border-red-500 px-1 rotate-[-10deg] opacity-80">
+                      SAMPLE
+                    </span>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setSelectedDocument(null)}
+                  className="p-1 rounded-full hover:bg-gray-200 text-gray-600"
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              {/* Document Content */}
+              <div className="flex-grow overflow-auto p-1 bg-gray-100 relative">
+                {selectedDocument.filename.startsWith('SAMPLE_') && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                    <div className="border-4 border-red-500 text-red-500 text-5xl font-bold px-8 py-4 rotate-[-30deg] opacity-20">
+                      SAMPLE
+                    </div>
+                  </div>
+                )}
+                <div className="h-full bg-white shadow-md rounded p-4">
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <FileText size={64} className="mx-auto mb-4 text-gray-300" />
+                      <h3 className="text-lg font-medium mb-2">Document Preview</h3>
+                      <p className="text-gray-500 mb-4">
+                        This is a sample document for demonstration purposes.
+                      </p>
+                      <p className="text-sm text-gray-400">
+                        Filename: {selectedDocument.filename}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Footer */}
+              <div className="p-4 border-t">
+                <Button 
+                  onClick={() => setSelectedDocument(null)}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </LayoutWrapper>
