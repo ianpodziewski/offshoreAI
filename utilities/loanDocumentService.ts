@@ -369,9 +369,9 @@ export const loanDocumentService = {
       // Function to generate content for different document types
       const generateDocumentContent = (docType: string): string => {
         // Get the loan data for the current loan
-        const loanData = loanDatabase.getLoan(currentLoanId);
+        const loanData = loanDatabase.getLoanById(loanId);
         if (!loanData) {
-          console.error('Loan data not found for ID:', currentLoanId);
+          console.error('Loan data not found for ID:', loanId);
           return '';
         }
         
