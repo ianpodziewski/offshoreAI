@@ -178,6 +178,9 @@ export default function LoanPage() {
           <h1 className="text-3xl font-bold mt-4" style={{ color: COLORS.textPrimary }}>
             #{loan.id}
           </h1>
+          <p className="text-lg mt-1" style={{ color: COLORS.textMuted }}>
+            {loan.propertyAddress}
+          </p>
         </div>
 
         <div className="flex flex-col-reverse lg:flex-row gap-6">

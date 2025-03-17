@@ -570,10 +570,10 @@ export default function LoanReviewPage() {
             Back to Loan Overview
           </button>
           <h1 className="text-3xl font-bold mt-4 text-white">
-            #{loanId} Review
+            #{loanId}
           </h1>
-          <p className="text-muted-foreground">
-            Review and verify loan information for {loan.propertyAddress}
+          <p className="text-lg mt-1 text-gray-400">
+            {loan.propertyAddress}
           </p>
         </div>
 

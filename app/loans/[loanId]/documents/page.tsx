@@ -135,10 +135,10 @@ export default function LoanDocumentsPage() {
             Back to Loan Overview
           </button>
           <h1 className="text-3xl font-bold mt-4 text-white">
-            #{loanId} Documents
+            #{loanId}
           </h1>
-          <p className="text-muted-foreground">
-            Manage documents for {loan.propertyAddress}
+          <p className="text-lg mt-1 text-gray-400">
+            {loan.propertyAddress}
           </p>
         </div>
 
