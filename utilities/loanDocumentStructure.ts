@@ -66,11 +66,11 @@ export const DOCUMENT_STRUCTURE = {
     entity_documentation: {
       title: "Entity Documentation",
       documents: [
-        { docType: "formation_documents", label: "Certificate of Formation", isRequired: false },
-        { docType: "operating_agreement", label: "Operating Agreement/Bylaws", isRequired: false },
-        { docType: "certificate_good_standing", label: "Certificate of Good Standing", isRequired: false },
-        { docType: "ein_documentation", label: "EIN", isRequired: false },
-        { docType: "resolution_to_borrow", label: "Resolution to Borrow", isRequired: false }
+        { docType: "formation_documents", label: "Certificate of Formation", isRequired: true },
+        { docType: "operating_agreement", label: "Operating Agreement/Bylaws", isRequired: true },
+        { docType: "certificate_good_standing", label: "Certificate of Good Standing", isRequired: true },
+        { docType: "ein_documentation", label: "EIN", isRequired: true },
+        { docType: "resolution_to_borrow", label: "Resolution to Borrow", isRequired: true }
       ]
     },
     experience_background: {
