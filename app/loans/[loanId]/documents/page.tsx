@@ -149,10 +149,52 @@ export default function LoanDocumentsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-white">Document Management</h2>
               </div>
-              <Button onClick={() => setIsUploaderOpen(true)} className="bg-blue-600 hover:bg-blue-700">
-                <Upload className="h-4 w-4 mr-2" />
-                Upload Document
-              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => {
+                    const fakeDocuments = loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
+                    if (fakeDocuments.length > 0) {
+                      setDocuments([...documents, ...fakeDocuments]);
+                      
+                      // Update completion status
+                      if (loan?.loanType) {
+                        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+                        setCompletionStatus(status);
+                      }
+                    }
+                  }} 
+                  className="bg-green-600 hover:bg-green-700"
+                  title="Generate sample documents for this loan"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate Sample Documents
+                </Button>
+                <Button 
+                  onClick={() => {
+                    const totalGenerated = loanDocumentService.generateFakeDocumentsForAllLoans();
+                    alert(`Generated ${totalGenerated} sample documents across all loans.`);
+                    
+                    // Refresh documents for current loan
+                    const docs = loanDocumentService.getDocumentsForLoan(loanId);
+                    setDocuments(docs);
+                    
+                    // Update completion status
+                    if (loan?.loanType) {
+                      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+                      setCompletionStatus(status);
+                    }
+                  }} 
+                  className="bg-purple-600 hover:bg-purple-700"
+                  title="Generate sample documents for all loans in the system"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Generate For All Loans
+                </Button>
+                <Button onClick={() => setIsUploaderOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload Document
+                </Button>
+              </div>
             </div>
             
             {/* Document Completion Status */}

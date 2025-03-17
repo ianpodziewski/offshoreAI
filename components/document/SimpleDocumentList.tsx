@@ -98,7 +98,14 @@ export default function SimpleDocumentList({
                   <div className="flex items-center">
                     <FileText size={18} className="text-gray-400 mr-3" />
                     <div>
-                      <p className="font-medium">{doc.filename}</p>
+                      <div className="relative">
+                        <p className="font-medium">{doc.filename}</p>
+                        {doc.filename.startsWith('SAMPLE_') && (
+                          <span className="absolute -top-1 -right-1 text-[8px] text-red-500 font-bold border border-red-500 px-1 rotate-[-10deg] opacity-80">
+                            SAMPLE
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-gray-500">
                         {new Date(doc.dateUploaded).toLocaleDateString()} • {doc.docType.replace(/_/g, ' ')}
                       </p>

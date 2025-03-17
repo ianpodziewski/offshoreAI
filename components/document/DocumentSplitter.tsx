@@ -110,7 +110,14 @@ const DocumentSplitter: React.FC<DocumentSplitterProps> = ({ document, onSplitCo
         <div className="space-y-4">
           <div className="p-4 border rounded-md bg-gray-50">
             <h3 className="font-medium mb-1">Selected Document</h3>
-            <p className="text-sm text-gray-600">{document.filename}</p>
+            <div className="relative">
+              <p className="text-sm text-gray-600">{document.filename}</p>
+              {document.filename.startsWith('SAMPLE_') && (
+                <span className="absolute -top-1 -right-1 text-[8px] text-red-500 font-bold border border-red-500 px-1 rotate-[-10deg] opacity-80">
+                  SAMPLE
+                </span>
+              )}
+            </div>
             <div className="flex gap-2 mt-2">
               <Badge variant="outline">{document.docType}</Badge>
               <Badge variant="outline">{document.category}</Badge>
@@ -129,7 +136,14 @@ const DocumentSplitter: React.FC<DocumentSplitterProps> = ({ document, onSplitCo
               <ul className="space-y-2">
                 {splitResult.splitDocuments.map((doc) => (
                   <li key={doc.id} className="text-sm p-2 bg-white rounded border">
-                    <div className="font-medium">{doc.filename}</div>
+                    <div className="relative">
+                      <div className="font-medium">{doc.filename}</div>
+                      {doc.filename.startsWith('SAMPLE_') && (
+                        <span className="absolute -top-1 -right-1 text-[8px] text-red-500 font-bold border border-red-500 px-1 rotate-[-10deg] opacity-80">
+                          SAMPLE
+                        </span>
+                      )}
+                    </div>
                     <div className="flex gap-2 mt-1">
                       <Badge variant="outline" className="text-xs">{doc.docType}</Badge>
                       <Badge variant="outline" className="text-xs">{doc.category}</Badge>

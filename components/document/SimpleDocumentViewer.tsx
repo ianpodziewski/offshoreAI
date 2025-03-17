@@ -132,7 +132,14 @@ const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
       >
         {/* Header */}
         <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-semibold">{document.filename}</h2>
+          <div className="relative">
+            <h2 className="text-xl font-semibold">{document.filename}</h2>
+            {document.filename.startsWith('SAMPLE_') && (
+              <span className="absolute -top-1 -right-1 text-xs text-red-500 font-bold border border-red-500 px-1 rotate-[-10deg] opacity-80">
+                SAMPLE
+              </span>
+            )}
+          </div>
           <button 
             onClick={(e) => {
               e.stopPropagation();
@@ -146,7 +153,14 @@ const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
         </div>
         
         {/* Document Content */}
-        <div className="flex-grow overflow-auto p-1 bg-gray-100">
+        <div className="flex-grow overflow-auto p-1 bg-gray-100 relative">
+          {document.filename.startsWith('SAMPLE_') && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+              <div className="border-4 border-red-500 text-red-500 text-5xl font-bold px-8 py-4 rotate-[-30deg] opacity-20">
+                SAMPLE
+              </div>
+            </div>
+          )}
           {isHtmlContent ? (
             // Render HTML content directly
             <div className="h-full bg-white shadow-md rounded">

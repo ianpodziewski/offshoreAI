@@ -5,11 +5,31 @@ import {
   DocumentCategory,
   createDocument,
   getRequiredDocuments,
-  getAllDocumentTypes
+  getAllDocumentTypes,
+  DOCUMENT_STRUCTURE
 } from './loanDocumentStructure';
+import { loanDatabase } from './loanDatabase';
 
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
+
+// Document statuses for fake documents (excluding 'required' since we want to show uploaded docs)
+const FAKE_DOCUMENT_STATUSES: DocumentStatus[] = ['pending', 'approved', 'received', 'reviewed'];
+
+// Document file types
+const FILE_TYPES = ['.pdf', '.docx', '.jpg', '.png'];
+
+// Function to generate a random file size between 100KB and 10MB
+const getRandomFileSize = (): number => {
+  return Math.floor(Math.random() * 9900000) + 100000; // 100KB to 10MB
+};
+
+// Function to format file size
+export const formatFileSize = (bytes: number): string => {
+  if (bytes < 1024) return bytes + ' bytes';
+  else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  else return (bytes / 1048576).toFixed(1) + ' MB';
+};
 
 // Document service for managing loan documents
 export const loanDocumentService = {
@@ -182,7 +202,7 @@ export const loanDocumentService = {
       return missingDocTypes.map(docType => ({
         id: uuidv4(),
         loanId,
-        filename: `${docType.label}.pdf`,
+        filename: `SAMPLE_${docType.label}.pdf`,
         dateUploaded: new Date().toISOString(),
         category: docType.category,
         section: docType.section,
@@ -208,7 +228,7 @@ export const loanDocumentService = {
       const placeholderDocs = requiredDocTypes.map(docType => ({
         id: uuidv4(),
         loanId,
-        filename: `${docType.label}.pdf`,
+        filename: `SAMPLE_${docType.label}.pdf`,
         dateUploaded: new Date().toISOString(),
         category: docType.category,
         section: docType.section,
@@ -299,6 +319,121 @@ export const loanDocumentService = {
           misc: { total: 0, completed: 0, percentage: 0 }
         }
       };
+    }
+  },
+  
+  // Generate fake documents for a loan
+  generateFakeDocuments: (loanId: string, loanType: string): LoanDocument[] => {
+    try {
+      // Get all required document types for this loan type
+      const requiredDocTypes = getRequiredDocuments(loanType);
+      
+      // Get existing documents for this loan
+      const existingDocs = loanDocumentService.getDocumentsForLoan(loanId);
+      
+      // Create fake documents for each required type
+      const fakeDocuments: LoanDocument[] = [];
+      
+      // Generate a random date within the last 30 days
+      const getRandomDate = (): string => {
+        const now = new Date();
+        const daysAgo = Math.floor(Math.random() * 30);
+        const randomDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+        return randomDate.toISOString();
+      };
+      
+      // Generate a random status with bias towards 'approved' and 'received'
+      const getRandomStatus = (): DocumentStatus => {
+        const rand = Math.random();
+        if (rand < 0.4) return 'approved';
+        if (rand < 0.7) return 'received';
+        if (rand < 0.85) return 'reviewed';
+        return 'pending';
+      };
+      
+      // Generate a random file type
+      const getRandomFileType = (): string => {
+        return FILE_TYPES[Math.floor(Math.random() * FILE_TYPES.length)];
+      };
+      
+      // Process each required document type
+      for (const docType of requiredDocTypes) {
+        // Skip if document already exists
+        if (existingDocs.some(doc => doc.docType === docType.docType)) {
+          continue;
+        }
+        
+        // Generate random properties
+        const uploadDate = getRandomDate();
+        const status = getRandomStatus();
+        const fileType = getRandomFileType();
+        const fileSize = getRandomFileSize();
+        
+        // Create a more realistic filename
+        const sanitizedLabel = docType.label.toLowerCase().replace(/\s+/g, '_');
+        const filename = `SAMPLE_${sanitizedLabel}${fileType}`;
+        
+        // Create the fake document
+        const fakeDocument: LoanDocument = {
+          id: uuidv4(),
+          loanId,
+          filename,
+          fileType,
+          fileSize,
+          dateUploaded: uploadDate,
+          category: docType.category,
+          section: docType.section,
+          subsection: docType.subsection,
+          docType: docType.docType,
+          status,
+          isRequired: true,
+          version: 1,
+          notes: status === 'approved' ? 'Document verified and approved.' : 
+                 status === 'rejected' ? 'Document rejected. Please resubmit.' : 
+                 status === 'reviewed' ? 'Document reviewed, pending approval.' : 
+                 'Document uploaded, awaiting review.'
+        };
+        
+        // Add expiration date for certain document types
+        if (['insurance_policy', 'appraisal_report', 'credit_report', 'background_check'].includes(docType.docType)) {
+          const expirationDate = new Date();
+          expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+          fakeDocument.expirationDate = expirationDate.toISOString();
+        }
+        
+        fakeDocuments.push(fakeDocument);
+      }
+      
+      // Save the fake documents
+      if (fakeDocuments.length > 0) {
+        const allDocs = loanDocumentService.getAllDocuments();
+        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...allDocs, ...fakeDocuments]));
+      }
+      
+      return fakeDocuments;
+    } catch (error) {
+      console.error('Error generating fake documents:', error);
+      return [];
+    }
+  },
+  
+  // Generate fake documents for all loans
+  generateFakeDocumentsForAllLoans: (): number => {
+    try {
+      // Get all loans from the database
+      const loans = loanDatabase.getLoans();
+      let totalDocumentsGenerated = 0;
+      
+      // Generate fake documents for each loan
+      for (const loan of loans) {
+        const fakeDocuments = loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
+        totalDocumentsGenerated += fakeDocuments.length;
+      }
+      
+      return totalDocumentsGenerated;
+    } catch (error) {
+      console.error('Error generating fake documents for all loans:', error);
+      return 0;
     }
   },
   

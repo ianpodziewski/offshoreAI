@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { loanDocumentService } from './loanDocumentService';
 
 export type LoanStatus = 'pending' | 'approved' | 'in_review' | 'rejected' | 'closed' | 'funded' | 'default';
 export type LoanType = 'fix_and_flip' | 'rental_brrrr' | 'bridge' | 'construction' | 'commercial';
@@ -462,7 +463,14 @@ export function generateLoan(overrides = {}): LoanData {
   }
   
   // Apply any overrides
-  return { ...baseLoan, ...overrides };
+  const loan = { ...baseLoan, ...overrides };
+  
+  // Generate fake documents for the loan
+  setTimeout(() => {
+    loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
+  }, 100);
+  
+  return loan;
 }
 
 // Generate multiple loans

@@ -26,9 +26,12 @@ import {
   FolderOpen, 
   FileUp, 
   AlertCircle,
-  Eye
+  Eye,
+  Calendar,
+  HardDrive
 } from 'lucide-react';
 import { DOCUMENT_STRUCTURE, DocumentCategory } from '@/utilities/loanDocumentStructure';
+import { formatFileSize } from '@/utilities/loanDocumentService';
 
 interface LoanDocumentStructureProps {
   loanId: string;
@@ -75,6 +78,21 @@ export function LoanDocumentStructure({
     return doc ? doc.id : null;
   };
   
+  // Get document if uploaded
+  const getDocument = (docType: string) => {
+    return uploadedDocuments.find(doc => doc.docType === docType);
+  };
+  
+  // Format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+  
   // Render status badge
   const renderStatusBadge = (docType: string, isRequired: boolean) => {
     const status = getDocumentStatus(docType);
@@ -100,45 +118,120 @@ export function LoanDocumentStructure({
   // Render document action button
   const renderDocumentAction = (category: string, section: string, docType: string) => {
     const isUploaded = isDocumentUploaded(docType);
-    const docId = getDocumentId(docType);
+    const documentId = getDocumentId(docType);
     
-    if (isUploaded && docId && onViewDocument) {
+    if (isUploaded && documentId) {
       return (
         <Button 
-          variant="ghost" 
+          variant="outline" 
           size="sm" 
-          onClick={() => onViewDocument(docId)}
-          className="text-gray-300 hover:text-white hover:bg-transparent"
+          className="text-blue-500 border-blue-500 hover:bg-blue-100 hover:text-blue-700"
+          onClick={() => onViewDocument && onViewDocument(documentId)}
         >
-          <Eye className="h-5 w-5" />
-          <span className="sr-only">View</span>
-        </Button>
-      );
-    } else if (onUploadDocument) {
-      return (
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={() => onUploadDocument(category, section, docType)}
-          className="text-gray-300 hover:text-white hover:bg-transparent"
-        >
-          <Upload className="h-5 w-5" />
-          <span className="sr-only">Upload</span>
+          <Eye className="h-4 w-4 mr-1" />
+          View
         </Button>
       );
     }
     
-    return null;
+    return (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-700"
+        onClick={() => onUploadDocument && onUploadDocument(category, section, docType)}
+      >
+        <Upload className="h-4 w-4 mr-1" />
+        Upload
+      </Button>
+    );
   };
   
-  // Get the sections for the current category
+  // Render document item
+  const renderDocumentItem = (category: string, section: string, docType: string, label: string, isRequired: boolean) => {
+    const isUploaded = isDocumentUploaded(docType);
+    const document = getDocument(docType);
+    
+    return (
+      <div key={docType} className="flex items-start justify-between py-3 border-b border-gray-700 relative">
+        {isUploaded && document && (
+          <div className="absolute -rotate-12 opacity-20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+            <div className="border-2 border-red-500 text-red-500 font-bold text-xl px-4 py-1 rounded">
+              SAMPLE
+            </div>
+          </div>
+        )}
+        <div className="flex-1">
+          <div className="flex items-center">
+            <FileText className="h-4 w-4 mr-2 text-gray-400" />
+            <span className="text-sm text-gray-200">{label}</span>
+            <div className="ml-2">
+              {renderStatusBadge(docType, isRequired)}
+            </div>
+          </div>
+          
+          {isUploaded && document && (
+            <div className="mt-1 ml-6 text-xs text-gray-400 flex flex-col space-y-1">
+              <div className="flex items-center">
+                <Calendar className="h-3 w-3 mr-1" />
+                <span>Uploaded: {formatDate(document.dateUploaded)}</span>
+              </div>
+              {document.fileSize && (
+                <div className="flex items-center">
+                  <HardDrive className="h-3 w-3 mr-1" />
+                  <span>Size: {formatFileSize(document.fileSize)}</span>
+                </div>
+              )}
+              {document.notes && (
+                <div className="mt-1">
+                  <span>Notes: {document.notes}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="z-10">
+          {renderDocumentAction(category, section, docType)}
+        </div>
+      </div>
+    );
+  };
+  
+  // Render document section
+  const renderDocumentSection = (category: string, section: string, title: string, documents: any[]) => {
+    return (
+      <div key={section} className="mb-6">
+        <h3 className="text-lg font-medium text-white mb-3">{title}</h3>
+        <div className="bg-[#141b2d] rounded-lg border border-gray-800 p-4">
+          {documents.map(doc => renderDocumentItem(category, section, doc.docType, doc.label, doc.isRequired))}
+        </div>
+      </div>
+    );
+  };
+  
+  // Get category sections
   const getCategorySections = () => {
     // Type-safe access to DOCUMENT_STRUCTURE
-    if (category === 'borrower') return DOCUMENT_STRUCTURE.borrower;
-    if (category === 'property') return DOCUMENT_STRUCTURE.property;
-    if (category === 'closing') return DOCUMENT_STRUCTURE.closing;
-    if (category === 'servicing') return DOCUMENT_STRUCTURE.servicing;
-    return {};
+    let categoryData;
+    if (category === 'borrower') categoryData = DOCUMENT_STRUCTURE.borrower;
+    else if (category === 'property') categoryData = DOCUMENT_STRUCTURE.property;
+    else if (category === 'closing') categoryData = DOCUMENT_STRUCTURE.closing;
+    else if (category === 'servicing') categoryData = DOCUMENT_STRUCTURE.servicing;
+    else return null;
+    
+    return (
+      <div className="space-y-6">
+        {Object.entries(categoryData).map(([sectionKey, sectionData]: [string, any]) => {
+          const { title, documents } = sectionData;
+          
+          if (!documents || documents.length === 0) {
+            return null;
+          }
+          
+          return renderDocumentSection(category, sectionKey, title, documents);
+        })}
+      </div>
+    );
   };
   
   return (
@@ -196,34 +289,7 @@ export function LoanDocumentStructure({
       </div>
       
       <div className="space-y-4">
-        {Object.entries(getCategorySections()).map(([sectionKey, sectionData]) => {
-          const { title, documents } = sectionData as { 
-            title: string; 
-            documents: { docType: string; label: string; isRequired: boolean; }[] 
-          };
-          
-          return (
-            <div key={sectionKey} className="rounded-md overflow-hidden bg-[#111827] border border-gray-800">
-              <div className="bg-[#0A0F1A] py-3 px-4 border-b border-gray-800">
-                <h3 className="text-lg font-medium text-white">{title}</h3>
-              </div>
-              <div className="divide-y divide-gray-800">
-                {documents.map((doc) => (
-                  <div key={doc.docType} className="flex items-center justify-between px-4 py-3 hover:bg-[#1A2234] transition-colors">
-                    <div className="flex items-center">
-                      <FileText className="h-5 w-5 mr-3 text-gray-400 flex-shrink-0" />
-                      <span className="text-gray-200 mr-3">{doc.label}</span>
-                      {renderStatusBadge(doc.docType, doc.isRequired)}
-                    </div>
-                    <div>
-                      {renderDocumentAction(category, sectionKey, doc.docType)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        {getCategorySections()}
       </div>
     </div>
   );

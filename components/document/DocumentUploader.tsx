@@ -188,7 +188,14 @@ export function DocumentUploader({
           {file ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <File className="h-8 w-8 text-blue-500 mr-2" />
+                <div className="relative">
+                  <File className="h-8 w-8 text-blue-500 mr-2" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="border border-red-500 text-red-500 text-[8px] font-bold px-1 rotate-[-20deg] opacity-80">
+                      SAMPLE
+                    </div>
+                  </div>
+                </div>
                 <div className="text-left">
                   <p className="text-sm font-medium">{file.name}</p>
                   <p className="text-xs text-gray-500">
