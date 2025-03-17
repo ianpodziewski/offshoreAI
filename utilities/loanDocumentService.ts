@@ -334,6 +334,13 @@ export const loanDocumentService = {
       // Create fake documents for each required type
       const fakeDocuments: LoanDocument[] = [];
       
+      // Fetch loan data
+      const loanData = loanDatabase.getLoanById(loanId);
+      if (!loanData) {
+        console.error(`Loan data not found for loanId: ${loanId}`);
+        return [];
+      }
+      
       // Generate a random date within the last 30 days
       const getRandomDate = (): string => {
         const now = new Date();
@@ -356,6 +363,358 @@ export const loanDocumentService = {
         return FILE_TYPES[Math.floor(Math.random() * FILE_TYPES.length)];
       };
       
+      // Function to generate content for different document types
+      const generateDocumentContent = (docType: string): string => {
+        const formattedDate = new Date().toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        const formatCurrency = (amount: number): string => {
+          return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2
+          }).format(amount);
+        };
+        
+        // Base document styling
+        const baseStyle = `
+          <style>
+            .document {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.5;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .document-header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 2px solid #eee;
+              padding-bottom: 20px;
+            }
+            .document-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              color: #1a2234;
+            }
+            .document-subtitle {
+              font-size: 16px;
+              color: #666;
+            }
+            .document-section {
+              margin-bottom: 20px;
+            }
+            .section-title {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              color: #1a2234;
+            }
+            .info-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 20px;
+            }
+            .info-table th, .info-table td {
+              padding: 8px 12px;
+              text-align: left;
+              border-bottom: 1px solid #eee;
+            }
+            .info-table th {
+              background-color: #f8f9fa;
+              font-weight: bold;
+            }
+            .signature-section {
+              margin-top: 40px;
+              border-top: 1px solid #eee;
+              padding-top: 20px;
+            }
+            .signature-line {
+              border-bottom: 1px solid #999;
+              width: 250px;
+              display: inline-block;
+              margin-top: 30px;
+            }
+          </style>
+        `;
+        
+        // Generate content based on document type
+        switch(docType) {
+          case 'loan_application':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">LOAN APPLICATION</div>
+                  <div class="document-subtitle">Application Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Borrower Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Borrower Name:</th>
+                      <td>${loanData.borrowerName}</td>
+                    </tr>
+                    <tr>
+                      <th>Email:</th>
+                      <td>${loanData.borrowerName.replace(' ', '.').toLowerCase()}@example.com</td>
+                    </tr>
+                    <tr>
+                      <th>Phone:</th>
+                      <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Loan Details</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Loan Type:</th>
+                      <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Amount:</th>
+                      <td>${formatCurrency(loanData.loanAmount)}</td>
+                    </tr>
+                    <tr>
+                      <th>Interest Rate:</th>
+                      <td>${loanData.interestRate}%</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Term:</th>
+                      <td>${loanData.loanTerm / 12} years</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Property Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Property Address:</th>
+                      <td>${loanData.propertyAddress}</td>
+                    </tr>
+                    <tr>
+                      <th>Property Type:</th>
+                      <td>${loanData.propertyType.replace(/_/g, ' ')}</td>
+                    </tr>
+                    <tr>
+                      <th>Property Value:</th>
+                      <td>${formatCurrency(loanData.purchasePrice)}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="signature-section">
+                  <p>By signing below, I/we certify that the information provided in this application is true and correct.</p>
+                  <div class="signature-line"></div>
+                  <div>${loanData.borrowerName}</div>
+                </div>
+              </div>
+            `;
+            
+          case 'promissory_note':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">PROMISSORY NOTE</div>
+                  <div class="document-subtitle">Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <p>
+                    FOR VALUE RECEIVED, the undersigned, <strong>${loanData.borrowerName}</strong> ("Borrower"), 
+                    hereby promises to pay to the order of LENDER FINANCIAL, the principal sum of 
+                    <strong>${formatCurrency(loanData.loanAmount)}</strong> with interest on the unpaid principal balance 
+                    from the date of this Note, until paid, at an interest rate of <strong>${loanData.interestRate}%</strong> per annum.
+                  </p>
+                  
+                  <p>
+                    Property Address: ${loanData.propertyAddress}<br>
+                    Loan Type: ${loanData.loanType.toUpperCase()}<br>
+                    Loan Term: ${loanData.loanTerm / 12} years
+                  </p>
+                  
+                  <p>
+                    1. <strong>PAYMENT.</strong> Borrower shall make monthly payments of principal and interest in the amount of 
+                    ${formatCurrency((loanData.loanAmount * (loanData.interestRate/100/12)) / (1 - Math.pow(1 + (loanData.interestRate/100/12), -loanData.loanTerm)))} 
+                    beginning on the 1st day of the month following disbursement and continuing on the 1st day of each month thereafter 
+                    until the earlier of (i) the date on which the entire principal balance and all accrued interest has been paid in full, or 
+                    (ii) the Maturity Date.
+                  </p>
+                </div>
+                
+                <div class="signature-section">
+                  <p>IN WITNESS WHEREOF, the undersigned has executed this Note as of the date first written above.</p>
+                  <div class="signature-line"></div>
+                  <div>${loanData.borrowerName}, Borrower</div>
+                </div>
+              </div>
+            `;
+            
+          case 'deed_of_trust':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">DEED OF TRUST</div>
+                  <div class="document-subtitle">Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <p>
+                    THIS DEED OF TRUST is made this ${new Date().getDate()} day of 
+                    ${new Date().toLocaleString('en-us', { month: 'long' })}, 
+                    ${new Date().getFullYear()}, between 
+                    <strong>${loanData.borrowerName}</strong> ("Borrower"), and LENDER FINANCIAL ("Lender").
+                  </p>
+                  
+                  <p>
+                    THE PROPERTY. Borrower irrevocably grants and conveys to Trustee, in trust, with power of sale, 
+                    the following described property located in the County of ${loanData.propertyAddress.split(',')[1]?.trim().split(' ')[0] || 'County'}, 
+                    State of ${loanData.propertyAddress.split(',')[2]?.trim().split(' ')[0] || 'State'}:
+                  </p>
+                  
+                  <div class="property-description">
+                    ${loanData.propertyAddress}<br>
+                    Property Type: ${loanData.propertyType.replace('_', ' ')}
+                  </div>
+                  
+                  <p>
+                    Borrower warrants that Borrower is the legal owner of the estate hereby conveyed and has the right to grant and 
+                    convey the Property. Borrower warrants and will defend generally the title to the Property against all claims and demands.
+                  </p>
+                </div>
+                
+                <div class="signature-section">
+                  <p>IN WITNESS WHEREOF, Borrower has executed this Deed of Trust on the day and year first above written.</p>
+                  <div class="signature-line"></div>
+                  <div>${loanData.borrowerName}, Borrower</div>
+                </div>
+              </div>
+            `;
+            
+          case 'closing_disclosure':
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">CLOSING DISCLOSURE</div>
+                  <div class="document-subtitle">Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Loan Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Loan Term:</th>
+                      <td>${loanData.loanTerm / 12} years</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Purpose:</th>
+                      <td>${loanData.loanType.replace(/_/g, ' ')}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Product:</th>
+                      <td>${loanData.loanType.toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Type:</th>
+                      <td>Fixed Rate</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Loan Terms</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Loan Amount:</th>
+                      <td>${formatCurrency(loanData.loanAmount)}</td>
+                    </tr>
+                    <tr>
+                      <th>Interest Rate:</th>
+                      <td>${loanData.interestRate}%</td>
+                    </tr>
+                    <tr>
+                      <th>Monthly Principal & Interest:</th>
+                      <td>${formatCurrency((loanData.loanAmount * (loanData.interestRate/100/12)) / (1 - Math.pow(1 + (loanData.interestRate/100/12), -loanData.loanTerm)))}</td>
+                    </tr>
+                    <tr>
+                      <th>Prepayment Penalty:</th>
+                      <td>None</td>
+                    </tr>
+                    <tr>
+                      <th>Balloon Payment:</th>
+                      <td>None</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Property Information</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Property Address:</th>
+                      <td>${loanData.propertyAddress}</td>
+                    </tr>
+                    <tr>
+                      <th>Property Value:</th>
+                      <td>${formatCurrency(loanData.purchasePrice)}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            `;
+            
+          default:
+            // Generate a generic document for other types
+            return `${baseStyle}
+              <div class="document">
+                <div class="document-header">
+                  <div class="document-title">${docType.toUpperCase().replace(/_/g, ' ')}</div>
+                  <div class="document-subtitle">Date: ${formattedDate}</div>
+                </div>
+                
+                <div class="document-section">
+                  <div class="section-title">Loan Details</div>
+                  <table class="info-table">
+                    <tr>
+                      <th>Borrower:</th>
+                      <td>${loanData.borrowerName}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan ID:</th>
+                      <td>${loanId}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Type:</th>
+                      <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
+                    </tr>
+                    <tr>
+                      <th>Loan Amount:</th>
+                      <td>${formatCurrency(loanData.loanAmount)}</td>
+                    </tr>
+                    <tr>
+                      <th>Property Address:</th>
+                      <td>${loanData.propertyAddress}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <div class="document-section">
+                  <p>This document contains information related to the ${docType.replace(/_/g, ' ')} for the above-referenced loan.</p>
+                  <p>The content of this document is specific to the loan conditions and property details as specified in the loan agreement.</p>
+                </div>
+              </div>
+            `;
+        }
+      };
+      
       // Process each required document type
       for (const docType of requiredDocTypes) {
         // Skip if document already exists
@@ -366,12 +725,15 @@ export const loanDocumentService = {
         // Generate random properties
         const uploadDate = getRandomDate();
         const status = getRandomStatus();
-        const fileType = getRandomFileType();
+        const fileType = ".html"; // Change to HTML for proper rendering
         const fileSize = getRandomFileSize();
         
         // Create a more realistic filename
         const sanitizedLabel = docType.label.toLowerCase().replace(/\s+/g, '_');
         const filename = `SAMPLE_${sanitizedLabel}${fileType}`;
+        
+        // Generate document-specific content
+        const content = generateDocumentContent(docType.docType);
         
         // Create the fake document
         const fakeDocument: LoanDocument = {
@@ -388,10 +750,11 @@ export const loanDocumentService = {
           status,
           isRequired: true,
           version: 1,
-          notes: status === 'approved' ? 'Document verified and approved.' : 
+          content, // Add the generated content
+          notes: `This is a sample document for ${loanData.borrowerName} with loan amount ${loanData.loanAmount} for the property at ${loanData.propertyAddress}. Status: ${status === 'approved' ? 'Document verified and approved.' : 
                  status === 'rejected' ? 'Document rejected. Please resubmit.' : 
                  status === 'reviewed' ? 'Document reviewed, pending approval.' : 
-                 'Document uploaded, awaiting review.'
+                 'Document uploaded, awaiting review.'}`
         };
         
         // Add expiration date for certain document types

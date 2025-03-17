@@ -30,6 +30,47 @@ import { loanDatabase } from '@/utilities/loanDatabase';
 import LayoutWrapper from '@/app/layout-wrapper';
 import LoanSidebar from '@/components/loan/LoanSidebar';
 
+// Global styles for document viewer
+const documentViewerStyles = `
+  .document-content .document {
+    font-family: Arial, sans-serif;
+    color: #333;
+    line-height: 1.5;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  .document-content .document-header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 20px;
+  }
+  .document-content .signature-section {
+    margin-top: 40px;
+  }
+  .document-content .signature-line {
+    border-bottom: 1px solid #999;
+    width: 250px;
+    display: inline-block;
+    margin-top: 30px;
+  }
+  .document-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  .document-content th, .document-content td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+  }
+  .document-content th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+  }
+`;
+
 export default function LoanDocumentsPage() {
   const params = useParams();
   const router = useRouter();
@@ -129,6 +170,7 @@ export default function LoanDocumentsPage() {
   
   return (
     <LayoutWrapper>
+      <style jsx global>{documentViewerStyles}</style>
       <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">
           <button
@@ -375,18 +417,26 @@ export default function LoanDocumentsPage() {
                   </div>
                 )}
                 <div className="h-full bg-white shadow-md rounded p-4">
-                  <div className="flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <FileText size={64} className="mx-auto mb-4 text-gray-300" />
-                      <h3 className="text-lg font-medium mb-2">Document Preview</h3>
-                      <p className="text-gray-500 mb-4">
-                        This is a sample document for demonstration purposes.
-                      </p>
-                      <p className="text-sm text-gray-400">
-                        Filename: {selectedDocument.filename}
-                      </p>
+                  {selectedDocument.content ? (
+                    <div 
+                      className="document-content h-full overflow-auto"
+                      style={{ maxHeight: 'calc(80vh - 140px)' }}
+                      dangerouslySetInnerHTML={{ __html: selectedDocument.content }}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <FileText size={64} className="mx-auto mb-4 text-gray-300" />
+                        <h3 className="text-lg font-medium mb-2">Document Preview</h3>
+                        <p className="text-gray-500 mb-4">
+                          This is a sample document for demonstration purposes.
+                        </p>
+                        <p className="text-sm text-gray-400">
+                          Filename: {selectedDocument.filename}
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
               
