@@ -16,7 +16,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
   // Simplified navigation items
   const navItems = [
     {
-      name: 'Overview',
+      name: 'Loan Data Points',
       path: `/loans/${loan.id}`,
       icon: <Info size={18} />,
       isActive: !activePage || activePage === 'overview'
