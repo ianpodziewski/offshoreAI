@@ -129,9 +129,7 @@ export const DOCUMENT_STRUCTURE = {
         { docType: "pre_approval_letter", label: "Pre-Approval Letter", isRequired: true },
         { docType: "term_sheet", label: "Term Sheet", isRequired: true },
         { docType: "fee_disclosure", label: "Fee Disclosure", isRequired: true },
-        { docType: "rate_lock_agreement", label: "Rate Lock Agreement", isRequired: false },
-        { docType: "underwriting_approval", label: "Underwriting Approval", isRequired: true },
-
+        { docType: "rate_lock_agreement", label: "Rate Lock Agreement", isRequired: false }
       ]
     },
     loan_agreements: {
@@ -141,8 +139,8 @@ export const DOCUMENT_STRUCTURE = {
         { docType: "promissory_note", label: "Promissory Note", isRequired: true },
         { docType: "mortgage_deed_of_trust", label: "Mortgage/Deed of Trust", isRequired: true },
         { docType: "security_agreement", label: "Security Agreement", isRequired: true },
-        { docType: "personal_guarantee", label: "Personal Guarantee", isRequired: false },
-        { docType: "assignment_rents_leases", label: "Assignment of Leases & Rents", isRequired: false },
+        { docType: "personal_guarantee", label: "Personal Guarantee", isRequired: true },
+        { docType: "assignment_rents_leases", label: "Assignment of Leases & Rents", isRequired: true },
         { docType: "loan_servicing_agreement", label: "Loan Agreement", isRequired: true }
       ]
     },
