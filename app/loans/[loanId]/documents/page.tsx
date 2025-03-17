@@ -439,7 +439,6 @@ export default function LoanDocumentsPage() {
               <div className="px-4 py-3 bg-gray-50 border-b">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
-                    <FileText size={18} className="text-gray-500 mr-2" />
                     <a 
                       href="#" 
                       onClick={(e) => {

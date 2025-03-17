@@ -155,21 +155,14 @@ export function LoanDocumentStructure({
     return (
       <Card key={docType} className="bg-[#1A2234] border-gray-800 mb-4">
         <CardHeader className="border-b border-gray-800 bg-[#0A0F1A] py-3">
-          <CardTitle className="text-base text-white flex items-center justify-between">
-            <div className="flex items-center">
-              <FileText className="h-4 w-4 mr-2 text-gray-400" />
-              <span>{label}</span>
-            </div>
-            <div>
-              {renderStatusBadge(docType, isRequired)}
-            </div>
+          <CardTitle className="text-base text-white">
+            {label}
           </CardTitle>
         </CardHeader>
         <CardContent className="py-3">
           {isUploaded && document ? (
             <div className="flex justify-between items-center">
               <div className="flex items-center">
-                <FileText size={18} className="text-gray-400 mr-2" />
                 <a 
                   href="#" 
                   onClick={(e) => {
@@ -277,61 +270,7 @@ export function LoanDocumentStructure({
   
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <Card className="bg-[#1A2234] border-gray-800">
-          <CardHeader className="border-b border-gray-800 bg-[#0A0F1A]">
-            <CardTitle className="text-white">Loan Document Checklist</CardTitle>
-            <CardDescription className="text-gray-400">
-              Required and optional documents for {loanType.replace('_', ' ')} loans
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="text-sm text-gray-300 mb-4">
-              <div className="flex items-center mb-2">
-                <Badge className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded mr-2">Required</Badge>
-                <span>Documents that must be submitted for loan approval</span>
-              </div>
-              <div className="flex items-center">
-                <Badge className="bg-gray-500 text-white text-xs font-medium px-2 py-0.5 rounded mr-2">Optional</Badge>
-                <span>Documents that may be required based on loan specifics</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-[#1A2234] border-gray-800">
-          <CardHeader className="border-b border-gray-800 bg-[#0A0F1A]">
-            <CardTitle className="text-white">Document Status</CardTitle>
-            <CardDescription className="text-gray-400">
-              Current status of your document submissions
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <div className="grid grid-cols-2 gap-2 text-sm text-gray-300">
-              <div className="flex items-center">
-                <Badge className="bg-green-500 text-white text-xs font-medium px-2 py-0.5 rounded mr-2">Approved</Badge>
-                <span>Document accepted</span>
-              </div>
-              <div className="flex items-center">
-                <Badge className="bg-yellow-500 text-white text-xs font-medium px-2 py-0.5 rounded mr-2">Pending</Badge>
-                <span>Under review</span>
-              </div>
-              <div className="flex items-center">
-                <Badge className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded mr-2">Rejected</Badge>
-                <span>Needs resubmission</span>
-              </div>
-              <div className="flex items-center">
-                <Badge className="bg-blue-500 text-white text-xs font-medium px-2 py-0.5 rounded mr-2">Received</Badge>
-                <span>Document received</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="space-y-4">
-        {getCategorySections()}
-      </div>
+      {getCategorySections()}
     </div>
   );
 } 
