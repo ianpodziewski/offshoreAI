@@ -35,16 +35,40 @@ const documentViewerStyles = `
   .document-content .document {
     font-family: Arial, sans-serif;
     color: #333;
-    line-height: 1.5;
+    line-height: 1.6;
     max-width: 800px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 30px;
+    background-color: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 8px;
   }
   .document-content .document-header {
     text-align: center;
     margin-bottom: 30px;
-    border-bottom: 2px solid #eee;
+    border-bottom: 2px solid #1e5a9a;
     padding-bottom: 20px;
+  }
+  .document-content .document-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #1e5a9a;
+    margin-bottom: 8px;
+  }
+  .document-content .document-subtitle {
+    color: #666;
+    font-size: 15px;
+  }
+  .document-content .document-section {
+    margin-bottom: 25px;
+  }
+  .document-content .section-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: #1e5a9a;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eee;
   }
   .document-content .signature-section {
     margin-top: 40px;
@@ -61,13 +85,22 @@ const documentViewerStyles = `
     margin-bottom: 20px;
   }
   .document-content th, .document-content td {
-    padding: 8px 12px;
+    padding: 10px 15px;
     text-align: left;
     border-bottom: 1px solid #eee;
   }
   .document-content th {
     background-color: #f8f9fa;
     font-weight: bold;
+    width: 35%;
+  }
+  .document-content td {
+    width: 65%;
+  }
+  .document-content .info-table {
+    border: 1px solid #eee;
+    border-radius: 4px;
+    overflow: hidden;
   }
 `;
 
@@ -391,12 +424,7 @@ export default function LoanDocumentsPage() {
               {/* Header */}
               <div className="p-4 border-b flex justify-between items-center">
                 <div className="relative">
-                  <h2 className="text-xl font-semibold">{selectedDocument.filename}</h2>
-                  {selectedDocument.filename.startsWith('SAMPLE_') && (
-                    <span className="absolute -top-1 -right-1 text-xs text-red-500 font-bold border border-red-500 px-1 rotate-[-10deg] opacity-80">
-                      SAMPLE
-                    </span>
-                  )}
+                  <h2 className="text-xl font-semibold">{selectedDocument.filename.replace('SAMPLE_', '')}</h2>
                 </div>
                 <button 
                   onClick={() => setSelectedDocument(null)}
@@ -408,15 +436,15 @@ export default function LoanDocumentsPage() {
               </div>
               
               {/* Document Content */}
-              <div className="flex-grow overflow-auto p-1 bg-gray-100 relative">
+              <div className="flex-grow overflow-auto p-2 bg-gray-100 relative">
                 {selectedDocument.filename.startsWith('SAMPLE_') && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                    <div className="border-4 border-red-500 text-red-500 text-5xl font-bold px-8 py-4 rotate-[-30deg] opacity-20">
+                    <div className="border-4 border-red-500 text-red-500 text-6xl font-bold px-10 py-5 rotate-[-30deg] opacity-20 rounded-lg">
                       SAMPLE
                     </div>
                   </div>
                 )}
-                <div className="h-full bg-white shadow-md rounded p-4">
+                <div className="h-full bg-white shadow-md rounded p-5">
                   {selectedDocument.content ? (
                     <div 
                       className="document-content h-full overflow-auto"
@@ -432,7 +460,7 @@ export default function LoanDocumentsPage() {
                           This is a sample document for demonstration purposes.
                         </p>
                         <p className="text-sm text-gray-400">
-                          Filename: {selectedDocument.filename}
+                          Filename: {selectedDocument.filename.replace('SAMPLE_', '')}
                         </p>
                       </div>
                     </div>
