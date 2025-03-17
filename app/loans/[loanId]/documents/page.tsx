@@ -444,7 +444,7 @@ export default function LoanDocumentsPage() {
                       href="#" 
                       onClick={(e) => {
                         e.preventDefault();
-                        // Open in new tab logic
+                        // Open in new tab logic - only open in new tab, don't do anything else
                         const newWindow = window.open('', '_blank');
                         if (newWindow) {
                           newWindow.document.write(`

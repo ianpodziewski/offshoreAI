@@ -174,50 +174,44 @@ export function LoanDocumentStructure({
                   href="#" 
                   onClick={(e) => {
                     e.preventDefault();
-                    if (onViewDocument && document.id) {
-                      // First handle the normal view action
-                      onViewDocument(document.id);
-                      
-                      // Then we could also try to open in a new tab
-                      // This creates a new window with basic document content
-                      if (document.content) {
-                        const newWindow = window.open('', '_blank');
-                        if (newWindow) {
-                          newWindow.document.write(`
-                            <html>
-                              <head>
-                                <title>${document.filename}</title>
-                                <style>
-                                  body { 
-                                    font-family: Arial, sans-serif;
-                                    line-height: 1.6;
-                                    padding: 20px;
-                                    max-width: 800px;
-                                    margin: 0 auto;
-                                  }
-                                  .document-header {
-                                    text-align: center;
-                                    margin-bottom: 30px;
-                                    border-bottom: 2px solid #1e5a9a;
-                                    padding-bottom: 20px;
-                                  }
-                                  .document-content {
-                                    padding: 20px;
-                                    background-color: white;
-                                  }
-                                </style>
-                              </head>
-                              <body>
-                                <div class="document-header">
-                                  <h1>${document.filename}</h1>
-                                </div>
-                                <div class="document-content">
-                                  ${document.content}
-                                </div>
-                              </body>
-                            </html>
-                          `);
-                        }
+                    // Only open in a new tab, don't trigger the modal view
+                    if (document.content) {
+                      const newWindow = window.open('', '_blank');
+                      if (newWindow) {
+                        newWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>${document.filename}</title>
+                              <style>
+                                body { 
+                                  font-family: Arial, sans-serif;
+                                  line-height: 1.6;
+                                  padding: 20px;
+                                  max-width: 800px;
+                                  margin: 0 auto;
+                                }
+                                .document-header {
+                                  text-align: center;
+                                  margin-bottom: 30px;
+                                  border-bottom: 2px solid #1e5a9a;
+                                  padding-bottom: 20px;
+                                }
+                                .document-content {
+                                  padding: 20px;
+                                  background-color: white;
+                                }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="document-header">
+                                <h1>${document.filename}</h1>
+                              </div>
+                              <div class="document-content">
+                                ${document.content}
+                              </div>
+                            </body>
+                          </html>
+                        `);
                       }
                     }
                   }}
