@@ -153,40 +153,94 @@ export function LoanDocumentStructure({
     const document = getDocument(docType);
     
     return (
-      <div key={docType} className="flex items-start justify-between py-3 border-b border-gray-700 relative">
-        <div className="flex-1">
-          <div className="flex items-center">
-            <FileText className="h-4 w-4 mr-2 text-gray-400" />
-            <span className="text-sm text-gray-200">{label}</span>
-            <div className="ml-2">
+      <Card key={docType} className="bg-[#1A2234] border-gray-800 mb-4">
+        <CardHeader className="border-b border-gray-800 bg-[#0A0F1A] py-3">
+          <CardTitle className="text-base text-white flex items-center justify-between">
+            <div className="flex items-center">
+              <FileText className="h-4 w-4 mr-2 text-gray-400" />
+              <span>{label}</span>
+            </div>
+            <div>
               {renderStatusBadge(docType, isRequired)}
             </div>
-          </div>
-          
-          {isUploaded && document && (
-            <div className="mt-1 ml-6 text-xs text-gray-400 flex flex-col space-y-1">
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="py-3">
+          {isUploaded && document ? (
+            <div className="flex justify-between items-center">
               <div className="flex items-center">
-                <Calendar className="h-3 w-3 mr-1" />
-                <span>Uploaded: {formatDate(document.dateUploaded)}</span>
+                <FileText size={18} className="text-gray-400 mr-2" />
+                <a 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (onViewDocument && document.id) {
+                      // First handle the normal view action
+                      onViewDocument(document.id);
+                      
+                      // Then we could also try to open in a new tab
+                      // This creates a new window with basic document content
+                      if (document.content) {
+                        const newWindow = window.open('', '_blank');
+                        if (newWindow) {
+                          newWindow.document.write(`
+                            <html>
+                              <head>
+                                <title>${document.filename}</title>
+                                <style>
+                                  body { 
+                                    font-family: Arial, sans-serif;
+                                    line-height: 1.6;
+                                    padding: 20px;
+                                    max-width: 800px;
+                                    margin: 0 auto;
+                                  }
+                                  .document-header {
+                                    text-align: center;
+                                    margin-bottom: 30px;
+                                    border-bottom: 2px solid #1e5a9a;
+                                    padding-bottom: 20px;
+                                  }
+                                  .document-content {
+                                    padding: 20px;
+                                    background-color: white;
+                                  }
+                                </style>
+                              </head>
+                              <body>
+                                <div class="document-header">
+                                  <h1>${document.filename}</h1>
+                                </div>
+                                <div class="document-content">
+                                  ${document.content}
+                                </div>
+                              </body>
+                            </html>
+                          `);
+                        }
+                      }
+                    }
+                  }}
+                  className="text-blue-500 hover:underline font-medium"
+                >
+                  {document.filename}
+                </a>
               </div>
-              {document.fileSize && (
-                <div className="flex items-center">
-                  <HardDrive className="h-3 w-3 mr-1" />
-                  <span>Size: {formatFileSize(document.fileSize)}</span>
+              <div className="flex gap-2">
+                <div className="text-xs text-gray-400 mr-2">
+                  {formatDate(document.dateUploaded)}
                 </div>
-              )}
-              {document.notes && (
-                <div className="mt-1">
-                  <span>Notes: {document.notes}</span>
-                </div>
-              )}
+                {renderDocumentAction(category, section, docType)}
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center">
+              <div className="text-gray-400 text-sm">No document uploaded</div>
+              {renderDocumentAction(category, section, docType)}
             </div>
           )}
-        </div>
-        <div className="z-10">
-          {renderDocumentAction(category, section, docType)}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   };
   
@@ -195,7 +249,7 @@ export function LoanDocumentStructure({
     return (
       <div key={section} className="mb-6">
         <h3 className="text-lg font-medium text-white mb-3">{title}</h3>
-        <div className="bg-[#141b2d] rounded-lg border border-gray-800 p-4">
+        <div className="space-y-2">
           {documents.map(doc => renderDocumentItem(category, section, doc.docType, doc.label, doc.isRequired))}
         </div>
       </div>

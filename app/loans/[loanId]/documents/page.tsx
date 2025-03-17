@@ -424,7 +424,7 @@ export default function LoanDocumentsPage() {
               {/* Header */}
               <div className="p-4 border-b flex justify-between items-center">
                 <div className="relative">
-                  <h2 className="text-xl font-semibold">{selectedDocument.filename}</h2>
+                  <h2 className="text-xl font-semibold">{selectedDocument.docType.replace(/_/g, ' ')}</h2>
                 </div>
                 <button 
                   onClick={() => setSelectedDocument(null)}
@@ -433,6 +433,50 @@ export default function LoanDocumentsPage() {
                 >
                   <X size={20} />
                 </button>
+              </div>
+              
+              {/* File Info Section */}
+              <div className="px-4 py-3 bg-gray-50 border-b">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <FileText size={18} className="text-gray-500 mr-2" />
+                    <a 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // Open in new tab logic
+                        const newWindow = window.open('', '_blank');
+                        if (newWindow) {
+                          newWindow.document.write(`
+                            <html>
+                              <head>
+                                <title>${selectedDocument.filename}</title>
+                                <style>${documentViewerStyles}</style>
+                              </head>
+                              <body class="document-content">
+                                ${selectedDocument.content || `
+                                  <div style="text-align: center; padding: 50px;">
+                                    <h1>${selectedDocument.filename}</h1>
+                                    <p>Document preview</p>
+                                  </div>
+                                `}
+                              </body>
+                            </html>
+                          `);
+                        }
+                      }}
+                      className="text-blue-600 hover:underline font-medium"
+                    >
+                      {selectedDocument.filename}
+                    </a>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <span>{new Date(selectedDocument.dateUploaded).toLocaleDateString()}</span>
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                      {selectedDocument.status}
+                    </span>
+                  </div>
+                </div>
               </div>
               
               {/* Document Content */}
