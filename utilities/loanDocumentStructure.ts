@@ -58,7 +58,7 @@ export const DOCUMENT_STRUCTURE = {
         { docType: "bank_statements", label: "Bank Statements", isRequired: true },
         { docType: "income_verification", label: "Income Verification", isRequired: true },
         { docType: "real_estate_schedule", label: "Schedule of REO", isRequired: true },
-        { docType: "investment_history", label: "RE Track Record", isRequired: true },
+        { docType: "investment_history", label: "RE Track Record", isRequired: false },
         { docType: "debt_schedule", label: "Debt Schedule", isRequired: true },
         { docType: "credit_explanation", label: "Credit LOE(s)", isRequired: false }
       ]
