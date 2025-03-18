@@ -62,11 +62,11 @@ This directory contains template functions for generating HTML documents for the
 - ✅ `dscr_calculation`
 - ✅ `property_management_agreement`
 
-### Pre-Closing (Partial Implementation)
+### Pre-Closing (Implemented)
 - ✅ `term_sheet`
-- ❌ `pre_approval_letter`
-- ❌ `fee_disclosure`
-- ❌ `rate_lock_agreement`
+- ✅ `pre_approval_letter`
+- ✅ `fee_disclosure`
+- ✅ `rate_lock_agreement`
 
 ### Compliance Documents (Not Implemented)
 - ❌ `state_lending_disclosures`

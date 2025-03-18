@@ -24,6 +24,11 @@ import {
   getDscrCalculationWorksheetTemplate,
   getPropertyManagementAgreementTemplate
 } from './templates/incomeDocumentTemplates';
+import {
+  getPreApprovalLetterTemplate,
+  getFeeDisclosureTemplate,
+  getRateLockAgreementTemplate
+} from './templates/preClosingDocuments';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -41,7 +46,10 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'draw_schedule': getDrawScheduleTemplate,
   'lease_agreement': getLeaseAgreementTemplate,
   'dscr_calculation': getDscrCalculationWorksheetTemplate,
-  'property_management_agreement': getPropertyManagementAgreementTemplate
+  'property_management_agreement': getPropertyManagementAgreementTemplate,
+  'pre_approval_letter': getPreApprovalLetterTemplate,
+  'fee_disclosure': getFeeDisclosureTemplate,
+  'rate_lock_agreement': getRateLockAgreementTemplate
 };
 
 // A mapping of document types to their categories
@@ -60,7 +68,10 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'draw_schedule': 'project',
   'lease_agreement': 'financial',
   'dscr_calculation': 'financial',
-  'property_management_agreement': 'financial'
+  'property_management_agreement': 'financial',
+  'pre_approval_letter': 'loan',
+  'fee_disclosure': 'financial',
+  'rate_lock_agreement': 'loan'
 };
 
 // Document names for display
@@ -79,7 +90,10 @@ const documentNames: Record<string, string> = {
   'draw_schedule': 'Draw Schedule',
   'lease_agreement': 'Lease Agreement',
   'dscr_calculation': 'DSCR Calculation Worksheet',
-  'property_management_agreement': 'Property Management Agreement'
+  'property_management_agreement': 'Property Management Agreement',
+  'pre_approval_letter': 'Pre-Approval Letter',
+  'fee_disclosure': 'Fee Disclosure',
+  'rate_lock_agreement': 'Rate Lock Agreement'
 };
 
 export const fakeDocumentService = {
