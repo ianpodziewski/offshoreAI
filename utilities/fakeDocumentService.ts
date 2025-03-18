@@ -33,6 +33,10 @@ import {
   getLenderClosingChecklistTemplate,
   getLoanAgreementTemplate
 } from './templates/lenderLoanDocs';
+import {
+  getAntiMoneyLaunderingDocTemplate,
+  getPatriotActComplianceTemplate
+} from './templates/complianceDocuments';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -55,7 +59,9 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'fee_disclosure': getFeeDisclosureTemplate,
   'rate_lock_agreement': getRateLockAgreementTemplate,
   'lender_closing_checklist': getLenderClosingChecklistTemplate,
-  'loan_agreement': getLoanAgreementTemplate
+  'loan_agreement': getLoanAgreementTemplate,
+  'aml_documentation': getAntiMoneyLaunderingDocTemplate,
+  'patriot_act_certification': getPatriotActComplianceTemplate
 };
 
 // A mapping of document types to their categories
@@ -79,7 +85,9 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'fee_disclosure': 'financial',
   'rate_lock_agreement': 'loan',
   'lender_closing_checklist': 'loan',
-  'loan_agreement': 'loan'
+  'loan_agreement': 'loan',
+  'aml_documentation': 'legal',
+  'patriot_act_certification': 'legal'
 };
 
 // Document names for display
@@ -103,7 +111,9 @@ const documentNames: Record<string, string> = {
   'fee_disclosure': 'Fee Disclosure',
   'rate_lock_agreement': 'Rate Lock Agreement',
   'lender_closing_checklist': 'Lender Closing Checklist',
-  'loan_agreement': 'Loan Agreement'
+  'loan_agreement': 'Loan Agreement',
+  'aml_documentation': 'Anti-Money Laundering Documentation',
+  'patriot_act_certification': 'Patriot Act Certification'
 };
 
 export const fakeDocumentService = {

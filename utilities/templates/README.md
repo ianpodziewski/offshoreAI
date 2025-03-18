@@ -70,12 +70,12 @@ This directory contains template functions for generating HTML documents for the
 - ✅ `fee_disclosure`
 - ✅ `rate_lock_agreement`
 
-### Compliance Documents (Not Implemented)
+### Compliance Documents (Partial Implementation)
 - ❌ `state_lending_disclosures`
 - ❌ `federal_lending_disclosures`
-- ❌ `aml_documentation`
+- ✅ `aml_documentation`
 - ❌ `ofac_check`
-- ❌ `patriot_act_compliance`
+- ✅ `patriot_act_compliance`
 
 ### Insurance (Not Implemented)
 - ❌ `property_insurance`
