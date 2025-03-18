@@ -20,6 +20,9 @@ import {
 // Import valuation templates
 import { getAppraisalReportTemplate, getBrokerPriceOpinionTemplate } from './valuationTemplates';
 
+// Import project documentation templates
+import { getRenovationBudgetTemplate, getDrawScheduleTemplate } from './projectDocumentationTemplates';
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4601,6 +4604,14 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   // Property information templates
   purchase_contract: getPurchaseContractTemplate,
   preliminary_title_report: getPreliminaryTitleReportTemplate,
+  // Valuation templates
+  appraisal_report: getAppraisalReportTemplate,
+  broker_price_opinion: getBrokerPriceOpinionTemplate,
+  bpo: getBrokerPriceOpinionTemplate,
+  // Project documentation templates
+  renovation_budget: getRenovationBudgetTemplate,
+  construction_budget: getRenovationBudgetTemplate,
+  draw_schedule: getDrawScheduleTemplate,
   // Add other document types and their corresponding template functions here
 };
 
