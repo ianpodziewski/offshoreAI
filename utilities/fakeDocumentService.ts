@@ -84,12 +84,8 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'funding_authorization': getFundingAuthorizationTemplate,
   'escrow_agreements': getEscrowAgreementTemplate,
   'wiring_instructions': getWiringInstructionsTemplate,
-  'preliminary_title': getPreliminaryTitleReportTemplate,
-  'closing_checklist': getLenderClosingChecklistTemplate,
-  'mortgage_deed_of_trust': generateDeedOfTrust,
-  'patriot_act_compliance': getPatriotActComplianceTemplate,
-  'property_insurance': getPropertyInsurancePolicyTemplate,
-  'liability_insurance': getLiabilityInsurancePolicyTemplate,
+  
+  // Placeholder templates for currently unimplemented documents that are being requested
   'investment_history': (loan: LoanData) => `<h1>Investment History</h1><p>Investment history for ${loan.borrowerName} is not yet implemented.</p>`,
   'loan_servicing_agreement': (loan: LoanData) => `<h1>Loan Servicing Agreement</h1><p>Loan servicing agreement for ${loan.borrowerName} is not yet implemented.</p>`,
   'state_lending_disclosures': (loan: LoanData) => `<h1>State Lending Disclosures</h1><p>State lending disclosures for ${loan.borrowerName} are not yet implemented.</p>`,
@@ -136,12 +132,6 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'funding_authorization': 'financial',
   'escrow_agreements': 'legal',
   'wiring_instructions': 'financial',
-  'preliminary_title': 'property',
-  'closing_checklist': 'loan',
-  'mortgage_deed_of_trust': 'legal',
-  'patriot_act_compliance': 'legal',
-  'property_insurance': 'property',
-  'liability_insurance': 'property',
   'investment_history': 'financial',
   'loan_servicing_agreement': 'loan',
   'state_lending_disclosures': 'legal',
@@ -188,12 +178,6 @@ const documentNames: Record<string, string> = {
   'funding_authorization': 'Funding Authorization',
   'escrow_agreements': 'Escrow Agreement',
   'wiring_instructions': 'Wiring Instructions',
-  'preliminary_title': 'Preliminary Title Report',
-  'closing_checklist': 'Closing Checklist',
-  'mortgage_deed_of_trust': 'Mortgage/Deed of Trust',
-  'patriot_act_compliance': 'Patriot Act Compliance',
-  'property_insurance': 'Property Insurance',
-  'liability_insurance': 'Liability Insurance',
   'investment_history': 'Investment History',
   'loan_servicing_agreement': 'Loan Servicing Agreement',
   'state_lending_disclosures': 'State Lending Disclosures',
@@ -209,31 +193,56 @@ const documentNames: Record<string, string> = {
 
 export const fakeDocumentService = {
   /**
+   * Document type alias mapping to handle different naming conventions 
+   */
+  documentTypeAliases: {
+    'preliminary_title': 'preliminary_title_report',
+    'mortgage_deed_of_trust': 'deed_of_trust',
+    'property_insurance': 'property_insurance_policy',
+    'liability_insurance': 'liability_insurance_policy',
+    'patriot_act_compliance': 'patriot_act_certification',
+    'closing_checklist': 'lender_closing_checklist'
+  } as Record<string, string>,
+
+  /**
+   * Get the standard document type name from a potentially aliased name
+   */
+  getStandardDocType(docType: string): string {
+    return this.documentTypeAliases[docType] || docType;
+  },
+
+  /**
    * Generate document content without adding it to the document service
    */
   generateDocumentContent(loan: LoanData, docType: string): string | null {
+    // Convert potentially aliased document type to standard name
+    const standardDocType = this.getStandardDocType(docType);
+    
     // Check if we have a generator for this document type
-    if (!documentGenerators[docType]) {
+    if (!documentGenerators[standardDocType]) {
       console.error(`No generator found for document type: ${docType}`);
       return null;
     }
 
     // Generate the HTML content using the appropriate generator
-    return documentGenerators[docType](loan);
+    return documentGenerators[standardDocType](loan);
   },
 
   /**
    * Generate a fake document for a specific loan and document type
    */
   generateFakeDocument(loan: LoanData, docType: string): SimpleDocument | null {
+    // Convert potentially aliased document type to standard name
+    const standardDocType = this.getStandardDocType(docType);
+    
     // Check if we have a generator for this document type
-    if (!documentGenerators[docType]) {
+    if (!documentGenerators[standardDocType]) {
       console.error(`No generator found for document type: ${docType}`);
       return null;
     }
 
     // Generate the HTML content using the appropriate generator
-    const content = documentGenerators[docType](loan);
+    const content = documentGenerators[standardDocType](loan);
     
     // Create a SimpleDocument object with the generated content
     // Note: We're not formatting the content as base64 because it's HTML, not a PDF
@@ -241,8 +250,8 @@ export const fakeDocumentService = {
       id: `fake-${docType}-${loan.id}`,
       loanId: loan.id,
       filename: `${docType.replace(/_/g, '-')}.html`, // Changed to .html to indicate it's HTML content
-      docType: docType,
-      category: documentCategories[docType] || 'misc',
+      docType: docType, // Keep original docType for consistency with requests
+      category: documentCategories[standardDocType] || 'misc',
       content: content, // Plain HTML content, not base64 encoded
       dateUploaded: new Date().toISOString(),
       status: 'pending',
@@ -274,16 +283,18 @@ export const fakeDocumentService = {
    * Check if a fake document exists for a loan and document type
    */
   hasFakeDocument(loanId: string, docType: string): boolean {
+    const standardDocType = this.getStandardDocType(docType);
     const documents = simpleDocumentService.getDocumentsForLoan(loanId);
-    return documents.some(doc => doc.docType === docType);
+    return documents.some(doc => doc.docType === docType || doc.docType === standardDocType);
   },
 
   /**
    * Get a fake document by loan ID and document type
    */
   getFakeDocument(loanId: string, docType: string): SimpleDocument | null {
+    const standardDocType = this.getStandardDocType(docType);
     const documents = simpleDocumentService.getDocumentsForLoan(loanId);
-    return documents.find(doc => doc.docType === docType) || null;
+    return documents.find(doc => doc.docType === docType || doc.docType === standardDocType) || null;
   },
 
   /**

@@ -4677,8 +4677,21 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
 
 // This function provides a convenient way to get the right template
 export const getDocumentTemplate = (docType: string, loanData: LoanData): string => {
-  if (documentTemplates[docType]) {
-    return documentTemplates[docType](loanData);
+  // Mapping for alternative document type names
+  const documentTypeAliases: Record<string, string> = {
+    'preliminary_title': 'preliminary_title_report',
+    'mortgage_deed_of_trust': 'deed_of_trust',
+    'property_insurance': 'property_insurance_policy',
+    'liability_insurance': 'liability_insurance_policy',
+    'patriot_act_compliance': 'patriot_act_certification',
+    'closing_checklist': 'lender_closing_checklist'
+  };
+
+  // Check if this is an alternative name and map to the standard name
+  const standardDocType = documentTypeAliases[docType] || docType;
+  
+  if (documentTemplates[standardDocType]) {
+    return documentTemplates[standardDocType](loanData);
   }
   
   console.error(`Unknown document type: ${docType}`);
