@@ -1,8 +1,51 @@
 import { LoanDetails } from '../types/loanTypes';
+import { LoanData } from '../loanGenerator';
 
 /**
  * Document templates for various funding-related documents used in hard money lending
  */
+
+// Adapter function to convert LoanData to LoanDetails
+const adaptLoanDataToLoanDetails = (loanData: LoanData): LoanDetails => {
+  // Extract city, state, and zip from the propertyAddress if possible
+  const addressParts = loanData.propertyAddress.split(', ');
+  let city = 'N/A';
+  let state = 'N/A';
+  let zip = 'N/A';
+  
+  if (addressParts.length >= 2) {
+    // Assuming format like "123 Main St, Anytown, CA 12345"
+    city = addressParts[1];
+    if (addressParts.length >= 3) {
+      // Try to extract state and zip from the last part
+      const stateZipParts = addressParts[2].split(' ');
+      state = stateZipParts[0] || 'N/A';
+      zip = stateZipParts[1] || 'N/A';
+    }
+  }
+
+  return {
+    propertyAddress: {
+      street: addressParts[0] || loanData.propertyAddress,
+      city: city,
+      state: state,
+      zipCode: zip
+    },
+    borrowerName: loanData.borrowerName,
+    loanAmount: loanData.loanAmount,
+    lenderName: 'Harrington Capital Partners',
+    closingDate: new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }),
+    propertyType: loanData.propertyType || 'Residential',
+    loanNumber: loanData.id,
+    interestRate: loanData.interestRate,
+    originationFee: loanData.originationFee || 0.02,
+    loanTerm: loanData.loanTerm || 12,
+  };
+};
 
 /**
  * Generates a Final Title Policy document based on loan details
@@ -488,4 +531,30 @@ ${lenderName}
 DISCLAIMER:
 ${lenderName} is not responsible for any delay, failure of delivery, or misdirection of funds resulting from incorrect or incomplete wire instructions. The sender is responsible for confirming the accuracy of these instructions prior to sending funds.
 `;
+};
+
+// Wrapper functions that adapt to LoanData
+export const getFinalTitlePolicyTemplate = (loanData: LoanData): string => {
+  const loanDetails = adaptLoanDataToLoanDetails(loanData);
+  return generateFinalTitlePolicy(loanDetails);
+};
+
+export const getDisbursementInstructionsTemplate = (loanData: LoanData): string => {
+  const loanDetails = adaptLoanDataToLoanDetails(loanData);
+  return generateDisbursementInstructions(loanDetails);
+};
+
+export const getFundingAuthorizationTemplate = (loanData: LoanData): string => {
+  const loanDetails = adaptLoanDataToLoanDetails(loanData);
+  return generateFundingAuthorization(loanDetails);
+};
+
+export const getEscrowAgreementTemplate = (loanData: LoanData): string => {
+  const loanDetails = adaptLoanDataToLoanDetails(loanData);
+  return generateEscrowAgreement(loanDetails);
+};
+
+export const getWiringInstructionsTemplate = (loanData: LoanData): string => {
+  const loanDetails = adaptLoanDataToLoanDetails(loanData);
+  return generateWiringInstructions(loanDetails);
 };

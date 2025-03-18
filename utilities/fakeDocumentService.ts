@@ -43,6 +43,13 @@ import {
   getBuildersRiskPolicyTemplate,
   getLiabilityInsurancePolicyTemplate
 } from './templates/insuranceDocumentTemplates';
+import {
+  getFinalTitlePolicyTemplate,
+  getDisbursementInstructionsTemplate,
+  getFundingAuthorizationTemplate,
+  getEscrowAgreementTemplate,
+  getWiringInstructionsTemplate
+} from './templates/fundingDocumentTemplates';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -71,7 +78,12 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'property_insurance_policy': getPropertyInsurancePolicyTemplate,
   'flood_insurance_policy': getFloodInsurancePolicyTemplate,
   'builders_risk_policy': getBuildersRiskPolicyTemplate,
-  'liability_insurance_policy': getLiabilityInsurancePolicyTemplate
+  'liability_insurance_policy': getLiabilityInsurancePolicyTemplate,
+  'final_title_policy': getFinalTitlePolicyTemplate,
+  'disbursement_instructions': getDisbursementInstructionsTemplate,
+  'funding_authorization': getFundingAuthorizationTemplate,
+  'escrow_agreements': getEscrowAgreementTemplate,
+  'wiring_instructions': getWiringInstructionsTemplate
 };
 
 // A mapping of document types to their categories
@@ -101,7 +113,12 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'property_insurance_policy': 'property',
   'flood_insurance_policy': 'property',
   'builders_risk_policy': 'property',
-  'liability_insurance_policy': 'property'
+  'liability_insurance_policy': 'property',
+  'final_title_policy': 'legal',
+  'disbursement_instructions': 'financial',
+  'funding_authorization': 'financial',
+  'escrow_agreements': 'legal',
+  'wiring_instructions': 'financial'
 };
 
 // Document names for display
@@ -131,7 +148,12 @@ const documentNames: Record<string, string> = {
   'property_insurance_policy': 'Property Insurance Policy',
   'flood_insurance_policy': 'Flood Insurance Policy',
   'builders_risk_policy': 'Builders Risk Policy',
-  'liability_insurance_policy': 'Liability Insurance Policy'
+  'liability_insurance_policy': 'Liability Insurance Policy',
+  'final_title_policy': 'Final Title Policy',
+  'disbursement_instructions': 'Disbursement Instructions',
+  'funding_authorization': 'Funding Authorization',
+  'escrow_agreements': 'Escrow Agreement',
+  'wiring_instructions': 'Wiring Instructions'
 };
 
 export const fakeDocumentService = {

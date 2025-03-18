@@ -84,13 +84,13 @@ This directory contains template functions for generating HTML documents for the
 - ✅ `liability_insurance`
 - ❌ `insurance_binder`
 
-### Funding (Partial Implementation)
+### Funding (Implemented)
 - ✅ `closing_disclosure`
-- ❌ `final_title_policy`
-- ❌ `disbursement_instructions`
-- ❌ `funding_authorization`
-- ❌ `escrow_agreements`
-- ❌ `wiring_instructions`
+- ✅ `final_title_policy`
+- ✅ `disbursement_instructions`
+- ✅ `funding_authorization`
+- ✅ `escrow_agreements`
+- ✅ `wiring_instructions`
 
 ### Payment Records (Not Implemented)
 - ❌ `payment_history`

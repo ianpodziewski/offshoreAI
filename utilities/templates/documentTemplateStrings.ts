@@ -50,6 +50,15 @@ import {
   getLiabilityInsurancePolicyTemplate
 } from "./insuranceDocumentTemplates";
 
+// Import funding document templates
+import {
+  getFinalTitlePolicyTemplate,
+  getDisbursementInstructionsTemplate,
+  getFundingAuthorizationTemplate,
+  getEscrowAgreementTemplate,
+  getWiringInstructionsTemplate
+} from "./fundingDocumentTemplates";
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4658,6 +4667,12 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   flood_insurance_policy: getFloodInsurancePolicyTemplate,
   builders_risk_policy: getBuildersRiskPolicyTemplate,
   liability_insurance_policy: getLiabilityInsurancePolicyTemplate,
+  // Funding document templates
+  final_title_policy: getFinalTitlePolicyTemplate,
+  disbursement_instructions: getDisbursementInstructionsTemplate,
+  funding_authorization: getFundingAuthorizationTemplate,
+  escrow_agreements: getEscrowAgreementTemplate,
+  wiring_instructions: getWiringInstructionsTemplate,
 };
 
 // This function provides a convenient way to get the right template
