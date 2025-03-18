@@ -368,20 +368,56 @@ export const fakeDocumentService = {
     }
 
     // Generate the HTML content using the appropriate generator
-    const content = documentGenerators[standardDocType](loan);
+    let content = documentGenerators[standardDocType](loan);
+    
+    // Add watermark to the content if it doesn't already have one
+    if (!content.includes('class="watermark"')) {
+      // Check if we need to insert the watermark in the head section
+      if (content.includes('<head>')) {
+        // Add watermark style to the head section
+        content = content.replace('</head>', `${getWatermarkStyle()}</head>`);
+        // Add watermark div after the body tag
+        content = content.replace('<body>', '<body><div class="watermark"></div><div class="document-content">');
+        // Close the document-content div before the body end tag
+        content = content.replace('</body>', '</div></body>');
+      } else {
+        // Full document wrapper with watermark
+        content = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${docType.replace(/_/g, ' ')} - Sample</title>
+  <style>
+    ${getWatermarkStyle()}
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="watermark"></div>
+  <div class="document-content">
+    ${content}
+  </div>
+</body>
+</html>`;
+      }
+    }
     
     // Create a SimpleDocument object with the generated content
-    // Note: We're not formatting the content as base64 because it's HTML, not a PDF
     const fakeDocument: SimpleDocument = {
       id: `fake-${docType}-${loan.id}`,
       loanId: loan.id,
-      filename: `${docType.replace(/_/g, '-')}.html`, // Changed to .html to indicate it's HTML content
+      filename: `${docType.replace(/_/g, '-')}.html`,
       docType: docType, // Keep original docType for consistency with requests
       category: documentCategories[standardDocType] || 'misc',
-      content: content, // Plain HTML content, not base64 encoded
+      content: content, // HTML content with watermark
       dateUploaded: new Date().toISOString(),
       status: 'pending',
-      fileType: 'text/html' // Changed file type to HTML
+      fileType: 'text/html'
     };
 
     // Store the document using the existing service

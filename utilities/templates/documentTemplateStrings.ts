@@ -1,4 +1,4 @@
-import { LoanData } from '../loanGenerator';
+import { LoanData } from '@/utilities/loanGenerator';
 // Import entity document templates
 import {
   getFormationDocumentsTemplate,
@@ -87,23 +87,27 @@ const getWatermarkStyle = (): string => {
     /* Watermark styles */
     body {
       position: relative;
+      margin: 0;
+      padding: 0;
     }
     .watermark {
       position: fixed;
       top: 0;
       left: 0;
+      right: 0;
+      bottom: 0;
       width: 100%;
       height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1000;
     }
     .watermark:after {
       content: "SAMPLE";
       font-size: 120px;
-      color: rgba(220, 53, 69, 0.2);
+      color: rgba(220, 53, 69, 0.3);
       transform: rotate(-45deg);
       white-space: nowrap;
       text-transform: uppercase;
@@ -119,7 +123,17 @@ const getWatermarkStyle = (): string => {
 
 // Base document styling - shared across all documents
 const baseStyle = `
-  <style>
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <style>
+    ${getWatermarkStyle()}
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
     .document {
       font-family: Arial, sans-serif;
       color: #333;
@@ -129,6 +143,8 @@ const baseStyle = `
       padding: 20px;
       border: 1px solid #ddd;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      position: relative;
+      z-index: 1;
     }
     
     .document-header {
@@ -190,8 +206,11 @@ const baseStyle = `
       margin-top: 30px;
       margin-bottom: 5px;
     }
-  </style>
-`;
+    </style>
+  </head>
+  <body>
+    <div class="watermark"></div>
+    <div class="document-content">`;
 
 // Document Template Functions
 export const getLoanApplicationTemplate = (loanData: LoanData): string => {
@@ -348,6 +367,9 @@ export const getPhotoIdTemplate = (loanData: LoanData): string => {
         </table>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -364,19 +386,6 @@ export const getCreditAuthorizationTemplate = (loanData: LoanData): string => {
       </div>
       
       <div class="document-section">
-        <p>I/We authorize DocuLendAI, or its assigns, to obtain verification of any information necessary, including but not limited to the following:</p>
-        
-        <ul style="margin-left: 20px; margin-bottom: 20px;">
-          <li>My employment history and earnings, including future, past, and present</li>
-          <li>My bank accounts, stock holdings, and any other asset balances</li>
-          <li>My liability accounts including credit cards, loans, and mortgages</li>
-          <li>My credit history through a consumer credit report</li>
-        </ul>
-        
-        <p>This information will be used for loan qualification purposes only and will be kept confidential.</p>
-      </div>
-      
-      <div class="document-section">
         <div class="section-title">Borrower Information</div>
         <table class="info-table">
           <tr>
@@ -384,27 +393,31 @@ export const getCreditAuthorizationTemplate = (loanData: LoanData): string => {
             <td>${loanData.borrowerName}</td>
           </tr>
           <tr>
-            <th>Social Security #:</th>
-            <td>XXX-XX-${Math.floor(1000 + Math.random() * 9000)}</td>
+            <th>Email:</th>
+            <td>${loanData.borrowerName.replace(' ', '.').toLowerCase()}@example.com</td>
           </tr>
           <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
-          </tr>
-          <tr>
-            <th>Property Address:</th>
-            <td>${loanData.propertyAddress}</td>
+            <th>Phone:</th>
+            <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
           </tr>
         </table>
       </div>
       
+      <div class="document-section">
+        <p>I hereby authorize ${loanData.lender || 'DocuLendAI Lending'} and its designated credit reporting agency to obtain a consumer credit report and verify other credit information, including past and present mortgage and landlord references. It is understood that a photocopy of this form will serve as authorization.</p>
+        <p>The information obtained is only to be used in the processing of my mortgage loan application.</p>
+      </div>
+      
       <div class="signature-section">
-        <p>By signing below, I authorize the verification of the information provided on this form.</p>
+        <p>By signing below, I acknowledge and accept the terms outlined in this authorization form.</p>
         <div class="signature-line"></div>
-        <div>${loanData.borrowerName}, Borrower</div>
+        <div>${loanData.borrowerName}, Applicant</div>
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -466,6 +479,9 @@ export const getPromissoryNoteTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -565,6 +581,9 @@ export const getDeedOfTrustTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -731,6 +750,9 @@ export const getClosingDisclosureTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -900,6 +922,9 @@ export const getPropertyAppraisalTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -1103,6 +1128,9 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -1203,6 +1231,9 @@ export const getPersonalGuaranteeTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -1333,6 +1364,9 @@ export const getAssignmentRentsLeasesTemplate = (loanData: LoanData): string => 
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -1488,6 +1522,9 @@ export const getSecurityAgreementTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -1748,6 +1785,9 @@ export const getDrawRequestTemplate = (loanData: LoanData): string => {
         </div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -1916,6 +1956,9 @@ export const getBackgroundCheckTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -2135,6 +2178,9 @@ export const getContactInformationTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -2484,6 +2530,9 @@ export const getPersonalFinancialStatementTemplate = (loanData: LoanData): strin
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -2860,6 +2909,9 @@ export const getPersonalTaxReturnsTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -3309,6 +3361,9 @@ export const getBusinessTaxReturnsTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -3620,6 +3675,9 @@ export const getBankStatementsTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -3908,6 +3966,9 @@ export const getIncomeVerificationTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -4119,6 +4180,9 @@ export const getRealEstateScheduleTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -4517,6 +4581,9 @@ export const getDebtScheduleTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -4674,6 +4741,9 @@ const getCreditExplanationLettersTemplate = (loanData: LoanData): string => {
         </div>
       </div>
     </div>
+  </div>
+  </body>
+  </html>
   `;
 };
 
@@ -4724,22 +4794,20 @@ const generateUnimplementedTemplate = (title: string, borrowerName: string): str
       <div class="document-container">
         <h1>${title}</h1>
         
-    <div class="document-container">
-      <h1>${title}</h1>
-      
-      <div class="warning">
-        <p><strong>Document Not Yet Implemented</strong></p>
-        <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
+        <div class="warning">
+          <p><strong>Document Not Yet Implemented</strong></p>
+          <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
+        </div>
+        
+        <div class="info">
+          <p><strong>What This Document Will Include:</strong></p>
+          <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
+          <p>If you need this document urgently, please contact your system administrator.</p>
+        </div>
+        
+        <p>Document ID: SAMPLE-${Date.now()}</p>
+        <p>Generated: ${new Date().toLocaleDateString()}</p>
       </div>
-      
-      <div class="info">
-        <p><strong>What This Document Will Include:</strong></p>
-        <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
-        <p>If you need this document urgently, please contact your system administrator.</p>
-      </div>
-      
-      <p>Document ID: SAMPLE-${Date.now()}</p>
-      <p>Generated: ${new Date().toLocaleDateString()}</p>
     </div>
   </body>
   </html>
@@ -4862,6 +4930,7 @@ export const getDocumentTemplate = (docType: string, loanData: LoanData): string
   <html>
   <head>
     <style>
+      ${getWatermarkStyle()}
       body {
         font-family: Arial, sans-serif;
         margin: 40px;
@@ -4889,24 +4958,27 @@ export const getDocumentTemplate = (docType: string, loanData: LoanData): string
     </style>
   </head>
   <body>
-    <div class="error-container">
-      <h1>Unknown Document Type</h1>
-      
-      <div class="details">
-        <p><strong>Error Details:</strong></p>
-        <p>The document type "${docType}" is not recognized by the system or has not been implemented yet.</p>
-        <p>This could be due to a mismatch between document labels and their internal document types.</p>
+    <div class="watermark"></div>
+    <div class="document-content">
+      <div class="error-container">
+        <h1>Unknown Document Type</h1>
+        
+        <div class="details">
+          <p><strong>Error Details:</strong></p>
+          <p>The document type "${docType}" is not recognized by the system or has not been implemented yet.</p>
+          <p>This could be due to a mismatch between document labels and their internal document types.</p>
+        </div>
+        
+        <p><strong>Possible Solutions:</strong></p>
+        <ul>
+          <li>Check if the document type is correctly spelled</li>
+          <li>Verify that the document type has been properly registered in the system</li>
+          <li>Contact your system administrator for assistance</li>
+        </ul>
+        
+        <p>Error ID: ERROR-${Date.now()}</p>
+        <p>Timestamp: ${new Date().toLocaleString()}</p>
       </div>
-      
-      <p><strong>Possible Solutions:</strong></p>
-      <ul>
-        <li>Check if the document type is correctly spelled</li>
-        <li>Verify that the document type has been properly registered in the system</li>
-        <li>Contact your system administrator for assistance</li>
-      </ul>
-      
-      <p>Error ID: ERROR-${Date.now()}</p>
-      <p>Timestamp: ${new Date().toLocaleString()}</p>
     </div>
   </body>
   </html>
