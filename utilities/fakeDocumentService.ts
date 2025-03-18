@@ -160,6 +160,7 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   
   // Placeholder templates for currently unimplemented documents that are being requested
   'investment_history': (loan: LoanData) => generateUnimplementedTemplate('RE Track Record', loan.borrowerName),
+  'loan_servicing_agreement': getLoanAgreementTemplate,
   'state_lending_disclosures': (loan: LoanData) => generateUnimplementedTemplate('State Lending Disclosures', loan.borrowerName),
   'federal_lending_disclosures': (loan: LoanData) => generateUnimplementedTemplate('Federal Lending Disclosures', loan.borrowerName),
   'ofac_check': (loan: LoanData) => generateUnimplementedTemplate('OFAC Check', loan.borrowerName),
@@ -277,7 +278,13 @@ export const fakeDocumentService = {
     'loan_servicing_agreement': 'loan_agreement',
     'investment_history': 'investment_history',
     'lease_agreements': 'lease_agreement',
-    'flood_insurance': 'flood_insurance_policy'
+    'flood_insurance': 'flood_insurance_policy',
+    'loan_servicing': 'loan_servicing_agreement',
+    'state_disclosures': 'state_lending_disclosures',
+    'federal_disclosures': 'federal_lending_disclosures',
+    'tax_verification': 'property_tax_verification',
+    'financial_review': 'annual_financial_review',
+    'ach_payment_authorization': 'ach_authorization'
   } as Record<string, string>,
 
   /**

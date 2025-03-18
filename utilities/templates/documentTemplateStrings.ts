@@ -4605,6 +4605,66 @@ const getCreditExplanationLettersTemplate = (loanData: LoanData): string => {
   `;
 };
 
+// Helper function to generate unimplemented document templates
+const generateUnimplementedTemplate = (title: string, borrowerName: string): string => {
+  return `
+  <html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        line-height: 1.6;
+      }
+      .document-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      h1 {
+        color: #333;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 10px;
+      }
+      .warning {
+        background-color: #fff8e1;
+        border-left: 4px solid #ffc107;
+        padding: 12px 20px;
+        margin: 20px 0;
+      }
+      .info {
+        background-color: #e1f5fe;
+        border-left: 4px solid #03a9f4;
+        padding: 12px 20px;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="document-container">
+      <h1>${title}</h1>
+      
+      <div class="warning">
+        <p><strong>Document Not Yet Implemented</strong></p>
+        <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
+      </div>
+      
+      <div class="info">
+        <p><strong>What This Document Will Include:</strong></p>
+        <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
+        <p>If you need this document urgently, please contact your system administrator.</p>
+      </div>
+      
+      <p>Document ID: SAMPLE-${Date.now()}</p>
+      <p>Generated: ${new Date().toLocaleDateString()}</p>
+    </div>
+  </body>
+  </html>
+  `;
+};
+
 // Export a mapping of document types to their template functions
 export const documentTemplates: Record<string, (loanData: LoanData) => string> = {
   loan_application: getLoanApplicationTemplate,
@@ -4673,6 +4733,19 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   funding_authorization: getFundingAuthorizationTemplate,
   escrow_agreements: getEscrowAgreementTemplate,
   wiring_instructions: getWiringInstructionsTemplate,
+  
+  // Added missing document types
+  investment_history: (loanData: LoanData) => generateUnimplementedTemplate('Investment History', loanData.borrowerName),
+  loan_servicing_agreement: getLoanAgreementTemplate, // Alias for loan_agreement
+  state_lending_disclosures: (loanData: LoanData) => generateUnimplementedTemplate('State Lending Disclosures', loanData.borrowerName),
+  federal_lending_disclosures: (loanData: LoanData) => generateUnimplementedTemplate('Federal Lending Disclosures', loanData.borrowerName),
+  ofac_check: (loanData: LoanData) => generateUnimplementedTemplate('OFAC Check', loanData.borrowerName),
+  payment_history: (loanData: LoanData) => generateUnimplementedTemplate('Payment History', loanData.borrowerName),
+  payment_receipts: (loanData: LoanData) => generateUnimplementedTemplate('Payment Receipts', loanData.borrowerName),
+  ach_authorization: (loanData: LoanData) => generateUnimplementedTemplate('ACH Authorization', loanData.borrowerName),
+  property_tax_verification: (loanData: LoanData) => generateUnimplementedTemplate('Property Tax Verification', loanData.borrowerName),
+  insurance_renewal: (loanData: LoanData) => generateUnimplementedTemplate('Insurance Renewal', loanData.borrowerName),
+  annual_financial_review: (loanData: LoanData) => generateUnimplementedTemplate('Annual Financial Review', loanData.borrowerName),
 };
 
 // This function provides a convenient way to get the right template
@@ -4687,7 +4760,13 @@ export const getDocumentTemplate = (docType: string, loanData: LoanData): string
     'closing_checklist': 'lender_closing_checklist',
     'investment_history': 'investment_history',
     'lease_agreements': 'lease_agreement',
-    'flood_insurance': 'flood_insurance_policy'
+    'flood_insurance': 'flood_insurance_policy',
+    // Adding aliases for new document types
+    'loan_servicing': 'loan_servicing_agreement',
+    'state_disclosures': 'state_lending_disclosures',
+    'federal_disclosures': 'federal_lending_disclosures',
+    'tax_verification': 'property_tax_verification',
+    'financial_review': 'annual_financial_review'
   };
 
   // Check if this is an alternative name and map to the standard name
