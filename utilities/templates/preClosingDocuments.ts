@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -189,7 +190,7 @@ const getPreApprovalLetterTemplate = (loanData: LoanData): string => {
     }
   };
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -308,6 +309,8 @@ const getPreApprovalLetterTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Pre-Approval Letter - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -355,7 +358,7 @@ const getFeeDisclosureTemplate = (loanData: LoanData): string => {
   const totalPrepaidItems = prepaidInterest + prepaidHazardInsurance + prepaidPropertyTaxes;
   const totalCashToClose = totalClosingCosts + totalPrepaidItems;
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -568,6 +571,8 @@ const getFeeDisclosureTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Fee Disclosure - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -602,7 +607,7 @@ const getRateLockAgreementTemplate = (loanData: LoanData): string => {
   
   const loanOfficer = loanOfficers[Math.floor(Math.random() * loanOfficers.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -754,6 +759,8 @@ const getRateLockAgreementTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Rate Lock Agreement - ${loanData.borrowerName}`, content);
 };
 
 // Export templates

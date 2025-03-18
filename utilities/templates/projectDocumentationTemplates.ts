@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -263,7 +264,7 @@ const getRenovationBudgetTemplate = (loanData: LoanData): string => {
   const budgetDifference = actualRehabBudget - totalProjectCost;
   const budgetDifferenceClass = budgetDifference >= 0 ? 'text-success' : 'text-danger';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Renovation & Construction Budget</div>
@@ -383,6 +384,8 @@ const getRenovationBudgetTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Renovation & Construction Budget - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -490,7 +493,7 @@ const getDrawScheduleTemplate = (loanData: LoanData): string => {
     });
   };
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Construction Draw Schedule</div>
@@ -624,6 +627,8 @@ const getDrawScheduleTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Construction Draw Schedule - ${loanData.borrowerName}`, content);
 };
 
 // Export templates

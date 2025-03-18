@@ -59,6 +59,7 @@ import {
   getEscrowAgreementTemplate,
   getWiringInstructionsTemplate
 } from "./fundingDocumentTemplates";
+import { Content } from '@radix-ui/react-tooltip';
 
 /**
  * Document template functions return HTML strings for various loan document types
@@ -302,7 +303,6 @@ export const getLoanApplicationTemplate = (loanData: LoanData): string => {
 
 export const getPhotoIdTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
-  
   const content = `
     <div class="header">
       <h1>PHOTO ID</h1>
@@ -2426,7 +2426,7 @@ export const getPersonalTaxReturnsTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   const currentYear = new Date().getFullYear();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">PERSONAL TAX RETURNS</div>
@@ -2796,13 +2796,15 @@ export const getPersonalTaxReturnsTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Personal Tax Returns - ${loanData.borrowerName}`, content);
 };
 
 export const getBusinessTaxReturnsTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   const currentYear = new Date().getFullYear();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">BUSINESS TAX RETURNS</div>
@@ -3245,6 +3247,8 @@ export const getBusinessTaxReturnsTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Business Tax Returns - ${loanData.borrowerName}`, content);
 };
 
 export const getBankStatementsTemplate = (loanData: LoanData): string => {
@@ -3263,7 +3267,7 @@ export const getBankStatementsTemplate = (loanData: LoanData): string => {
   const year2 = currentMonth - 2 < 0 ? currentYear - 1 : currentYear;
   const year3 = currentMonth - 3 < 0 ? currentYear - 1 : currentYear;
   
-  return `${baseStyle}
+   const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">BANK STATEMENTS</div>
@@ -3556,13 +3560,15 @@ export const getBankStatementsTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Bank Statements - ${loanData.borrowerName}`, content);
 };
 
 export const getIncomeVerificationTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   const currentYear = new Date().getFullYear();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">INCOME VERIFICATION</div>
@@ -3844,12 +3850,14 @@ export const getIncomeVerificationTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Income Verification - ${loanData.borrowerName}`, content);
 };
 
 export const getRealEstateScheduleTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">SCHEDULE OF REAL ESTATE OWNED</div>
@@ -4055,12 +4063,14 @@ export const getRealEstateScheduleTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Real Estate Schedule - ${loanData.borrowerName}`, content);
 };
 
 export const getDebtScheduleTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">DEBT SCHEDULE</div>
@@ -4453,6 +4463,8 @@ export const getDebtScheduleTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Debt Schedule - ${loanData.borrowerName}`, content);
 };
 
 // Credit Explanation Letters Template
@@ -4480,7 +4492,7 @@ const getCreditExplanationLettersTemplate = (loanData: LoanData): string => {
   // Get last 4 digits of SSN (safely)
   const lastFourSSN = '1234'; // Default value
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">CREDIT EXPLANATION LETTERS</div>
@@ -4610,6 +4622,8 @@ const getCreditExplanationLettersTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Credit Explanation Letters - ${loanData.borrowerName}`, content);
 };
 
 // Helper function to generate unimplemented document templates

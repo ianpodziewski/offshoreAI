@@ -1,3 +1,4 @@
+import { documentStyleService } from "../documentStyleService";
 import { LoanData } from "../loanGenerator";
 
 /**
@@ -274,7 +275,7 @@ export const getPropertyInsurancePolicyTemplate = (loanData: LoanData): string =
   
   const agent = agents[Math.floor(Math.random() * agents.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -537,6 +538,8 @@ export const getPropertyInsurancePolicyTemplate = (loanData: LoanData): string =
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Property Insurance Policy Declarations - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -648,7 +651,7 @@ export const getFloodInsurancePolicyTemplate = (loanData: LoanData): string => {
   
   const agent = agents[Math.floor(Math.random() * agents.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -874,6 +877,8 @@ export const getFloodInsurancePolicyTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Flood Insurance Policy Declarations - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -1000,7 +1005,7 @@ export const getBuildersRiskPolicyTemplate = (loanData: LoanData): string => {
   
   const contractor = contractors[Math.floor(Math.random() * contractors.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -1344,6 +1349,8 @@ export const getBuildersRiskPolicyTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Builder's Risk Policy Declarations - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -1489,7 +1496,7 @@ export const getLiabilityInsurancePolicyTemplate = (loanData: LoanData): string 
   
   const agent = agents[Math.floor(Math.random() * agents.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -1839,4 +1846,6 @@ export const getLiabilityInsurancePolicyTemplate = (loanData: LoanData): string 
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Flood Insurance Policy Declarations - ${loanData.borrowerName}`, content);
 };

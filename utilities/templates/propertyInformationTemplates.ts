@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -209,7 +210,7 @@ const getPurchaseContractTemplate = (loanData: LoanData): string => {
   const earnestMoney = Math.round(propertyPrice * 0.03);
   const downPayment = Math.round(propertyPrice * 0.2) - earnestMoney;
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Real Estate Purchase Contract</div>
@@ -434,6 +435,8 @@ const getPurchaseContractTemplate = (loanData: LoanData): string => {
       
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Purchase Contract - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -502,7 +505,7 @@ const getPreliminaryTitleReportTemplate = (loanData: LoanData): string => {
   // Assessor's Parcel Number (APN)
   const apn = `${Math.floor(100 + Math.random() * 900)}-${Math.floor(100 + Math.random() * 900)}-${Math.floor(10 + Math.random() * 90)}`;
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Preliminary Title Report</div>
@@ -626,6 +629,8 @@ const getPreliminaryTitleReportTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Preliminary Title Report - ${loanData.borrowerName}`, content);
 };
 
 // Export all templates

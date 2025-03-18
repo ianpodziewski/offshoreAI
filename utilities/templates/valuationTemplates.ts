@@ -1,5 +1,5 @@
 import { LoanData } from '../loanGenerator';
-
+import { documentStyleService } from '../documentStyleService';
 /**
  * Valuation Templates
  * Returns HTML strings for valuation-related document types
@@ -172,7 +172,7 @@ const getAppraisalReportTemplate = (loanData: LoanData): string => {
     comparableSales.reduce((sum, comp) => sum + comp.price, 0) / comparableSales.length
   );
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Uniform Residential Appraisal Report</div>
@@ -291,6 +291,8 @@ const getAppraisalReportTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Appraisal Report - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -330,7 +332,7 @@ const getBrokerPriceOpinionTemplate = (loanData: LoanData): string => {
   
   const totalRepairCost = repairItems.reduce((sum, item) => sum + item.cost, 0);
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Broker Price Opinion</div>
@@ -464,6 +466,8 @@ const getBrokerPriceOpinionTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Broker Price Opinion - ${loanData.borrowerName}`, content);
 };
 
 // Export templates

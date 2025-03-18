@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -196,7 +197,7 @@ const getLeaseAgreementTemplate = (loanData: LoanData): string => {
   
   const propertyFeatures = getPropertyFeatures();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Residential Lease Agreement</div>
@@ -493,6 +494,8 @@ const getLeaseAgreementTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Lease Agreement - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -546,7 +549,7 @@ const getDscrCalculationWorksheetTemplate = (loanData: LoanData): string => {
   const dscrStatus = dscr >= 1.25 ? 'Strong' : dscr >= 1.0 ? 'Acceptable' : 'Insufficient';
   const dscrClass = dscr >= 1.25 ? 'text-success' : dscr >= 1.0 ? 'text-warning' : 'text-danger';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">DSCR Calculation Worksheet</div>
@@ -755,6 +758,8 @@ const getDscrCalculationWorksheetTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`DSCR Calculation Worksheet - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -792,7 +797,7 @@ const getPropertyManagementAgreementTemplate = (loanData: LoanData): string => {
   const agreementStartDate = formattedDate;
   const agreementEndDate = getFutureDate(initialTerm);
   
-  return `${baseStyle}
+  const content = ` 
     <div class="document">
       <div class="document-header">
         <div class="document-title">Property Management Agreement</div>
@@ -1053,6 +1058,8 @@ const getPropertyManagementAgreementTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Property Management Agreement - ${loanData.borrowerName}`, content);
 };
 
 // Export templates

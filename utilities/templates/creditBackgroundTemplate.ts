@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -418,7 +419,7 @@ export const getCreditReportTemplate = (loanData: LoanData): string => {
     return sum + (currentYear - year) * 12 + (currentMonth - month);
   }, 0) / accounts.length);
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Credit Report</div>
@@ -643,4 +644,6 @@ export const getCreditReportTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Credit Report - ${loanData.borrowerName}`, content);
 };

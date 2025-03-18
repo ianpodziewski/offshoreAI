@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -325,7 +326,7 @@ export const getAntiMoneyLaunderingDocTemplate = (loanData: LoanData): string =>
   
   const complianceOfficer = complianceOfficers[Math.floor(Math.random() * complianceOfficers.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -719,6 +720,8 @@ export const getAntiMoneyLaunderingDocTemplate = (loanData: LoanData): string =>
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Anti-Money Laundering Documentation - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -752,7 +755,7 @@ export const getPatriotActComplianceTemplate = (loanData: LoanData): string => {
   
   const complianceOfficer = complianceOfficers[Math.floor(Math.random() * complianceOfficers.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -1130,4 +1133,6 @@ export const getPatriotActComplianceTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`USA PATRIOT Act Compliance Form - ${loanData.borrowerName}`, content);
 };

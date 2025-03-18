@@ -1,6 +1,6 @@
 import { LoanDetails } from '../types/loanTypes';
 import { LoanData } from '../loanGenerator';
-
+import { documentStyleService } from '../documentStyleService';
 /**
  * Document templates for various funding-related documents used in hard money lending
  */
@@ -69,7 +69,7 @@ export const generateFinalTitlePolicy = (loanDetails: LoanDetails): string => {
     day: 'numeric',
   });
 
-  return `
+  const content = `
 FINAL TITLE INSURANCE POLICY
 
 POLICY NUMBER: FTP-${loanNumber}-${new Date().getFullYear()}
@@ -118,6 +118,8 @@ IN WITNESS WHEREOF, [Title Insurance Company Name] has caused this policy to be 
 ____________________________
 Authorized Signatory
 `;
+
+  return documentStyleService.wrapContentWithWatermark(`Final Title Policy - ${loanDetails.borrowerName}`, content);
 };
 
 /**
@@ -158,7 +160,7 @@ export const generateDisbursementInstructions = (loanDetails: LoanDetails): stri
   
   const netProceedsToClosing = loanAmount - totalFees;
 
-  return `
+  const content = `
 DISBURSEMENT INSTRUCTIONS
 
 LOAN NUMBER: ${loanNumber}
@@ -217,6 +219,8 @@ ________________________________
 Escrow Officer
 Date: ${closingDate}
 `;
+
+  return documentStyleService.wrapContentWithWatermark(`Disbursement Instructions - ${loanDetails.borrowerName}`, content);
 };
 
 /**
@@ -243,7 +247,7 @@ export const generateFundingAuthorization = (loanDetails: LoanDetails): string =
     day: 'numeric',
   });
 
-  return `
+  const content = `
 FUNDING AUTHORIZATION
 
 AUTHORIZATION NUMBER: FA-${loanNumber}
@@ -315,6 +319,8 @@ Name: [FUNDING MANAGER NAME]
 Phone: [PHONE NUMBER]
 Email: [EMAIL ADDRESS]
 `;
+
+  return documentStyleService.wrapContentWithWatermark(`Funding Authorization - ${loanDetails.borrowerName}`, content);
 };
 
 /**
@@ -351,7 +357,7 @@ export const generateEscrowAgreement = (loanDetails: LoanDetails): string => {
   // Calculate initial escrow deposit
   const initialEscrowDeposit = monthlyEscrowAmount * 2; // Two months of reserve
 
-  return `
+  const content = `
 ESCROW AGREEMENT
 
 THIS ESCROW AGREEMENT (the "Agreement") is made and entered into on ${currentDate}, by and between:
@@ -439,6 +445,8 @@ By: ________________________
 Title: _____________________
 Date: ${closingDate}
 `;
+
+  return documentStyleService.wrapContentWithWatermark(`Escrow Agreement - ${loanDetails.borrowerName}`, content);
 };
 
 /**
@@ -465,7 +473,7 @@ export const generateWiringInstructions = (loanDetails: LoanDetails): string => 
   // Calculate net amount after fees (simplified for example)
   const netLoanAmount = loanAmount * 0.97; // Assuming 3% in fees
 
-  return `
+  const content = `
 WIRE TRANSFER INSTRUCTIONS
 
 DATE: ${currentDate}
@@ -531,6 +539,8 @@ ${lenderName}
 DISCLAIMER:
 ${lenderName} is not responsible for any delay, failure of delivery, or misdirection of funds resulting from incorrect or incomplete wire instructions. The sender is responsible for confirming the accuracy of these instructions prior to sending funds.
 `;
+
+  return documentStyleService.wrapContentWithWatermark(`Wiring Instructions - ${loanDetails.borrowerName}`, content);
 };
 
 // Wrapper functions that adapt to LoanData

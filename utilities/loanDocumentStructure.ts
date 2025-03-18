@@ -147,10 +147,10 @@ export const DOCUMENT_STRUCTURE = {
     compliance_documents: {
       title: "Compliance Documents",
       documents: [
-        { docType: "state_lending_disclosures", label: "State-Specific Lending Disclosures", isRequired: true },
-        { docType: "federal_lending_disclosures", label: "Federal Lending Disclosures", isRequired: true },
+        { docType: "state_lending_disclosures", label: "State-Specific Lending Disclosures", isRequired: false },
+        { docType: "federal_lending_disclosures", label: "Federal Lending Disclosures", isRequired: false },
         { docType: "aml_documentation", label: "Anti-Money Laundering Documentation", isRequired: true },
-        { docType: "ofac_check", label: "OFAC Check", isRequired: true },
+        { docType: "ofac_check", label: "OFAC Check", isRequired: false },
         { docType: "patriot_act_compliance", label: "Patriot Act", isRequired: true }
       ]
     },
@@ -180,9 +180,9 @@ export const DOCUMENT_STRUCTURE = {
     payment_records: {
       title: "Payment Records",
       documents: [
-        { docType: "payment_history", label: "Payment history", isRequired: true },
-        { docType: "payment_receipts", label: "Payment receipts", isRequired: true },
-        { docType: "ach_authorization", label: "ACH authorization", isRequired: true },
+        { docType: "payment_history", label: "Payment history", isRequired: false },
+        { docType: "payment_receipts", label: "Payment receipts", isRequired: false },
+        { docType: "ach_authorization", label: "ACH authorization", isRequired: false },
         { docType: "late_notices", label: "Late notices", isRequired: false },
         { docType: "payment_modification", label: "Payment modification requests", isRequired: false }
       ]

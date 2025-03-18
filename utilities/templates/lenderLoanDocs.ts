@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -369,7 +370,7 @@ export const getLenderClosingChecklistTemplate = (loanData: LoanData): string =>
   
   const totalCompletionPercentage = Math.round((totalCompleted / totalDocuments) * 100);
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -575,6 +576,8 @@ export const getLenderClosingChecklistTemplate = (loanData: LoanData): string =>
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Loan Closing Checklist - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -620,7 +623,7 @@ export const getPromissoryNoteTemplate = (loanData: LoanData): string => {
   // Default payment day if not provided in loanData
   const paymentDay = '1st';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">Promissory Note</div>
@@ -774,6 +777,8 @@ export const getPromissoryNoteTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Promissory Note - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -815,7 +820,7 @@ export const getDeedOfTrustTemplate = (loanData: LoanData): string => {
   // Legal description (placeholder)
   const legalDescription = `LOT ${Math.floor(Math.random() * 100) + 1} OF BLOCK ${Math.floor(Math.random() * 50) + 1} OF ${loanData.propertyAddress.split(',')[0].toUpperCase()} SUBDIVISION, ACCORDING TO THE PLAT THEREOF RECORDED IN PLAT BOOK ${Math.floor(Math.random() * 100) + 1}, PAGE ${Math.floor(Math.random() * 200) + 1}, OF THE PUBLIC RECORDS OF ${loanData.propertyAddress.split(',').pop()?.trim().toUpperCase() || 'THE COUNTY'}, TOGETHER WITH ALL IMPROVEMENTS NOW OR HEREAFTER ERECTED ON THE PROPERTY, AND ALL EASEMENTS, APPURTENANCES, AND FIXTURES NOW OR HEREAFTER A PART OF THE PROPERTY.`;
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">${loanData.loanType.includes('construction') ? 'Construction' : ''} Deed of Trust</div>
@@ -940,6 +945,8 @@ export const getDeedOfTrustTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Deed of Trust - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -998,7 +1005,7 @@ export const getLoanAgreementTemplate = (loanData: LoanData): string => {
   
   const loanOfficer = loanOfficers[Math.floor(Math.random() * loanOfficers.length)];
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="letterhead">
         <div class="letterhead-logo">
@@ -1274,4 +1281,6 @@ export const getLoanAgreementTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Loan Agreement - ${loanData.borrowerName}`, content);
 };

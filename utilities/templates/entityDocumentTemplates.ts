@@ -1,3 +1,4 @@
+import { documentStyleService } from '../documentStyleService';
 import { LoanData } from '../loanGenerator';
 
 /**
@@ -93,7 +94,7 @@ const getFormationDocumentsTemplate = (loanData: LoanData): string => {
   const entityType = loanData.entityType || 'Limited Liability Company';
   const entityState = loanData.stateOfFormation || 'Delaware';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">CERTIFICATE OF FORMATION</div>
@@ -150,6 +151,8 @@ const getFormationDocumentsTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Certificate of Formation - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -161,7 +164,7 @@ const getOperatingAgreementTemplate = (loanData: LoanData): string => {
   const entityType = loanData.entityType || 'Limited Liability Company';
   const entityState = loanData.stateOfFormation || 'Delaware';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">${entityType === 'Limited Liability Company' ? 'OPERATING AGREEMENT' : 'BYLAWS'}</div>
@@ -228,6 +231,8 @@ const getOperatingAgreementTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Operating Agreement - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -239,7 +244,7 @@ const getCertificateGoodStandingTemplate = (loanData: LoanData): string => {
   const entityType = loanData.entityType || 'Limited Liability Company';
   const entityState = loanData.stateOfFormation || 'Delaware';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">CERTIFICATE OF GOOD STANDING</div>
@@ -307,6 +312,8 @@ const getCertificateGoodStandingTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Certificate of Good Standing - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -317,7 +324,7 @@ const getEinDocumentationTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   const entityType = loanData.entityType || 'Limited Liability Company';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div style="text-align: center; margin-bottom: 20px;">
@@ -380,6 +387,8 @@ const getEinDocumentationTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`EIN Documentation - ${loanData.borrowerName}`, content);
 };
 
 /**
@@ -390,7 +399,7 @@ const getResolutionToBorrowTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   const entityType = loanData.entityType || 'Limited Liability Company';
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">RESOLUTION TO BORROW</div>
@@ -467,6 +476,8 @@ const getResolutionToBorrowTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Resolution to Borrow - ${loanData.borrowerName}`, content);
 };
 
 // Export all templates
