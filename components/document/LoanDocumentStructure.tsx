@@ -28,7 +28,9 @@ import {
   AlertCircle,
   Eye,
   Calendar,
-  HardDrive
+  HardDrive,
+  Trash2,
+  Plus
 } from 'lucide-react';
 import { DOCUMENT_STRUCTURE, DocumentCategory } from '@/utilities/loanDocumentStructure';
 import { formatFileSize } from '@/utilities/loanDocumentService';
@@ -82,6 +84,25 @@ export function LoanDocumentStructure({
   // Get document if uploaded
   const getDocument = (docType: string) => {
     return uploadedDocuments.find(doc => doc.docType === docType);
+  };
+  
+  // Delete document 
+  const handleDeleteDocument = (e: React.MouseEvent, documentId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Show confirmation dialog
+    if (window.confirm("Are you sure you want to delete this document?")) {
+      // Filter out the document with the given ID
+      const updatedDocuments = uploadedDocuments.filter(doc => doc.id !== documentId);
+      
+      // Update the parent component with the new documents array
+      if (onViewDocument) {
+        // We're using onViewDocument as a handler to pass the ID to the parent
+        // The parent component will need to handle the delete operation
+        onViewDocument(`delete_${documentId}`);
+      }
+    }
   };
   
   // Format date
@@ -201,29 +222,38 @@ export function LoanDocumentStructure({
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, docType, section)}
         >
-          <div className="py-4 px-5">
+          <div className="py-4 px-5 flex justify-between items-center">
             <h3 className="text-base text-white">{label}</h3>
-            <p className="text-xs text-gray-400 mt-1">
-              {isUploaded ? "Click to add file" : "Click to upload or drag and drop"}
-            </p>
+            <Plus size={18} className="text-blue-500" />
           </div>
         </div>
         
         {isUploaded && document && (
           <div className="bg-[#070B15] border border-t-0 border-gray-800 rounded-b-lg py-4 px-5">
             <div className="flex justify-between items-center">
-              <a 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  openDocumentInNewTab(document);
-                }}
-                className="text-blue-500 hover:underline font-medium"
-              >
-                {document.filename}
-              </a>
-              <div className="text-xs text-gray-400">
-                {formatDate(document.dateUploaded)}
+              <div className="flex items-center">
+                <a 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    openDocumentInNewTab(document);
+                  }}
+                  className="text-blue-500 hover:underline font-medium"
+                >
+                  {document.filename}
+                </a>
+              </div>
+              <div className="flex items-center">
+                <div className="text-xs text-gray-400 mr-3">
+                  {formatDate(document.dateUploaded)}
+                </div>
+                <button
+                  onClick={(e) => document && handleDeleteDocument(e, document.id)}
+                  className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-100/10"
+                  title="Delete document"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           </div>

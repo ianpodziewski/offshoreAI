@@ -167,6 +167,29 @@ export default function LoanDocumentsPage() {
   
   // Handle document view
   const handleViewDocument = (documentId: string) => {
+    // Check if this is a delete action
+    if (documentId.startsWith('delete_')) {
+      const idToDelete = documentId.replace('delete_', '');
+      
+      // Use the loanDocumentService to delete the document
+      const success = loanDocumentService.deleteDocument(idToDelete);
+      
+      if (success) {
+        // Filter out the document with this ID from the local state
+        const updatedDocuments = documents.filter(doc => doc.id !== idToDelete);
+        setDocuments(updatedDocuments);
+        
+        // Update completion status
+        if (loan?.loanType) {
+          const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+          setCompletionStatus(status);
+        }
+      }
+      
+      return;
+    }
+    
+    // Regular view document action
     const document = documents.find(doc => doc.id === documentId);
     if (document) {
       setSelectedDocument(document);
