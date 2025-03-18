@@ -51,6 +51,7 @@ export function LoanDocumentStructure({
   category = 'borrower'
 }: LoanDocumentStructureProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
+  const [draggingDocType, setDraggingDocType] = useState<string | null>(null);
   
   // Toggle category expansion
   const toggleCategory = (category: string) => {
@@ -93,6 +94,69 @@ export function LoanDocumentStructure({
     });
   };
   
+  // Handle drag and drop functionality
+  const handleDragOver = (e: React.DragEvent, docType: string) => {
+    e.preventDefault();
+    setDraggingDocType(docType);
+  };
+  
+  const handleDragLeave = () => {
+    setDraggingDocType(null);
+  };
+  
+  const handleDrop = (e: React.DragEvent, docType: string, section: string) => {
+    e.preventDefault();
+    setDraggingDocType(null);
+    
+    // If there's an upload handler, call it
+    if (onUploadDocument) {
+      onUploadDocument(category, section, docType);
+    }
+  };
+  
+  // Open document in new tab
+  const openDocumentInNewTab = (document: any) => {
+    if (document && document.content) {
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>${document.filename}</title>
+              <style>
+                body { 
+                  font-family: Arial, sans-serif;
+                  line-height: 1.6;
+                  padding: 20px;
+                  max-width: 800px;
+                  margin: 0 auto;
+                }
+                .document-header {
+                  text-align: center;
+                  margin-bottom: 30px;
+                  border-bottom: 2px solid #1e5a9a;
+                  padding-bottom: 20px;
+                }
+                .document-content {
+                  padding: 20px;
+                  background-color: white;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="document-header">
+                <h1>${document.filename}</h1>
+              </div>
+              <div class="document-content">
+                ${document.content}
+              </div>
+            </body>
+          </html>
+        `);
+      }
+    }
+  };
+  
   // Render status badge
   const renderStatusBadge = (docType: string, isRequired: boolean) => {
     const status = getDocumentStatus(docType);
@@ -119,71 +183,16 @@ export function LoanDocumentStructure({
   const renderDocumentItem = (category: string, section: string, docType: string, label: string, isRequired: boolean) => {
     const isUploaded = isDocumentUploaded(docType);
     const document = getDocument(docType);
+    const isDragging = draggingDocType === docType;
     
     const handleHeaderClick = () => {
       // If document exists, open in new tab
       if (document && document.content) {
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(`
-            <html>
-              <head>
-                <title>${document.filename}</title>
-                <style>
-                  body { 
-                    font-family: Arial, sans-serif;
-                    line-height: 1.6;
-                    padding: 20px;
-                    max-width: 800px;
-                    margin: 0 auto;
-                  }
-                  .document-header {
-                    text-align: center;
-                    margin-bottom: 30px;
-                    border-bottom: 2px solid #1e5a9a;
-                    padding-bottom: 20px;
-                  }
-                  .document-content {
-                    padding: 20px;
-                    background-color: white;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="document-header">
-                  <h1>${document.filename}</h1>
-                </div>
-                <div class="document-content">
-                  ${document.content}
-                </div>
-              </body>
-            </html>
-          `);
-        }
-      } else {
+        openDocumentInNewTab(document);
+      } else if (onUploadDocument) {
         // If no document, trigger file upload
-        onUploadDocument && onUploadDocument(category, section, docType);
+        onUploadDocument(category, section, docType);
       }
-    };
-    
-    // Handle drag and drop functionality
-    const [isDragging, setIsDragging] = useState(false);
-    
-    const handleDragOver = (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(true);
-    };
-    
-    const handleDragLeave = () => {
-      setIsDragging(false);
-    };
-    
-    const handleDrop = (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      
-      // Here we'd normally handle the file, but for now just trigger the upload modal
-      onUploadDocument && onUploadDocument(category, section, docType);
     };
     
     return (
@@ -191,9 +200,9 @@ export function LoanDocumentStructure({
         <div 
           className={`bg-[#1A2234] border-gray-800 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-[#252e47] ${isDragging ? 'border-blue-500 border-2' : 'border'} ${!isUploaded ? 'rounded-b-lg' : 'rounded-b-none'}`}
           onClick={handleHeaderClick}
-          onDragOver={handleDragOver}
+          onDragOver={(e) => handleDragOver(e, docType)}
           onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
+          onDrop={(e) => handleDrop(e, docType, section)}
         >
           <div className="py-4 px-5">
             <h3 className="text-base text-white">{label}</h3>
@@ -210,46 +219,7 @@ export function LoanDocumentStructure({
                 href="#" 
                 onClick={(e) => {
                   e.preventDefault();
-                  // Only open in a new tab
-                  if (document.content) {
-                    const newWindow = window.open('', '_blank');
-                    if (newWindow) {
-                      newWindow.document.write(`
-                        <html>
-                          <head>
-                            <title>${document.filename}</title>
-                            <style>
-                              body { 
-                                font-family: Arial, sans-serif;
-                                line-height: 1.6;
-                                padding: 20px;
-                                max-width: 800px;
-                                margin: 0 auto;
-                              }
-                              .document-header {
-                                text-align: center;
-                                margin-bottom: 30px;
-                                border-bottom: 2px solid #1e5a9a;
-                                padding-bottom: 20px;
-                              }
-                              .document-content {
-                                padding: 20px;
-                                background-color: white;
-                              }
-                            </style>
-                          </head>
-                          <body>
-                            <div class="document-header">
-                              <h1>${document.filename}</h1>
-                            </div>
-                            <div class="document-content">
-                              ${document.content}
-                            </div>
-                          </body>
-                        </html>
-                      `);
-                    }
-                  }
+                  openDocumentInNewTab(document);
                 }}
                 className="text-blue-500 hover:underline font-medium"
               >
