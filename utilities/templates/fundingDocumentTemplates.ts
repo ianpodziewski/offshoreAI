@@ -5,6 +5,36 @@ import { documentStyleService } from '../documentStyleService';
  * Document templates for various funding-related documents used in hard money lending
  */
 
+// Helper functions for consistent formatting
+// Format date helper
+const formatDate = (): string => {
+  return new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
+// Format currency helper
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2
+  }).format(amount);
+};
+
+// Get a future date based on months from now
+const getFutureDate = (monthsFromNow: number): string => {
+  const futureDate = new Date();
+  futureDate.setMonth(futureDate.getMonth() + monthsFromNow);
+  return futureDate.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+};
+
 // Adapter function to convert LoanData to LoanDetails
 const adaptLoanDataToLoanDetails = (loanData: LoanData): LoanDetails => {
   // Extract city, state, and zip from the propertyAddress if possible
@@ -63,61 +93,121 @@ export const generateFinalTitlePolicy = (loanDetails: LoanDetails): string => {
     loanNumber,
   } = loanDetails;
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const currentDate = formatDate();
+  const policyAmount = loanAmount * 1.1; // 110% of loan amount
+  const policyNumber = `FTP-${loanNumber}-${new Date().getFullYear()}`;
+  
+  // Generate title insurance company information
+  const titleCompanies = [
+    'Fidelity National Title Insurance Company',
+    'First American Title Insurance Company',
+    'Old Republic National Title Insurance Company',
+    'Stewart Title Guaranty Company'
+  ];
+  
+  const titleCompany = titleCompanies[Math.floor(Math.random() * titleCompanies.length)];
+  const titleCompanyState = ['California', 'Delaware', 'New York', 'Texas'][Math.floor(Math.random() * 4)];
 
   const content = `
-FINAL TITLE INSURANCE POLICY
-
-POLICY NUMBER: FTP-${loanNumber}-${new Date().getFullYear()}
-DATE OF POLICY: ${currentDate}
-POLICY AMOUNT: $${(loanAmount * 1.1).toFixed(2)}
-
-INSURED: ${lenderName}
-BORROWER: ${borrowerName}
-PROPERTY ADDRESS: ${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}
-
-PROPERTY TYPE: ${propertyType}
-LOAN CLOSING DATE: ${closingDate}
-LOAN AMOUNT: $${loanAmount.toFixed(2)}
-
-This Final Title Insurance Policy ("Policy") is issued by [Title Insurance Company Name], a corporation organized and existing under the laws of the State of [State], herein called the "Company."
-
-COVERAGE STATEMENT:
-Subject to the exclusions from coverage, the exceptions from coverage contained in Schedule B, and the conditions and stipulations, [Title Insurance Company Name], a [State] corporation, herein called the Company, insures, as of the Date of Policy shown above, against loss or damage, not exceeding the Amount of Insurance stated above, sustained or incurred by the insured by reason of:
-
-1. Title to the estate or interest described in Schedule A being vested other than as stated therein;
-2. Any defect in or lien or encumbrance on the title;
-3. Unmarketability of the title;
-4. Lack of right of access to and from the land;
-5. The invalidity or unenforceability of the lien of the insured mortgage upon the title;
-6. The priority of any lien or encumbrance over the lien of the insured mortgage;
-7. Lack of priority of the lien of the insured mortgage over any statutory lien for services, labor, or material arising from an improvement or work related to the land which is contracted for or commenced prior to Date of Policy;
-8. The invalidity or unenforceability of any assignment of the insured mortgage, provided the assignment is shown in Schedule A, or the failure of the assignment shown in Schedule A to vest title to the insured mortgage in the named insured assignee free and clear of all liens.
-
-SCHEDULE A:
-The estate or interest in the land which is encumbered by the insured mortgage is Fee Simple.
-Title to the estate or interest in the land is vested in: ${borrowerName}
-The insured mortgage and assignments thereof, if any, are described as follows:
-Deed of Trust executed by ${borrowerName} to secure a note in the original principal amount of $${loanAmount.toFixed(2)}, dated ${closingDate}, in favor of ${lenderName}.
-
-SCHEDULE B:
-This policy does not insure against loss or damage by reason of the following:
-1. Property taxes for the current fiscal year, and subsequent years, not yet due and payable.
-2. Easements, restrictions, and conditions of record.
-3. Any facts, rights, interests, or claims that are not shown by the public records but that could be ascertained by an inspection of the land or by making inquiry of persons in possession of the land.
-4. Any encroachment, encumbrance, violation, variation, or adverse circumstance affecting the title that would be disclosed by an accurate and complete land survey of the land.
-
-IN WITNESS WHEREOF, [Title Insurance Company Name] has caused this policy to be signed and sealed as of the Date of Policy shown above.
-
-[Title Insurance Company Name]
-
-____________________________
-Authorized Signatory
-`;
+    <div class="document">
+      <div class="document-header">
+        <div class="document-title">Final Title Insurance Policy</div>
+        <div class="document-subtitle">Date: ${currentDate}</div>
+      </div>
+      
+      <div class="document-section">
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Policy Number:</th>
+              <td>${policyNumber}</td>
+            </tr>
+            <tr>
+              <th>Date of Policy:</th>
+              <td>${currentDate}</td>
+            </tr>
+            <tr>
+              <th>Policy Amount:</th>
+              <td>${formatCurrency(policyAmount)}</td>
+            </tr>
+            <tr>
+              <th>Insured:</th>
+              <td>${lenderName}</td>
+            </tr>
+            <tr>
+              <th>Borrower:</th>
+              <td>${borrowerName}</td>
+            </tr>
+            <tr>
+              <th>Property Address:</th>
+              <td>${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}</td>
+            </tr>
+            <tr>
+              <th>Property Type:</th>
+              <td>${propertyType}</td>
+            </tr>
+            <tr>
+              <th>Loan Closing Date:</th>
+              <td>${closingDate}</td>
+            </tr>
+            <tr>
+              <th>Loan Amount:</th>
+              <td>${formatCurrency(loanAmount)}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <p>This Final Title Insurance Policy ("Policy") is issued by ${titleCompany}, a corporation organized and existing under the laws of the State of ${titleCompanyState}, herein called the "Company."</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Coverage Statement</div>
+        <p>Subject to the exclusions from coverage, the exceptions from coverage contained in Schedule B, and the conditions and stipulations, ${titleCompany}, a ${titleCompanyState} corporation, herein called the Company, insures, as of the Date of Policy shown above, against loss or damage, not exceeding the Amount of Insurance stated above, sustained or incurred by the insured by reason of:</p>
+        
+        <ol>
+          <li>Title to the estate or interest described in Schedule A being vested other than as stated therein;</li>
+          <li>Any defect in or lien or encumbrance on the title;</li>
+          <li>Unmarketability of the title;</li>
+          <li>Lack of right of access to and from the land;</li>
+          <li>The invalidity or unenforceability of the lien of the insured mortgage upon the title;</li>
+          <li>The priority of any lien or encumbrance over the lien of the insured mortgage;</li>
+          <li>Lack of priority of the lien of the insured mortgage over any statutory lien for services, labor, or material arising from an improvement or work related to the land which is contracted for or commenced prior to Date of Policy;</li>
+          <li>The invalidity or unenforceability of any assignment of the insured mortgage, provided the assignment is shown in Schedule A, or the failure of the assignment shown in Schedule A to vest title to the insured mortgage in the named insured assignee free and clear of all liens.</li>
+        </ol>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Schedule A</div>
+        <p>The estate or interest in the land which is encumbered by the insured mortgage is <strong>Fee Simple</strong>.</p>
+        <p>Title to the estate or interest in the land is vested in: <strong>${borrowerName}</strong></p>
+        <p>The insured mortgage and assignments thereof, if any, are described as follows:</p>
+        <p>Deed of Trust executed by ${borrowerName} to secure a note in the original principal amount of ${formatCurrency(loanAmount)}, dated ${closingDate}, in favor of ${lenderName}.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Schedule B</div>
+        <p>This policy does not insure against loss or damage by reason of the following:</p>
+        
+        <ol>
+          <li>Property taxes for the current fiscal year, and subsequent years, not yet due and payable.</li>
+          <li>Easements, restrictions, and conditions of record.</li>
+          <li>Any facts, rights, interests, or claims that are not shown by the public records but that could be ascertained by an inspection of the land or by making inquiry of persons in possession of the land.</li>
+          <li>Any encroachment, encumbrance, violation, variation, or adverse circumstance affecting the title that would be disclosed by an accurate and complete land survey of the land.</li>
+        </ol>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Witness</div>
+        <p>IN WITNESS WHEREOF, ${titleCompany} has caused this policy to be signed and sealed as of the Date of Policy shown above.</p>
+        
+        <div class="signature-section">
+          <div class="signature-line"></div>
+          <div>${titleCompany}</div>
+          <div>Authorized Signatory</div>
+        </div>
+      </div>
+    </div>
+  `;
 
   return documentStyleService.wrapContentWithWatermark(`Final Title Policy - ${loanDetails.borrowerName}`, content);
 };
@@ -140,14 +230,11 @@ export const generateDisbursementInstructions = (loanDetails: LoanDetails): stri
     loanTerm,
   } = loanDetails;
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const currentDate = formatDate();
 
   // Calculate fees
-  const origFeeAmount = loanAmount * (originationFee / 100);
+  const origFeePercent = originationFee || 2; // Default to 2% if not provided
+  const origFeeAmount = loanAmount * (origFeePercent / 100);
   const titleFees = 1200;
   const escrowFees = 850;
   const appraisalFee = 700;
@@ -161,64 +248,153 @@ export const generateDisbursementInstructions = (loanDetails: LoanDetails): stri
   const netProceedsToClosing = loanAmount - totalFees;
 
   const content = `
-DISBURSEMENT INSTRUCTIONS
-
-LOAN NUMBER: ${loanNumber}
-DATE: ${currentDate}
-CLOSING DATE: ${closingDate}
-BORROWER: ${borrowerName}
-PROPERTY ADDRESS: ${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}
-LENDER: ${lenderName}
-
-LOAN INFORMATION:
-Loan Amount: $${loanAmount.toFixed(2)}
-Interest Rate: ${interestRate}%
-Loan Term: ${loanTerm} months
-Origination Fee: ${originationFee}% ($${origFeeAmount.toFixed(2)})
-
-DISBURSEMENT SCHEDULE:
-
-FROM LOAN PROCEEDS:
-
-1. Fees Due to Lender:
-   a. Origination Fee: $${origFeeAmount.toFixed(2)}
-   b. Document Preparation Fee: $${documentPreparationFee.toFixed(2)}
-
-2. Third-Party Fees:
-   a. Title Insurance Premium: $${titleFees.toFixed(2)}
-   b. Escrow/Closing Fee: $${escrowFees.toFixed(2)}
-   c. Appraisal Fee: $${appraisalFee.toFixed(2)}
-   d. Recording Fees: $${recordingFees.toFixed(2)}
-   e. Wire Transfer Fee: $${wireTransferFee.toFixed(2)}
-
-TOTAL FEES: $${totalFees.toFixed(2)}
-
-NET LOAN PROCEEDS TO CLOSING: $${netProceedsToClosing.toFixed(2)}
-
-HOLDBACK RESERVES (if applicable): $0.00
-
-INSTRUCTIONS TO TITLE/ESCROW:
-
-1. Please disburse the funds as indicated above.
-2. The net proceeds should be disbursed to the borrower after all fees are paid and all conditions for funding have been satisfied.
-3. Do not release any funds until the Deed of Trust/Mortgage has been properly recorded.
-4. Verify that all outstanding liens, if any, have been paid in full or subordinated as required.
-5. Ensure that the title insurance policy is issued without delay following closing and recording.
-
-These disbursement instructions are approved and authorized:
-
-________________________________
-${borrowerName}, Borrower  
-Date: ${closingDate}
-
-________________________________
-Authorized Representative for ${lenderName}
-Date: ${closingDate}
-
-________________________________
-Escrow Officer
-Date: ${closingDate}
-`;
+    <div class="document">
+      <div class="document-header">
+        <div class="document-title">Disbursement Instructions</div>
+        <div class="document-subtitle">Date: ${currentDate}</div>
+      </div>
+      
+      <div class="document-section">
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Loan Number:</th>
+              <td>${loanNumber}</td>
+            </tr>
+            <tr>
+              <th>Closing Date:</th>
+              <td>${closingDate}</td>
+            </tr>
+            <tr>
+              <th>Borrower:</th>
+              <td>${borrowerName}</td>
+            </tr>
+            <tr>
+              <th>Property Address:</th>
+              <td>${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}</td>
+            </tr>
+            <tr>
+              <th>Lender:</th>
+              <td>${lenderName}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Loan Information</div>
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Loan Amount:</th>
+              <td>${formatCurrency(loanAmount)}</td>
+            </tr>
+            <tr>
+              <th>Interest Rate:</th>
+              <td>${interestRate}%</td>
+            </tr>
+            <tr>
+              <th>Loan Term:</th>
+              <td>${loanTerm} months</td>
+            </tr>
+            <tr>
+              <th>Origination Fee:</th>
+              <td>${origFeePercent}% (${formatCurrency(origFeeAmount)})</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Disbursement Schedule</div>
+        <p class="subsection-title">From Loan Proceeds:</p>
+        
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th colspan="2">1. Fees Due to Lender:</th>
+            </tr>
+            <tr>
+              <td style="padding-left: 20px;">a. Origination Fee:</td>
+              <td>${formatCurrency(origFeeAmount)}</td>
+            </tr>
+            <tr>
+              <td style="padding-left: 20px;">b. Document Preparation Fee:</td>
+              <td>${formatCurrency(documentPreparationFee)}</td>
+            </tr>
+            <tr>
+              <th colspan="2">2. Third-Party Fees:</th>
+            </tr>
+            <tr>
+              <td style="padding-left: 20px;">a. Title Insurance Premium:</td>
+              <td>${formatCurrency(titleFees)}</td>
+            </tr>
+            <tr>
+              <td style="padding-left: 20px;">b. Escrow/Closing Fee:</td>
+              <td>${formatCurrency(escrowFees)}</td>
+            </tr>
+            <tr>
+              <td style="padding-left: 20px;">c. Appraisal Fee:</td>
+              <td>${formatCurrency(appraisalFee)}</td>
+            </tr>
+            <tr>
+              <td style="padding-left: 20px;">d. Recording Fees:</td>
+              <td>${formatCurrency(recordingFees)}</td>
+            </tr>
+            <tr>
+              <td style="padding-left: 20px;">e. Wire Transfer Fee:</td>
+              <td>${formatCurrency(wireTransferFee)}</td>
+            </tr>
+            <tr class="total-row">
+              <th>TOTAL FEES:</th>
+              <td>${formatCurrency(totalFees)}</td>
+            </tr>
+            <tr class="total-row">
+              <th>NET LOAN PROCEEDS TO CLOSING:</th>
+              <td>${formatCurrency(netProceedsToClosing)}</td>
+            </tr>
+            <tr>
+              <th>HOLDBACK RESERVES (if applicable):</th>
+              <td>${formatCurrency(0)}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Instructions to Title/Escrow</div>
+        <ol>
+          <li>Please disburse the funds as indicated above.</li>
+          <li>The net proceeds should be disbursed to the borrower after all fees are paid and all conditions for funding have been satisfied.</li>
+          <li>Do not release any funds until the Deed of Trust/Mortgage has been properly recorded.</li>
+          <li>Verify that all outstanding liens, if any, have been paid in full or subordinated as required.</li>
+          <li>Ensure that the title insurance policy is issued without delay following closing and recording.</li>
+        </ol>
+        
+        <div class="highlight-box">
+          <p>These disbursement instructions are approved and authorized:</p>
+        </div>
+        
+        <div class="signature-section">
+          <div class="signature-line"></div>
+          <div>${borrowerName}, Borrower</div>
+          <div>Date: ${closingDate}</div>
+          
+          <div style="margin-top: 30px;">
+            <div class="signature-line"></div>
+            <div>Authorized Representative for ${lenderName}</div>
+            <div>Date: ${closingDate}</div>
+          </div>
+          
+          <div style="margin-top: 30px;">
+            <div class="signature-line"></div>
+            <div>Escrow Officer</div>
+            <div>Date: ${closingDate}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 
   return documentStyleService.wrapContentWithWatermark(`Disbursement Instructions - ${loanDetails.borrowerName}`, content);
 };
@@ -241,84 +417,169 @@ export const generateFundingAuthorization = (loanDetails: LoanDetails): string =
     loanTerm,
   } = loanDetails;
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const currentDate = formatDate();
+  const authorizationNumber = `FA-${loanNumber}`;
+  const expirationDate = getFutureDate(0.5); // 15 days from now
+  
+  // Generate funding manager information
+  const fundingManagers = [
+    { name: 'Rebecca Wilson', phone: '(212) 555-3456', email: 'rwilson@harringtoncapital.com' },
+    { name: 'Anthony Parker', phone: '(212) 555-4567', email: 'aparker@harringtoncapital.com' },
+    { name: 'Michelle Rodriguez', phone: '(212) 555-5678', email: 'mrodriguez@harringtoncapital.com' }
+  ];
+  
+  const fundingManager = fundingManagers[Math.floor(Math.random() * fundingManagers.length)];
 
   const content = `
-FUNDING AUTHORIZATION
-
-AUTHORIZATION NUMBER: FA-${loanNumber}
-DATE: ${currentDate}
-
-TO: [TITLE/ESCROW COMPANY]
-RE: Loan Funding Authorization for Loan #${loanNumber}
-
-LOAN INFORMATION:
-Borrower(s): ${borrowerName}
-Property Address: ${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}
-Property Type: ${propertyType}
-Loan Amount: $${loanAmount.toFixed(2)}
-Interest Rate: ${interestRate}%
-Loan Term: ${loanTerm} months
-Scheduled Closing Date: ${closingDate}
-Lender: ${lenderName}
-
-This document serves as formal authorization to fund the above-referenced loan. The undersigned, as an authorized representative of ${lenderName} ("Lender"), hereby authorizes the funding of the above-referenced loan subject to the following conditions being met:
-
-FUNDING CONDITIONS:
-
-1. Receipt and approval of properly executed loan documents, including but not limited to:
-   - Promissory Note
-   - Deed of Trust/Mortgage
-   - Closing Disclosure/Settlement Statement
-   - Disbursement Instructions
-   - Escrow Instructions
-   - Borrower's Affidavit
-   - Insurance Verification (with Lender listed as mortgagee/loss payee)
-   - All applicable riders and addenda
-
-2. Confirmation that the title insurance policy will be issued with no exceptions other than those approved by Lender in writing.
-
-3. Verification that all property taxes are current.
-
-4. Confirmation that hazard insurance is in place with appropriate coverage amounts and with Lender properly listed as mortgagee/loss payee.
-
-5. Verification that all required inspections have been completed and approved.
-
-6. Confirmation that all existing liens and encumbrances have been paid off or subordinated as required.
-
-7. Receipt of a clear final inspection report (if applicable).
-
-8. All conditions listed in the Loan Commitment Letter have been satisfied.
-
-AUTHORIZATION:
-
-Upon satisfaction of all conditions listed above, the Lender hereby authorizes the disbursement of loan funds in the amount of $${loanAmount.toFixed(2)} in accordance with the Disbursement Instructions provided separately.
-
-EXPIRATION:
-
-This Funding Authorization expires if funding does not occur by the close of business on [EXPIRATION DATE - 10 BUSINESS DAYS FROM ISSUE]. Any funding after this date requires a new authorization from Lender.
-
-Authorized and Approved:
-
-________________________________
-Authorized Representative for ${lenderName}
-Title: [TITLE]
-Date: ${currentDate}
-
-________________________________
-Funding Department Approval
-Date: ${currentDate}
-
-CONTACT INFORMATION:
-For questions regarding this Funding Authorization, please contact:
-Name: [FUNDING MANAGER NAME]
-Phone: [PHONE NUMBER]
-Email: [EMAIL ADDRESS]
-`;
+    <div class="document">
+      <div class="document-header">
+        <div class="document-title">Funding Authorization</div>
+        <div class="document-subtitle">Date: ${currentDate}</div>
+      </div>
+      
+      <div class="document-section">
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Authorization Number:</th>
+              <td>${authorizationNumber}</td>
+            </tr>
+            <tr>
+              <th>To:</th>
+              <td>[TITLE/ESCROW COMPANY]</td>
+            </tr>
+            <tr>
+              <th>RE:</th>
+              <td>Loan Funding Authorization for Loan #${loanNumber}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Loan Information</div>
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Borrower(s):</th>
+              <td>${borrowerName}</td>
+            </tr>
+            <tr>
+              <th>Property Address:</th>
+              <td>${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}</td>
+            </tr>
+            <tr>
+              <th>Property Type:</th>
+              <td>${propertyType}</td>
+            </tr>
+            <tr>
+              <th>Loan Amount:</th>
+              <td>${formatCurrency(loanAmount)}</td>
+            </tr>
+            <tr>
+              <th>Interest Rate:</th>
+              <td>${interestRate}%</td>
+            </tr>
+            <tr>
+              <th>Loan Term:</th>
+              <td>${loanTerm} months</td>
+            </tr>
+            <tr>
+              <th>Scheduled Closing Date:</th>
+              <td>${closingDate}</td>
+            </tr>
+            <tr>
+              <th>Lender:</th>
+              <td>${lenderName}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <p>This document serves as formal authorization to fund the above-referenced loan. The undersigned, as an authorized representative of ${lenderName} ("Lender"), hereby authorizes the funding of the above-referenced loan subject to the following conditions being met:</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Funding Conditions</div>
+        
+        <ol>
+          <li>
+            <strong>Receipt and approval of properly executed loan documents, including but not limited to:</strong>
+            <ul>
+              <li>Promissory Note</li>
+              <li>Deed of Trust/Mortgage</li>
+              <li>Closing Disclosure/Settlement Statement</li>
+              <li>Disbursement Instructions</li>
+              <li>Escrow Instructions</li>
+              <li>Borrower's Affidavit</li>
+              <li>Insurance Verification (with Lender listed as mortgagee/loss payee)</li>
+              <li>All applicable riders and addenda</li>
+            </ul>
+          </li>
+          <li>Confirmation that the title insurance policy will be issued with no exceptions other than those approved by Lender in writing.</li>
+          <li>Verification that all property taxes are current.</li>
+          <li>Confirmation that hazard insurance is in place with appropriate coverage amounts and with Lender properly listed as mortgagee/loss payee.</li>
+          <li>Verification that all required inspections have been completed and approved.</li>
+          <li>Confirmation that all existing liens and encumbrances have been paid off or subordinated as required.</li>
+          <li>Receipt of a clear final inspection report (if applicable).</li>
+          <li>All conditions listed in the Loan Commitment Letter have been satisfied.</li>
+        </ol>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Authorization</div>
+        <div class="highlight-box">
+          <p>Upon satisfaction of all conditions listed above, the Lender hereby authorizes the disbursement of loan funds in the amount of ${formatCurrency(loanAmount)} in accordance with the Disbursement Instructions provided separately.</p>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Expiration</div>
+        <div class="warning-box">
+          <p>This Funding Authorization expires if funding does not occur by the close of business on ${expirationDate}. Any funding after this date requires a new authorization from Lender.</p>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Approval</div>
+        <p>Authorized and Approved:</p>
+        
+        <div class="signature-section">
+          <div class="signature-line"></div>
+          <div>Authorized Representative for ${lenderName}</div>
+          <div>Title: [TITLE]</div>
+          <div>Date: ${currentDate}</div>
+          
+          <div style="margin-top: 30px;">
+            <div class="signature-line"></div>
+            <div>Funding Department Approval</div>
+            <div>Date: ${currentDate}</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Contact Information</div>
+        <p>For questions regarding this Funding Authorization, please contact:</p>
+        
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Name:</th>
+              <td>${fundingManager.name}</td>
+            </tr>
+            <tr>
+              <th>Phone:</th>
+              <td>${fundingManager.phone}</td>
+            </tr>
+            <tr>
+              <th>Email:</th>
+              <td>${fundingManager.email}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
 
   return documentStyleService.wrapContentWithWatermark(`Funding Authorization - ${loanDetails.borrowerName}`, content);
 };
@@ -341,11 +602,7 @@ export const generateEscrowAgreement = (loanDetails: LoanDetails): string => {
     loanTerm,
   } = loanDetails;
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const currentDate = formatDate();
 
   // Calculate estimated monthly tax and insurance amounts
   const estimatedAnnualTaxes = loanAmount * 0.015; // Assuming 1.5% of loan amount annually
@@ -356,95 +613,172 @@ export const generateEscrowAgreement = (loanDetails: LoanDetails): string => {
   
   // Calculate initial escrow deposit
   const initialEscrowDeposit = monthlyEscrowAmount * 2; // Two months of reserve
+  
+  // Generate escrow company information
+  const escrowCompanies = [
+    'First American Escrow Services',
+    'Fidelity National Escrow',
+    'Chicago Title Escrow',
+    'Old Republic Escrow'
+  ];
+  
+  const escrowCompany = escrowCompanies[Math.floor(Math.random() * escrowCompanies.length)];
 
   const content = `
-ESCROW AGREEMENT
-
-THIS ESCROW AGREEMENT (the "Agreement") is made and entered into on ${currentDate}, by and between:
-
-BORROWER: ${borrowerName} (the "Borrower")
-LENDER: ${lenderName} (the "Lender")
-ESCROW AGENT: [ESCROW COMPANY NAME] (the "Escrow Agent")
-
-PROPERTY: ${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}
-LOAN NUMBER: ${loanNumber}
-LOAN AMOUNT: $${loanAmount.toFixed(2)}
-LOAN CLOSING DATE: ${closingDate}
-
-RECITALS:
-
-WHEREAS, Borrower has obtained a loan from Lender secured by the above-referenced Property;
-
-WHEREAS, Lender requires Borrower to maintain an escrow account for the payment of property taxes and insurance premiums;
-
-WHEREAS, the parties desire to establish the terms and conditions governing the administration of the escrow account;
-
-NOW, THEREFORE, in consideration of the mutual covenants and agreements contained herein, the parties agree as follows:
-
-1. ESTABLISHMENT OF ESCROW ACCOUNT:
-   
-   Lender and Borrower hereby establish an escrow account (the "Escrow Account") with Escrow Agent for the purpose of paying property taxes, hazard insurance premiums, and other charges as they become due on the Property.
-
-2. INITIAL DEPOSIT:
-   
-   At closing, Borrower shall deposit with Escrow Agent the sum of $${initialEscrowDeposit.toFixed(2)} as an initial deposit to the Escrow Account.
-
-3. MONTHLY DEPOSITS:
-   
-   Borrower agrees to pay to Lender, along with the regular monthly mortgage payment, the following amounts to be deposited into the Escrow Account:
-   
-   a. Property Taxes: $${monthlyTaxes.toFixed(2)} per month
-   b. Hazard Insurance: $${monthlyInsurance.toFixed(2)} per month
-   
-   Total Monthly Escrow Payment: $${monthlyEscrowAmount.toFixed(2)}
-   
-   These amounts are subject to adjustment based on actual tax and insurance bills as they are received by Lender.
-
-4. ESCROW ANALYSIS:
-   
-   Lender will perform an annual analysis of the Escrow Account to determine if the monthly deposits are sufficient to pay the expected disbursements for the coming year. Borrower will be notified of any adjustment to the monthly escrow payment.
-
-5. PAYMENT OF ESCROW ITEMS:
-   
-   Escrow Agent shall use the funds in the Escrow Account to pay property taxes, hazard insurance premiums, and other charges when they become due. Escrow Agent shall provide Borrower with an annual statement showing all deposits to and disbursements from the Escrow Account.
-
-6. INSUFFICIENT FUNDS:
-   
-   If at any time the funds in the Escrow Account are insufficient to pay an escrow item when due, Borrower shall, upon notice from Lender, promptly deposit the amount of the deficiency with Escrow Agent.
-
-7. SURPLUS FUNDS:
-   
-   If at any time the amount of funds in the Escrow Account exceeds the amount deemed necessary by Lender to pay escrow items when due, plus any cushion permitted by applicable law, Lender shall refund the excess to Borrower.
-
-8. TERMINATION:
-   
-   This Agreement shall terminate upon the payment in full of the loan or upon the mutual agreement of the parties.
-
-9. GOVERNING LAW:
-   
-   This Agreement shall be governed by and construed in accordance with the laws of the state in which the Property is located.
-
-IN WITNESS WHEREOF, the parties have executed this Escrow Agreement as of the date first written above.
-
-BORROWER:
-____________________________
-${borrowerName}
-Date: ${closingDate}
-
-LENDER:
-____________________________
-${lenderName}
-By: ________________________
-Title: _____________________
-Date: ${closingDate}
-
-ESCROW AGENT:
-____________________________
-[ESCROW COMPANY NAME]
-By: ________________________
-Title: _____________________
-Date: ${closingDate}
-`;
+    <div class="document">
+      <div class="document-header">
+        <div class="document-title">Escrow Agreement</div>
+        <div class="document-subtitle">Date: ${currentDate}</div>
+      </div>
+      
+      <div class="document-section">
+        <p class="centered-text">
+          <strong>THIS ESCROW AGREEMENT</strong> (the "Agreement") is made and entered into on ${currentDate}, by and between:
+        </p>
+        
+        <div class="parties">
+          <div class="party-box">
+            <div class="subsection-title">BORROWER:</div>
+            <p>${borrowerName} (the "Borrower")</p>
+          </div>
+          
+          <div class="party-box">
+            <div class="subsection-title">LENDER:</div>
+            <p>${lenderName} (the "Lender")</p>
+          </div>
+          
+          <div class="party-box">
+            <div class="subsection-title">ESCROW AGENT:</div>
+            <p>${escrowCompany} (the "Escrow Agent")</p>
+          </div>
+        </div>
+        
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>PROPERTY:</th>
+              <td>${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}</td>
+            </tr>
+            <tr>
+              <th>LOAN NUMBER:</th>
+              <td>${loanNumber}</td>
+            </tr>
+            <tr>
+              <th>LOAN AMOUNT:</th>
+              <td>${formatCurrency(loanAmount)}</td>
+            </tr>
+            <tr>
+              <th>LOAN CLOSING DATE:</th>
+              <td>${closingDate}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Recitals</div>
+        
+        <p><strong>WHEREAS</strong>, Borrower has obtained a loan from Lender secured by the above-referenced Property;</p>
+        
+        <p><strong>WHEREAS</strong>, Lender requires Borrower to maintain an escrow account for the payment of property taxes and insurance premiums;</p>
+        
+        <p><strong>WHEREAS</strong>, the parties desire to establish the terms and conditions governing the administration of the escrow account;</p>
+        
+        <p><strong>NOW, THEREFORE</strong>, in consideration of the mutual covenants and agreements contained herein, the parties agree as follows:</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">1. Establishment of Escrow Account</div>
+        <p>Lender and Borrower hereby establish an escrow account (the "Escrow Account") with Escrow Agent for the purpose of paying property taxes, hazard insurance premiums, and other charges as they become due on the Property.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">2. Initial Deposit</div>
+        <p>At closing, Borrower shall deposit with Escrow Agent the sum of ${formatCurrency(initialEscrowDeposit)} as an initial deposit to the Escrow Account.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">3. Monthly Deposits</div>
+        <p>Borrower agrees to pay to Lender, along with the regular monthly mortgage payment, the following amounts to be deposited into the Escrow Account:</p>
+        
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>a. Property Taxes:</th>
+              <td>${formatCurrency(monthlyTaxes)} per month</td>
+            </tr>
+            <tr>
+              <th>b. Hazard Insurance:</th>
+              <td>${formatCurrency(monthlyInsurance)} per month</td>
+            </tr>
+            <tr class="total-row">
+              <th>Total Monthly Escrow Payment:</th>
+              <td>${formatCurrency(monthlyEscrowAmount)}</td>
+            </tr>
+          </table>
+        </div>
+        
+        <p>These amounts are subject to adjustment based on actual tax and insurance bills as they are received by Lender.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">4. Escrow Analysis</div>
+        <p>Lender will perform an annual analysis of the Escrow Account to determine if the monthly deposits are sufficient to pay the expected disbursements for the coming year. Borrower will be notified of any adjustment to the monthly escrow payment.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">5. Payment of Escrow Items</div>
+        <p>Escrow Agent shall use the funds in the Escrow Account to pay property taxes, hazard insurance premiums, and other charges when they become due. Escrow Agent shall provide Borrower with an annual statement showing all deposits to and disbursements from the Escrow Account.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">6. Insufficient Funds</div>
+        <p>If at any time the funds in the Escrow Account are insufficient to pay an escrow item when due, Borrower shall, upon notice from Lender, promptly deposit the amount of the deficiency with Escrow Agent.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">7. Surplus Funds</div>
+        <p>If at any time the amount of funds in the Escrow Account exceeds the amount deemed necessary by Lender to pay escrow items when due, plus any cushion permitted by applicable law, Lender shall refund the excess to Borrower.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">8. Termination</div>
+        <p>This Agreement shall terminate upon the payment in full of the loan or upon the mutual agreement of the parties.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">9. Governing Law</div>
+        <p>This Agreement shall be governed by and construed in accordance with the laws of the state in which the Property is located.</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Signatures</div>
+        <p>IN WITNESS WHEREOF, the parties have executed this Escrow Agreement as of the date first written above.</p>
+        
+        <div class="signature-section">
+          <div class="signature-line"></div>
+          <div>BORROWER: ${borrowerName}</div>
+          <div>Date: ${closingDate}</div>
+          
+          <div style="margin-top: 30px;">
+            <div class="signature-line"></div>
+            <div>LENDER: ${lenderName}</div>
+            <div>By: ________________________</div>
+            <div>Title: _____________________</div>
+            <div>Date: ${closingDate}</div>
+          </div>
+          
+          <div style="margin-top: 30px;">
+            <div class="signature-line"></div>
+            <div>ESCROW AGENT: ${escrowCompany}</div>
+            <div>By: ________________________</div>
+            <div>Title: _____________________</div>
+            <div>Date: ${closingDate}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 
   return documentStyleService.wrapContentWithWatermark(`Escrow Agreement - ${loanDetails.borrowerName}`, content);
 };
@@ -464,81 +798,190 @@ export const generateWiringInstructions = (loanDetails: LoanDetails): string => 
     loanNumber,
   } = loanDetails;
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const currentDate = formatDate();
 
   // Calculate net amount after fees (simplified for example)
   const netLoanAmount = loanAmount * 0.97; // Assuming 3% in fees
+  
+  // Generate bank information
+  const banks = [
+    'First National Bank',
+    'Meridian Trust',
+    'Coastal Federal Bank',
+    'Western Union Financial Services'
+  ];
+  
+  const selectedBank = banks[Math.floor(Math.random() * banks.length)];
+  const routingNumber = Math.floor(100000000 + Math.random() * 900000000).toString();
+  const accountNumber = Math.floor(10000000 + Math.random() * 90000000).toString();
+  const swiftCode = `SW${(Math.random().toString(36).substring(2, 7)).toUpperCase()}XXX`;
+  
+  // Generate escrow officer information
+  const escrowOfficers = [
+    { name: 'Michael Thompson', phone: '(555) 123-4567', email: 'mthompson@titleco.com' },
+    { name: 'Jennifer Garcia', phone: '(555) 234-5678', email: 'jgarcia@titleco.com' },
+    { name: 'Robert Chen', phone: '(555) 345-6789', email: 'rchen@titleco.com' }
+  ];
+  
+  const escrowOfficer = escrowOfficers[Math.floor(Math.random() * escrowOfficers.length)];
+  const escrowNumber = `EC-${Math.floor(10000 + Math.random() * 90000)}`;
+  const titleCompany = 'Secured Title & Escrow Services';
 
   const content = `
-WIRE TRANSFER INSTRUCTIONS
-
-DATE: ${currentDate}
-LOAN NUMBER: ${loanNumber}
-BORROWER: ${borrowerName}
-PROPERTY ADDRESS: ${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}
-CLOSING DATE: ${closingDate}
-
-IMPORTANT: THESE WIRE INSTRUCTIONS ARE FOR THE ABOVE-REFERENCED TRANSACTION ONLY
-
-PLEASE WIRE FUNDS TO:
-
-RECEIVING BANK INFORMATION:
-Bank Name: [BANK NAME]
-Bank Address: [BANK ADDRESS]
-ABA/Routing Number: [ROUTING NUMBER]
-Swift Code (for international wires): [SWIFT CODE]
-
-BENEFICIARY INFORMATION:
-Account Name: [TITLE/ESCROW COMPANY NAME] Trust Account
-Account Number: [ACCOUNT NUMBER]
-Reference/Note: Loan #${loanNumber}, ${borrowerName}, ${propertyAddress.street}
-
-AMOUNT TO BE WIRED: $${netLoanAmount.toFixed(2)}
-
-INTERMEDIARY BANK (if applicable):
-Bank Name: [INTERMEDIARY BANK NAME]
-ABA/Routing Number: [INTERMEDIARY ROUTING NUMBER]
-
-SPECIAL INSTRUCTIONS:
-1. Please include the loan number, borrower name, and property address in the reference section of the wire.
-2. Notify the escrow officer when wire has been sent.
-3. Due to the risk of wire fraud, please call to verify these instructions before sending any funds.
-
-VERIFICATION CONTACT:
-Name: [ESCROW OFFICER NAME]
-Phone: [PHONE NUMBER] (must call this number to verify before sending)
-Email: [EMAIL ADDRESS]
-Title/Escrow Company: [TITLE/ESCROW COMPANY NAME]
-File/Escrow Number: [ESCROW NUMBER]
-
-IMPORTANT WIRE FRAUD ADVISORY:
-WIRE FRAUD IS ON THE RISE. Before sending any wire, call the intended recipient at a number you know is valid to confirm the instructions. Additionally, note that wiring instructions are typically not changed during the course of a transaction.
-
-CONFIRMATION OF RECEIPT:
-Once the wire has been sent, please email wire confirmation to:
-[EMAIL ADDRESS]
-
-FUNDING AUTHORIZATION:
-These wire instructions are hereby authorized by:
-
-____________________________
-Authorized Representative for ${lenderName}
-Title: [TITLE]
-Date: ${currentDate}
-
-LENDER INFORMATION:
-${lenderName}
-[LENDER ADDRESS]
-[LENDER PHONE]
-[LENDER EMAIL]
-
-DISCLAIMER:
-${lenderName} is not responsible for any delay, failure of delivery, or misdirection of funds resulting from incorrect or incomplete wire instructions. The sender is responsible for confirming the accuracy of these instructions prior to sending funds.
-`;
+    <div class="document">
+      <div class="document-header">
+        <div class="document-title">Wire Transfer Instructions</div>
+        <div class="document-subtitle">Date: ${currentDate}</div>
+      </div>
+      
+      <div class="document-section">
+        <div class="warning-box">
+          <strong>IMPORTANT:</strong> THESE WIRE INSTRUCTIONS ARE FOR THE ABOVE-REFERENCED TRANSACTION ONLY
+        </div>
+        
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Loan Number:</th>
+              <td>${loanNumber}</td>
+            </tr>
+            <tr>
+              <th>Borrower:</th>
+              <td>${borrowerName}</td>
+            </tr>
+            <tr>
+              <th>Property Address:</th>
+              <td>${propertyAddress.street}, ${propertyAddress.city}, ${propertyAddress.state} ${propertyAddress.zipCode}</td>
+            </tr>
+            <tr>
+              <th>Closing Date:</th>
+              <td>${closingDate}</td>
+            </tr>
+            <tr>
+              <th>Amount to be Wired:</th>
+              <td><strong>${formatCurrency(netLoanAmount)}</strong></td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Receiving Bank Information</div>
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Bank Name:</th>
+              <td>${selectedBank}</td>
+            </tr>
+            <tr>
+              <th>Bank Address:</th>
+              <td>123 Financial Center, Suite 400<br>Los Angeles, CA 90010</td>
+            </tr>
+            <tr>
+              <th>ABA/Routing Number:</th>
+              <td>${routingNumber}</td>
+            </tr>
+            <tr>
+              <th>Swift Code (for international wires):</th>
+              <td>${swiftCode}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Beneficiary Information</div>
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Account Name:</th>
+              <td>${titleCompany} Trust Account</td>
+            </tr>
+            <tr>
+              <th>Account Number:</th>
+              <td>${accountNumber}</td>
+            </tr>
+            <tr>
+              <th>Reference/Note:</th>
+              <td>Loan #${loanNumber}, ${borrowerName}, ${propertyAddress.street}</td>
+            </tr>
+            <tr>
+              <th>File/Escrow Number:</th>
+              <td>${escrowNumber}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Special Instructions</div>
+        <ol>
+          <li>Please include the loan number, borrower name, and property address in the reference section of the wire.</li>
+          <li>Notify the escrow officer when wire has been sent.</li>
+          <li>Due to the risk of wire fraud, please call to verify these instructions before sending any funds.</li>
+        </ol>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Verification Contact</div>
+        <div class="info-table-container">
+          <table class="info-table">
+            <tr>
+              <th>Name:</th>
+              <td>${escrowOfficer.name}</td>
+            </tr>
+            <tr>
+              <th>Phone:</th>
+              <td>${escrowOfficer.phone} <em>(must call this number to verify before sending)</em></td>
+            </tr>
+            <tr>
+              <th>Email:</th>
+              <td>${escrowOfficer.email}</td>
+            </tr>
+            <tr>
+              <th>Title/Escrow Company:</th>
+              <td>${titleCompany}</td>
+            </tr>
+          </table>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Wire Fraud Advisory</div>
+        <div class="warning-box">
+          <p><strong>WIRE FRAUD IS ON THE RISE.</strong> Before sending any wire, call the intended recipient at a number you know is valid to confirm the instructions. Additionally, note that wiring instructions are typically not changed during the course of a transaction.</p>
+        </div>
+        
+        <p>Once the wire has been sent, please email wire confirmation to: ${escrowOfficer.email}</p>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Funding Authorization</div>
+        <p>These wire instructions are hereby authorized by:</p>
+        
+        <div class="signature-section">
+          <div class="signature-line"></div>
+          <div>Authorized Representative for ${lenderName}</div>
+          <div>Date: ${currentDate}</div>
+        </div>
+      </div>
+      
+      <div class="document-section">
+        <div class="section-title">Lender Information</div>
+        <p>
+          ${lenderName}<br>
+          123 Capital Avenue, Suite 500<br>
+          New York, NY 10001<br>
+          (212) 555-7890<br>
+          funding@harringtoncapital.com
+        </p>
+        
+        <div class="disclaimer">
+          <p>${lenderName} is not responsible for any delay, failure of delivery, or misdirection of funds resulting from incorrect or incomplete wire instructions. The sender is responsible for confirming the accuracy of these instructions prior to sending funds.</p>
+        </div>
+      </div>
+    </div>
+  `;
 
   return documentStyleService.wrapContentWithWatermark(`Wiring Instructions - ${loanDetails.borrowerName}`, content);
 };
