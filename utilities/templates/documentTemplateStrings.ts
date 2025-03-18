@@ -4684,7 +4684,10 @@ export const getDocumentTemplate = (docType: string, loanData: LoanData): string
     'property_insurance': 'property_insurance_policy',
     'liability_insurance': 'liability_insurance_policy',
     'patriot_act_compliance': 'patriot_act_certification',
-    'closing_checklist': 'lender_closing_checklist'
+    'closing_checklist': 'lender_closing_checklist',
+    'investment_history': 'investment_history',
+    'lease_agreements': 'lease_agreement',
+    'flood_insurance': 'flood_insurance_policy'
   };
 
   // Check if this is an alternative name and map to the standard name
@@ -4695,5 +4698,57 @@ export const getDocumentTemplate = (docType: string, loanData: LoanData): string
   }
   
   console.error(`Unknown document type: ${docType}`);
-  return `<div class="error">Unknown document type: ${docType}</div>`;
+  return `
+  <html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        line-height: 1.6;
+      }
+      .error-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #f44336;
+        border-radius: 5px;
+        background-color: #ffebee;
+      }
+      h1 {
+        color: #d32f2f;
+        border-bottom: 2px solid #ffcdd2;
+        padding-bottom: 10px;
+      }
+      .details {
+        background-color: #fff;
+        border-left: 4px solid #d32f2f;
+        padding: 12px 20px;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="error-container">
+      <h1>Unknown Document Type</h1>
+      
+      <div class="details">
+        <p><strong>Error Details:</strong></p>
+        <p>The document type "${docType}" is not recognized by the system or has not been implemented yet.</p>
+        <p>This could be due to a mismatch between document labels and their internal document types.</p>
+      </div>
+      
+      <p><strong>Possible Solutions:</strong></p>
+      <ul>
+        <li>Check if the document type is correctly spelled</li>
+        <li>Verify that the document type has been properly registered in the system</li>
+        <li>Contact your system administrator for assistance</li>
+      </ul>
+      
+      <p>Error ID: ERROR-${Date.now()}</p>
+      <p>Timestamp: ${new Date().toLocaleString()}</p>
+    </div>
+  </body>
+  </html>
+  `;
 }; 

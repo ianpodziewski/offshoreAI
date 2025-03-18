@@ -51,6 +51,79 @@ import {
   getWiringInstructionsTemplate
 } from './templates/fundingDocumentTemplates';
 
+// Define document name prefixes based on loan type
+const getLoanTypePrefix = (loanType: string): string => {
+  const prefixMap: Record<string, string> = {
+    'fix_and_flip': 'F&F',
+    'bridge': 'BR',
+    'construction': 'CON',
+    'rental': 'RNT',
+    'multifamily': 'MF'
+  };
+  
+  return prefixMap[loanType] || 'STD';
+};
+
+// Helper function to generate unimplemented document templates
+const generateUnimplementedTemplate = (title: string, borrowerName: string): string => {
+  return `
+  <html>
+  <head>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        line-height: 1.6;
+      }
+      .document-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+      }
+      h1 {
+        color: #333;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 10px;
+      }
+      .warning {
+        background-color: #fff8e1;
+        border-left: 4px solid #ffc107;
+        padding: 12px 20px;
+        margin: 20px 0;
+      }
+      .info {
+        background-color: #e1f5fe;
+        border-left: 4px solid #03a9f4;
+        padding: 12px 20px;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="document-container">
+      <h1>${title}</h1>
+      
+      <div class="warning">
+        <p><strong>Document Not Yet Implemented</strong></p>
+        <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
+      </div>
+      
+      <div class="info">
+        <p><strong>What This Document Will Include:</strong></p>
+        <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
+        <p>If you need this document urgently, please contact your system administrator.</p>
+      </div>
+      
+      <p>Document ID: SAMPLE-${Date.now()}</p>
+      <p>Generated: ${new Date().toLocaleDateString()}</p>
+    </div>
+  </body>
+  </html>
+  `;
+};
+
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'promissory_note': generatePromissoryNote,
@@ -86,16 +159,16 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'wiring_instructions': getWiringInstructionsTemplate,
   
   // Placeholder templates for currently unimplemented documents that are being requested
-  'investment_history': (loan: LoanData) => `<h1>Investment History</h1><p>Investment history for ${loan.borrowerName} is not yet implemented.</p>`,
-  'state_lending_disclosures': (loan: LoanData) => `<h1>State Lending Disclosures</h1><p>State lending disclosures for ${loan.borrowerName} are not yet implemented.</p>`,
-  'federal_lending_disclosures': (loan: LoanData) => `<h1>Federal Lending Disclosures</h1><p>Federal lending disclosures for ${loan.borrowerName} are not yet implemented.</p>`,
-  'ofac_check': (loan: LoanData) => `<h1>OFAC Check</h1><p>OFAC check for ${loan.borrowerName} is not yet implemented.</p>`,
-  'payment_history': (loan: LoanData) => `<h1>Payment History</h1><p>Payment history for ${loan.borrowerName} is not yet implemented.</p>`,
-  'payment_receipts': (loan: LoanData) => `<h1>Payment Receipts</h1><p>Payment receipts for ${loan.borrowerName} are not yet implemented.</p>`,
-  'ach_authorization': (loan: LoanData) => `<h1>ACH Authorization</h1><p>ACH authorization for ${loan.borrowerName} is not yet implemented.</p>`,
-  'property_tax_verification': (loan: LoanData) => `<h1>Property Tax Verification</h1><p>Property tax verification for ${loan.borrowerName} is not yet implemented.</p>`,
-  'insurance_renewal': (loan: LoanData) => `<h1>Insurance Renewal</h1><p>Insurance renewal for ${loan.borrowerName} is not yet implemented.</p>`,
-  'annual_financial_review': (loan: LoanData) => `<h1>Annual Financial Review</h1><p>Annual financial review for ${loan.borrowerName} is not yet implemented.</p>`
+  'investment_history': (loan: LoanData) => generateUnimplementedTemplate('RE Track Record', loan.borrowerName),
+  'state_lending_disclosures': (loan: LoanData) => generateUnimplementedTemplate('State Lending Disclosures', loan.borrowerName),
+  'federal_lending_disclosures': (loan: LoanData) => generateUnimplementedTemplate('Federal Lending Disclosures', loan.borrowerName),
+  'ofac_check': (loan: LoanData) => generateUnimplementedTemplate('OFAC Check', loan.borrowerName),
+  'payment_history': (loan: LoanData) => generateUnimplementedTemplate('Payment History', loan.borrowerName),
+  'payment_receipts': (loan: LoanData) => generateUnimplementedTemplate('Payment Receipts', loan.borrowerName),
+  'ach_authorization': (loan: LoanData) => generateUnimplementedTemplate('ACH Authorization', loan.borrowerName),
+  'property_tax_verification': (loan: LoanData) => generateUnimplementedTemplate('Property Tax Verification', loan.borrowerName),
+  'insurance_renewal': (loan: LoanData) => generateUnimplementedTemplate('Insurance Renewal', loan.borrowerName),
+  'annual_financial_review': (loan: LoanData) => generateUnimplementedTemplate('Annual Financial Review', loan.borrowerName)
 };
 
 // A mapping of document types to their categories
@@ -177,7 +250,7 @@ const documentNames: Record<string, string> = {
   'funding_authorization': 'Funding Authorization',
   'escrow_agreements': 'Escrow Agreement',
   'wiring_instructions': 'Wiring Instructions',
-  'investment_history': 'Investment History',
+  'investment_history': 'RE Track Record',
   'loan_servicing_agreement': 'Loan Servicing Agreement',
   'state_lending_disclosures': 'State Lending Disclosures',
   'federal_lending_disclosures': 'Federal Lending Disclosures',
@@ -201,7 +274,10 @@ export const fakeDocumentService = {
     'liability_insurance': 'liability_insurance_policy',
     'patriot_act_compliance': 'patriot_act_certification',
     'closing_checklist': 'lender_closing_checklist',
-    'loan_servicing_agreement': 'loan_agreement'
+    'loan_servicing_agreement': 'loan_agreement',
+    'investment_history': 'investment_history',
+    'lease_agreements': 'lease_agreement',
+    'flood_insurance': 'flood_insurance_policy'
   } as Record<string, string>,
 
   /**
