@@ -70,23 +70,31 @@ const getWatermarkStyle = (): string => {
     /* Watermark styles */
     body {
       position: relative;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
     }
     .watermark {
       position: fixed;
       top: 0;
       left: 0;
+      right: 0;
+      bottom: 0;
       width: 100%;
       height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
       pointer-events: none;
-      z-index: 0;
+      z-index: 1000;
     }
     .watermark:after {
       content: "SAMPLE";
       font-size: 120px;
-      color: rgba(220, 53, 69, 0.2);
+      color: rgba(220, 53, 69, 0.3);
       transform: rotate(-45deg);
       white-space: nowrap;
       text-transform: uppercase;
@@ -96,6 +104,11 @@ const getWatermarkStyle = (): string => {
     .document-content {
       position: relative;
       z-index: 1;
+      max-width: 850px;
+      width: 100%;
+      margin: 40px auto;
+      padding: 20px;
+      box-sizing: border-box;
     }
   `;
 };
@@ -110,22 +123,20 @@ const generateUnimplementedTemplate = (title: string, borrowerName: string): str
     <title>${title} - ${borrowerName}</title>
     <style>
       ${getWatermarkStyle()}
-      body {
-        font-family: Arial, sans-serif;
-        margin: 40px;
-        line-height: 1.6;
-      }
       .document-container {
+        background: white;
         max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
+        width: 100%;
+        padding: 30px;
         border: 1px solid #ccc;
         border-radius: 5px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
       }
       h1 {
         color: #333;
         border-bottom: 2px solid #ddd;
         padding-bottom: 10px;
+        margin-top: 0;
       }
       .warning {
         background-color: #fff8e1;
@@ -376,8 +387,13 @@ export const fakeDocumentService = {
       if (content.includes('<head>')) {
         // Add watermark style to the head section
         content = content.replace('</head>', `${getWatermarkStyle()}</head>`);
+        
+        // Update the body tag with necessary attributes
+        content = content.replace(/<body[^>]*>/i, '<body>');
+        
         // Add watermark div after the body tag
         content = content.replace('<body>', '<body><div class="watermark"></div><div class="document-content">');
+        
         // Close the document-content div before the body end tag
         content = content.replace('</body>', '</div></body>');
       } else {
@@ -392,8 +408,31 @@ export const fakeDocumentService = {
     ${getWatermarkStyle()}
     body {
       font-family: Arial, sans-serif;
-      margin: 40px;
+      margin: 0;
       padding: 0;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .document-content {
+      position: relative;
+      z-index: 1;
+      max-width: 850px;
+      width: 100%;
+      margin: 40px auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
     }
   </style>
 </head>
