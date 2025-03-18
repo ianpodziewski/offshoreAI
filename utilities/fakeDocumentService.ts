@@ -64,12 +64,52 @@ const getLoanTypePrefix = (loanType: string): string => {
   return prefixMap[loanType] || 'STD';
 };
 
+// Function to get watermark styles for consistent usage
+const getWatermarkStyle = (): string => {
+  return `
+    /* Watermark styles */
+    body {
+      position: relative;
+    }
+    .watermark {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .watermark:after {
+      content: "SAMPLE";
+      font-size: 120px;
+      color: rgba(220, 53, 69, 0.2);
+      transform: rotate(-45deg);
+      white-space: nowrap;
+      text-transform: uppercase;
+      font-weight: bold;
+      letter-spacing: 10px;
+    }
+    .document-content {
+      position: relative;
+      z-index: 1;
+    }
+  `;
+};
+
 // Helper function to generate unimplemented document templates
 const generateUnimplementedTemplate = (title: string, borrowerName: string): string => {
   return `
+  <!DOCTYPE html>
   <html>
   <head>
+    <meta charset="UTF-8">
+    <title>${title} - ${borrowerName}</title>
     <style>
+      ${getWatermarkStyle()}
       body {
         font-family: Arial, sans-serif;
         margin: 40px;
@@ -102,22 +142,25 @@ const generateUnimplementedTemplate = (title: string, borrowerName: string): str
     </style>
   </head>
   <body>
-    <div class="document-container">
-      <h1>${title}</h1>
-      
-      <div class="warning">
-        <p><strong>Document Not Yet Implemented</strong></p>
-        <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
+    <div class="watermark"></div>
+    <div class="document-content">
+      <div class="document-container">
+        <h1>${title}</h1>
+        
+        <div class="warning">
+          <p><strong>Document Not Yet Implemented</strong></p>
+          <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
+        </div>
+        
+        <div class="info">
+          <p><strong>What This Document Will Include:</strong></p>
+          <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
+          <p>If you need this document urgently, please contact your system administrator.</p>
+        </div>
+        
+        <p>Document ID: SAMPLE-${Date.now()}</p>
+        <p>Generated: ${new Date().toLocaleDateString()}</p>
       </div>
-      
-      <div class="info">
-        <p><strong>What This Document Will Include:</strong></p>
-        <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
-        <p>If you need this document urgently, please contact your system administrator.</p>
-      </div>
-      
-      <p>Document ID: SAMPLE-${Date.now()}</p>
-      <p>Generated: ${new Date().toLocaleDateString()}</p>
     </div>
   </body>
   </html>
