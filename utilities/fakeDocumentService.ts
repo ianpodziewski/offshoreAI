@@ -11,6 +11,10 @@ import {
   getPurchaseContractTemplate, 
   getPreliminaryTitleReportTemplate 
 } from './templates/propertyInformationTemplates';
+import {
+  getAppraisalReportTemplate,
+  getBrokerPriceOpinionTemplate
+} from './templates/valuationTemplates';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -19,7 +23,10 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'closing_disclosure': generateClosingDisclosure,
   'property_appraisal': generatePropertyAppraisal,
   'purchase_contract': getPurchaseContractTemplate,
-  'preliminary_title_report': getPreliminaryTitleReportTemplate
+  'preliminary_title_report': getPreliminaryTitleReportTemplate,
+  'appraisal_report': getAppraisalReportTemplate,
+  'broker_price_opinion': getBrokerPriceOpinionTemplate,
+  'bpo': getBrokerPriceOpinionTemplate
 };
 
 // A mapping of document types to their categories
@@ -29,7 +36,10 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'closing_disclosure': 'financial',
   'property_appraisal': 'financial',
   'purchase_contract': 'property',
-  'preliminary_title_report': 'property'
+  'preliminary_title_report': 'property',
+  'appraisal_report': 'financial',
+  'broker_price_opinion': 'financial',
+  'bpo': 'financial'
 };
 
 // Document names for display
@@ -39,7 +49,10 @@ const documentNames: Record<string, string> = {
   'closing_disclosure': 'Closing Disclosure',
   'property_appraisal': 'Property Appraisal',
   'purchase_contract': 'Purchase Contract',
-  'preliminary_title_report': 'Preliminary Title Report'
+  'preliminary_title_report': 'Preliminary Title Report',
+  'appraisal_report': 'Appraisal Report',
+  'broker_price_opinion': 'Broker Price Opinion',
+  'bpo': 'Broker Price Opinion (BPO)'
 };
 
 export const fakeDocumentService = {

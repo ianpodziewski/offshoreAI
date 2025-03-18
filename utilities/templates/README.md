@@ -53,6 +53,10 @@ This directory contains template functions for generating HTML documents for the
 - ❌ `renovation_budget`
 - ❌ `draw_schedule`
 
+### Valuation (Implemented)
+- ✅ `appraisal_report`
+- ✅ `broker_price_opinion` / `bpo`
+
 ### Income Property Documents (Not Implemented)
 - ❌ `lease_agreements`
 - ❌ `dscr_calculation`
