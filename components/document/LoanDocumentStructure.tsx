@@ -66,24 +66,50 @@ export function LoanDocumentStructure({
   
   // Check if a document has been uploaded
   const isDocumentUploaded = (docType: string) => {
-    return uploadedDocuments.some(doc => doc.docType === docType);
+    // Check if there's at least one non-required document with this docType
+    return uploadedDocuments.some(doc => doc.docType === docType && doc.status !== 'required');
   };
   
   // Get document status if uploaded
   const getDocumentStatus = (docType: string) => {
-    const doc = uploadedDocuments.find(doc => doc.docType === docType);
-    return doc ? doc.status : 'required';
+    // Get the most recent document of this type
+    const docs = uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required');
+    if (docs.length > 0) {
+      // Sort by date uploaded (most recent first)
+      docs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
+      return docs[0].status;
+    }
+    return 'required';
   };
   
   // Get document ID if uploaded
   const getDocumentId = (docType: string) => {
-    const doc = uploadedDocuments.find(doc => doc.docType === docType);
-    return doc ? doc.id : null;
+    // Get the most recent document of this type
+    const docs = uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required');
+    if (docs.length > 0) {
+      // Sort by date uploaded (most recent first)
+      docs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
+      return docs[0].id;
+    }
+    return null;
   };
   
   // Get document if uploaded
   const getDocument = (docType: string) => {
-    return uploadedDocuments.find(doc => doc.docType === docType);
+    // Get the most recent document of this type
+    const docs = uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required');
+    if (docs.length > 0) {
+      // Sort by date uploaded (most recent first)
+      docs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
+      return docs[0];
+    }
+    return null;
+  };
+  
+  // Get all documents of a specific type
+  const getAllDocumentsOfType = (docType: string) => {
+    return uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required')
+      .sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
   };
   
   // Delete document 
@@ -204,6 +230,7 @@ export function LoanDocumentStructure({
   const renderDocumentItem = (category: string, section: string, docType: string, label: string, isRequired: boolean) => {
     const isUploaded = isDocumentUploaded(docType);
     const document = getDocument(docType);
+    const allDocuments = getAllDocumentsOfType(docType);
     const isDragging = draggingDocType === docType;
     
     const handleHeaderClick = () => {
@@ -228,34 +255,36 @@ export function LoanDocumentStructure({
           </div>
         </div>
         
-        {isUploaded && document && (
+        {isUploaded && (
           <div className="bg-[#070B15] border border-t-0 border-gray-800 rounded-b-lg py-4 px-5">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <a 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    openDocumentInNewTab(document);
-                  }}
-                  className="text-blue-500 hover:underline font-medium"
-                >
-                  {document.filename}
-                </a>
-              </div>
-              <div className="flex items-center">
-                <div className="text-xs text-gray-400 mr-3">
-                  {formatDate(document.dateUploaded)}
+            {allDocuments.map((doc) => (
+              <div key={doc.id} className="flex justify-between items-center mb-2 last:mb-0">
+                <div className="flex items-center">
+                  <a 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      openDocumentInNewTab(doc);
+                    }}
+                    className="text-blue-500 hover:underline font-medium"
+                  >
+                    {doc.filename}
+                  </a>
                 </div>
-                <button
-                  onClick={(e) => document && handleDeleteDocument(e, document.id)}
-                  className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-100/10"
-                  title="Delete document"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="flex items-center">
+                  <div className="text-xs text-gray-400 mr-3">
+                    {formatDate(doc.dateUploaded)}
+                  </div>
+                  <button
+                    onClick={(e) => handleDeleteDocument(e, doc.id)}
+                    className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-100/10"
+                    title="Delete document"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         )}
       </div>

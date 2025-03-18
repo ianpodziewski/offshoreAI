@@ -198,6 +198,8 @@ export default function LoanDocumentsPage() {
   
   // Handle document upload completion
   const handleDocumentUploaded = (document: any) => {
+    console.log('Document to be uploaded:', document);
+    
     // Create document with the required structure
     const newDoc = loanDocumentService.addDocument({
       ...document,
@@ -205,15 +207,22 @@ export default function LoanDocumentsPage() {
       status: 'pending',
       // Set the file upload date to now
       dateUploaded: new Date().toISOString(),
-      // Make sure we have the correct subsection field
+      // Make sure we have the correct subsection field 
       subsection: document.section || '',
+      // For PDFs, we might not have content rendered, so we'll store the base64 data
+      content: document.content || '',
       // Default to required if not specified
       isRequired: document.isRequired ?? true
     });
+    
+    console.log('Document after processing:', newDoc);
+    console.log('Current documents:', documents);
 
-    // Simply add the new document to the existing documents array without replacing
-    // This allows multiple documents of the same type to exist
-    setDocuments([...documents, newDoc]);
+    // Add the new document to the existing documents array
+    const updatedDocuments = [...documents, newDoc];
+    setDocuments(updatedDocuments);
+    
+    console.log('Updated documents list:', updatedDocuments);
     
     // Update completion status
     if (loan?.loanType) {
