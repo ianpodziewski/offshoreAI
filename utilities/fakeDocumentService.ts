@@ -83,7 +83,24 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'disbursement_instructions': getDisbursementInstructionsTemplate,
   'funding_authorization': getFundingAuthorizationTemplate,
   'escrow_agreements': getEscrowAgreementTemplate,
-  'wiring_instructions': getWiringInstructionsTemplate
+  'wiring_instructions': getWiringInstructionsTemplate,
+  'preliminary_title': getPreliminaryTitleReportTemplate,
+  'closing_checklist': getLenderClosingChecklistTemplate,
+  'mortgage_deed_of_trust': generateDeedOfTrust,
+  'patriot_act_compliance': getPatriotActComplianceTemplate,
+  'property_insurance': getPropertyInsurancePolicyTemplate,
+  'liability_insurance': getLiabilityInsurancePolicyTemplate,
+  'investment_history': (loan: LoanData) => `<h1>Investment History</h1><p>Investment history for ${loan.borrowerName} is not yet implemented.</p>`,
+  'loan_servicing_agreement': (loan: LoanData) => `<h1>Loan Servicing Agreement</h1><p>Loan servicing agreement for ${loan.borrowerName} is not yet implemented.</p>`,
+  'state_lending_disclosures': (loan: LoanData) => `<h1>State Lending Disclosures</h1><p>State lending disclosures for ${loan.borrowerName} are not yet implemented.</p>`,
+  'federal_lending_disclosures': (loan: LoanData) => `<h1>Federal Lending Disclosures</h1><p>Federal lending disclosures for ${loan.borrowerName} are not yet implemented.</p>`,
+  'ofac_check': (loan: LoanData) => `<h1>OFAC Check</h1><p>OFAC check for ${loan.borrowerName} is not yet implemented.</p>`,
+  'payment_history': (loan: LoanData) => `<h1>Payment History</h1><p>Payment history for ${loan.borrowerName} is not yet implemented.</p>`,
+  'payment_receipts': (loan: LoanData) => `<h1>Payment Receipts</h1><p>Payment receipts for ${loan.borrowerName} are not yet implemented.</p>`,
+  'ach_authorization': (loan: LoanData) => `<h1>ACH Authorization</h1><p>ACH authorization for ${loan.borrowerName} is not yet implemented.</p>`,
+  'property_tax_verification': (loan: LoanData) => `<h1>Property Tax Verification</h1><p>Property tax verification for ${loan.borrowerName} is not yet implemented.</p>`,
+  'insurance_renewal': (loan: LoanData) => `<h1>Insurance Renewal</h1><p>Insurance renewal for ${loan.borrowerName} is not yet implemented.</p>`,
+  'annual_financial_review': (loan: LoanData) => `<h1>Annual Financial Review</h1><p>Annual financial review for ${loan.borrowerName} is not yet implemented.</p>`
 };
 
 // A mapping of document types to their categories
@@ -118,7 +135,24 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'disbursement_instructions': 'financial',
   'funding_authorization': 'financial',
   'escrow_agreements': 'legal',
-  'wiring_instructions': 'financial'
+  'wiring_instructions': 'financial',
+  'preliminary_title': 'property',
+  'closing_checklist': 'loan',
+  'mortgage_deed_of_trust': 'legal',
+  'patriot_act_compliance': 'legal',
+  'property_insurance': 'property',
+  'liability_insurance': 'property',
+  'investment_history': 'financial',
+  'loan_servicing_agreement': 'loan',
+  'state_lending_disclosures': 'legal',
+  'federal_lending_disclosures': 'legal',
+  'ofac_check': 'legal',
+  'payment_history': 'financial',
+  'payment_receipts': 'financial',
+  'ach_authorization': 'financial',
+  'property_tax_verification': 'property',
+  'insurance_renewal': 'property',
+  'annual_financial_review': 'financial'
 };
 
 // Document names for display
@@ -153,7 +187,24 @@ const documentNames: Record<string, string> = {
   'disbursement_instructions': 'Disbursement Instructions',
   'funding_authorization': 'Funding Authorization',
   'escrow_agreements': 'Escrow Agreement',
-  'wiring_instructions': 'Wiring Instructions'
+  'wiring_instructions': 'Wiring Instructions',
+  'preliminary_title': 'Preliminary Title Report',
+  'closing_checklist': 'Closing Checklist',
+  'mortgage_deed_of_trust': 'Mortgage/Deed of Trust',
+  'patriot_act_compliance': 'Patriot Act Compliance',
+  'property_insurance': 'Property Insurance',
+  'liability_insurance': 'Liability Insurance',
+  'investment_history': 'Investment History',
+  'loan_servicing_agreement': 'Loan Servicing Agreement',
+  'state_lending_disclosures': 'State Lending Disclosures',
+  'federal_lending_disclosures': 'Federal Lending Disclosures',
+  'ofac_check': 'OFAC Check',
+  'payment_history': 'Payment History',
+  'payment_receipts': 'Payment Receipts',
+  'ach_authorization': 'ACH Authorization',
+  'property_tax_verification': 'Property Tax Verification',
+  'insurance_renewal': 'Insurance Renewal',
+  'annual_financial_review': 'Annual Financial Review'
 };
 
 export const fakeDocumentService = {
