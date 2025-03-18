@@ -186,11 +186,8 @@ export function LoanDocumentStructure({
     const isDragging = draggingDocType === docType;
     
     const handleHeaderClick = () => {
-      // If document exists, open in new tab
-      if (document && document.content) {
-        openDocumentInNewTab(document);
-      } else if (onUploadDocument) {
-        // If no document, trigger file upload
+      // Always trigger file upload when clicking the header, regardless of whether a document exists
+      if (onUploadDocument) {
         onUploadDocument(category, section, docType);
       }
     };
@@ -198,7 +195,7 @@ export function LoanDocumentStructure({
     return (
       <div key={docType} className="mb-4">
         <div 
-          className={`bg-[#1A2234] border-gray-800 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-[#252e47] ${isDragging ? 'border-blue-500 border-2' : 'border'} ${!isUploaded ? 'rounded-b-lg' : 'rounded-b-none'}`}
+          className={`bg-[#131B2E] border-gray-800 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-[#1F2A42] ${isDragging ? 'border-blue-500 border-2' : 'border'} ${!isUploaded ? 'rounded-b-lg' : 'rounded-b-none'}`}
           onClick={handleHeaderClick}
           onDragOver={(e) => handleDragOver(e, docType)}
           onDragLeave={handleDragLeave}
@@ -206,14 +203,14 @@ export function LoanDocumentStructure({
         >
           <div className="py-4 px-5">
             <h3 className="text-base text-white">{label}</h3>
-            {!isUploaded && (
-              <p className="text-xs text-gray-400 mt-1">Click to upload or drag and drop</p>
-            )}
+            <p className="text-xs text-gray-400 mt-1">
+              {isUploaded ? "Click to replace file" : "Click to upload or drag and drop"}
+            </p>
           </div>
         </div>
         
         {isUploaded && document && (
-          <div className="bg-[#0A0F1A] border border-t-0 border-gray-800 rounded-b-lg py-4 px-5">
+          <div className="bg-[#070B15] border border-t-0 border-gray-800 rounded-b-lg py-4 px-5">
             <div className="flex justify-between items-center">
               <a 
                 href="#" 
