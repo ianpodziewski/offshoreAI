@@ -17,6 +17,9 @@ import {
   getPreliminaryTitleReportTemplate
 } from './propertyInformationTemplates';
 
+// Import valuation templates
+import { getAppraisalReportTemplate, getBrokerPriceOpinionTemplate } from './valuationTemplates';
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
