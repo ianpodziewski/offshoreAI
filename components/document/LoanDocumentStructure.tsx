@@ -316,7 +316,7 @@ export function LoanDocumentStructure({
       <div key={docType} className="mb-4">
         {/* Document header - always shown */}
         <div 
-          className={`bg-[#131B2E] border-gray-800 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-[#1F2A42] ${isDragging ? 'border-blue-500 border-2' : 'border'} ${!isUploaded ? 'rounded-b-lg' : ''}`}
+          className={`bg-[#131B2E] border-gray-800 border rounded-t-lg cursor-pointer transition-colors duration-200 hover:bg-[#1F2A42] ${isDragging ? 'border-blue-500 border-2' : ''} ${!isUploaded ? 'rounded-b-lg' : ''}`}
           onClick={handleHeaderClick}
           onDragOver={(e) => handleDragOver(e, docType)}
           onDragLeave={handleDragLeave}
@@ -335,13 +335,13 @@ export function LoanDocumentStructure({
           </div>
         </div>
         
-        {/* Document content - only shown if documents exist */}
+        {/* Document content - only shown if documents exist - now attached directly to the header */}
         {isUploaded && (
-          <div className="mt-2 space-y-2">
-            {allDocuments.map((doc) => (
+          <div className="border border-t-0 border-gray-800 rounded-b-lg overflow-hidden">
+            {allDocuments.map((doc, index) => (
               <div 
                 key={doc.id} 
-                className="bg-[#070B15] border border-gray-800 rounded-lg p-3 transition-colors hover:bg-[#0A1020]"
+                className={`bg-[#070B15] p-3 transition-colors hover:bg-[#0A1020] ${index !== allDocuments.length - 1 ? 'border-b border-gray-800' : ''}`}
               >
                 <div className="flex justify-between items-center">
                   <div className="flex items-center">
