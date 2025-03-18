@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Save,
   Download,
-  ChevronLeft
+  ChevronLeft,
+  FileText
 } from 'lucide-react';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
@@ -128,10 +129,32 @@ const mockReviewData: ReviewData = {
 
 // Required documents for specific review items
 const requiredDocumentsForItems: Record<string, string[]> = {
-  'initial_inquiry-1': ['loan_application', 'credit_authorization', 'photo_id'],
+  'initial_inquiry-1': [
+    'credit_report', 
+    'borrower_identification', 
+    'background_check', 
+    'ofac_verification', 
+    'experience_documentation'
+  ],
   'initial_inquiry-2': ['property_photos', 'title_report', 'purchase_contract'],
   'initial_inquiry-3': ['loan_application', 'financial_statement'],
   'application-1': ['financial_statement', 'bank_statements', 'tax_returns'],
+};
+
+// Descriptions for each document type to help users understand what to upload
+const documentDescriptions: Record<string, string> = {
+  'credit_report': 'Credit report showing borrower\'s credit score and history',
+  'borrower_identification': 'Government-issued ID or passport',
+  'background_check': 'Background check report showing no foreclosures or bankruptcies',
+  'ofac_verification': 'OFAC verification results showing borrower is not on the list',
+  'experience_documentation': 'Documentation of borrower\'s real estate investment experience',
+  'property_photos': 'Recent photos of the property (interior and exterior)',
+  'title_report': 'Preliminary title report',
+  'purchase_contract': 'Executed purchase agreement',
+  'loan_application': 'Completed loan application form',
+  'financial_statement': 'Personal financial statement',
+  'bank_statements': 'Last 3 months of bank statements',
+  'tax_returns': 'Last 2 years of tax returns'
 };
 
 export default function ReviewItemPage() {
@@ -146,8 +169,9 @@ export default function ReviewItemPage() {
   const [notes, setNotes] = useState<string>('');
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [currentDocument, setCurrentDocument] = useState<SimpleDocument | null>(null);
+  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, SimpleDocument>>({});
   
-  // Load loan data
+  // Load loan data and existing documents
   useEffect(() => {
     if (loanId && reviewType && !isNaN(itemId)) {
       const loanData = loanDatabase.getLoanById(loanId);
@@ -162,6 +186,29 @@ export default function ReviewItemPage() {
             setReviewItem(item);
           }
         }
+        
+        // Load existing documents for this loan
+        const existingDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
+        
+        // Organize documents by docType for easy access
+        const docMap: Record<string, SimpleDocument> = {};
+        
+        existingDocuments.forEach(doc => {
+          if (doc.docType) {
+            docMap[doc.docType] = doc;
+          }
+        });
+        
+        // If we have documents, select the first one to display automatically
+        const relevantDocTypes = getRelevantDocuments();
+        for (const docType of relevantDocTypes) {
+          if (docMap[docType]) {
+            setCurrentDocument(docMap[docType]);
+            break;
+          }
+        }
+        
+        setUploadedDocuments(docMap);
       }
     }
   }, [loanId, reviewType, itemId]);
@@ -251,6 +298,19 @@ export default function ReviewItemPage() {
     return requiredDocumentsForItems[key] || [];
   };
   
+  // Get document label from type
+  const getDocumentLabel = (docType: string): string => {
+    return docType
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+  
+  // Get document description
+  const getDocumentDescription = (docType: string): string => {
+    return documentDescriptions[docType] || '';
+  };
+  
   return (
     <LayoutWrapper>
       <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -281,11 +341,53 @@ export default function ReviewItemPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <DocumentSockets 
-                  loanId={loanId} 
-                  onViewDocument={handleViewDocument}
-                  refreshTrigger={refreshKey}
-                />
+                {/* Show custom relevant documents for this specific review item */}
+                <div className="space-y-4">
+                  {getRelevantDocuments().map((docType) => (
+                    <div key={docType} 
+                      className={`border rounded-md p-4 bg-[#141b2d] transition-colors ${
+                        uploadedDocuments[docType] ? 'border-blue-600' : 'border-gray-700 hover:border-gray-600'
+                      }`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="font-medium text-white">{getDocumentLabel(docType)}</h3>
+                          <p className="text-xs text-gray-400">{getDocumentDescription(docType)}</p>
+                        </div>
+                      </div>
+                      
+                      {uploadedDocuments[docType] ? (
+                        <div className="mt-3 border border-blue-700 rounded-md p-3 bg-blue-900/20">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                              <FileText className="h-5 w-5 text-blue-400 mr-2" />
+                              <div>
+                                <p className="text-sm font-medium text-blue-300">{uploadedDocuments[docType].filename}</p>
+                                <p className="text-xs text-gray-400">
+                                  Uploaded {new Date(uploadedDocuments[docType].dateUploaded).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => setCurrentDocument(uploadedDocuments[docType])}
+                            >
+                              View
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-3 border border-dashed border-gray-700 rounded-md p-4 text-center">
+                          <FileText className="h-8 w-8 mx-auto text-gray-500 mb-2" />
+                          <p className="text-sm text-gray-400 mb-2">Drag & drop a PDF file here</p>
+                          <Button size="sm" variant="secondary" className="mx-auto">
+                            Upload File
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
             
@@ -311,7 +413,7 @@ export default function ReviewItemPage() {
                       />
                     ) : (
                       <div className="p-4">
-                        <pre className="whitespace-pre-wrap break-words">{currentDocument.content}</pre>
+                        <pre className="whitespace-pre-wrap break-words text-black">{currentDocument.content}</pre>
                       </div>
                     )}
                   </div>
@@ -327,7 +429,18 @@ export default function ReviewItemPage() {
                       size="sm"
                       onClick={() => {
                         // Approve document logic
-                        alert('Document approved!');
+                        if (currentDocument && currentDocument.docType) {
+                          const updatedDoc: SimpleDocument = {
+                            ...currentDocument,
+                            status: 'approved' as 'pending' | 'approved' | 'rejected'
+                          };
+                          setUploadedDocuments(prev => ({
+                            ...prev,
+                            [currentDocument.docType as string]: updatedDoc
+                          }));
+                          setCurrentDocument(updatedDoc);
+                          alert('Document approved!');
+                        }
                       }}
                     >
                       <CheckCircle2 size={16} className="mr-1 text-green-500" />
@@ -338,7 +451,18 @@ export default function ReviewItemPage() {
                       size="sm"
                       onClick={() => {
                         // Reject document logic
-                        alert('Document rejected!');
+                        if (currentDocument && currentDocument.docType) {
+                          const updatedDoc: SimpleDocument = {
+                            ...currentDocument,
+                            status: 'rejected' as 'pending' | 'approved' | 'rejected'
+                          };
+                          setUploadedDocuments(prev => ({
+                            ...prev,
+                            [currentDocument.docType as string]: updatedDoc
+                          }));
+                          setCurrentDocument(updatedDoc);
+                          alert('Document rejected!');
+                        }
                       }}
                     >
                       <AlertCircle size={16} className="mr-1 text-red-500" />
