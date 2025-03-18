@@ -37,6 +37,11 @@ import {
   getLoanAgreementTemplate
 } from './lenderLoanDocs';
 
+import {
+  getAntiMoneyLaunderingDocTemplate,
+  getPatriotActComplianceTemplate
+} from './complianceDocuments';
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4636,7 +4641,10 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   rate_lock_agreement: getRateLockAgreementTemplate,
   // Lender loan document templates
   lender_closing_checklist: getLenderClosingChecklistTemplate,
-  loan_agreement: getLoanAgreementTemplate
+  loan_agreement: getLoanAgreementTemplate,
+  // Compliance document templates
+  aml_documentation: getAntiMoneyLaunderingDocTemplate,
+  patriot_act_certification: getPatriotActComplianceTemplate
 };
 
 // This function provides a convenient way to get the right template
