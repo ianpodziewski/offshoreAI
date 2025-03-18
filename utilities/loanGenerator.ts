@@ -95,6 +95,9 @@ export interface LoanData {
       url?: string;
     }[];
   }[];
+
+  propertyValue?: number;
+  loanPurpose?: 'purchase' | 'refinance';
 }
 
 // More specific names for real estate investors

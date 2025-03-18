@@ -11,6 +11,12 @@ import {
 // Import credit report template
 import { getCreditReportTemplate } from './creditBackgroundTemplate';
 
+// Import property information templates
+import {
+  getPurchaseContractTemplate,
+  getPreliminaryTitleReportTemplate
+} from './propertyInformationTemplates';
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4589,6 +4595,9 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   resolution_to_borrow: getResolutionToBorrowTemplate,
   // Credit report template
   credit_report: getCreditReportTemplate,
+  // Property information templates
+  purchase_contract: getPurchaseContractTemplate,
+  preliminary_title_report: getPreliminaryTitleReportTemplate,
   // Add other document types and their corresponding template functions here
 };
 
