@@ -198,7 +198,21 @@ export default function LoanDocumentsPage() {
   
   // Handle document upload completion
   const handleDocumentUploaded = (document: any) => {
-    const newDoc = loanDocumentService.addDocument(document);
+    // Create document with the required structure
+    const newDoc = loanDocumentService.addDocument({
+      ...document,
+      // Make sure the status is set to 'pending' for a newly uploaded document
+      status: 'pending',
+      // Set the file upload date to now
+      dateUploaded: new Date().toISOString(),
+      // Make sure we have the correct subsection field
+      subsection: document.section || '',
+      // Default to required if not specified
+      isRequired: document.isRequired ?? true
+    });
+
+    // Simply add the new document to the existing documents array without replacing
+    // This allows multiple documents of the same type to exist
     setDocuments([...documents, newDoc]);
     
     // Update completion status
