@@ -314,46 +314,61 @@ export function LoanDocumentStructure({
     
     return (
       <div key={docType} className="mb-4">
+        {/* Document header - always shown */}
         <div 
-          className={`bg-[#131B2E] border-gray-800 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-[#1F2A42] ${isDragging ? 'border-blue-500 border-2' : 'border'} ${!isUploaded ? 'rounded-b-lg' : 'rounded-b-none'}`}
+          className={`bg-[#131B2E] border-gray-800 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-[#1F2A42] ${isDragging ? 'border-blue-500 border-2' : 'border'} ${!isUploaded ? 'rounded-b-lg' : ''}`}
           onClick={handleHeaderClick}
           onDragOver={(e) => handleDragOver(e, docType)}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, docType, section)}
         >
           <div className="py-4 px-5 flex justify-between items-center">
-            <h3 className="text-base text-white">{label}</h3>
+            <div className="flex items-center">
+              <h3 className="text-base text-white">{label}</h3>
+              {isUploaded && (
+                <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-900/50 text-blue-300">
+                  {allDocuments.length} file{allDocuments.length !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
             <Plus size={18} className="text-blue-500" />
           </div>
         </div>
         
+        {/* Document content - only shown if documents exist */}
         {isUploaded && (
-          <div className="bg-[#070B15] border border-t-0 border-gray-800 rounded-b-lg py-4 px-5">
+          <div className="mt-2 space-y-2">
             {allDocuments.map((doc) => (
-              <div key={doc.id} className="flex justify-between items-center mb-2 last:mb-0">
-                <div className="flex items-center">
-                  <a 
-                    href="#" 
-                    onClick={(e) => {
-                      e.preventDefault();
-                      openDocumentInNewTab(doc);
-                    }}
-                    className="text-blue-500 hover:underline font-medium"
-                  >
-                    {doc.filename}
-                  </a>
-                </div>
-                <div className="flex items-center">
-                  <div className="text-xs text-gray-400 mr-3">
-                    {formatDate(doc.dateUploaded)}
+              <div 
+                key={doc.id} 
+                className="bg-[#070B15] border border-gray-800 rounded-lg p-3 transition-colors hover:bg-[#0A1020]"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <FileText size={16} className="text-blue-500 mr-2" />
+                    <a 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        openDocumentInNewTab(doc);
+                      }}
+                      className="text-blue-500 hover:underline font-medium"
+                    >
+                      {doc.filename}
+                    </a>
                   </div>
-                  <button
-                    onClick={(e) => handleDeleteDocument(e, doc.id)}
-                    className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-100/10"
-                    title="Delete document"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex items-center">
+                    <div className="text-xs text-gray-400 mr-3">
+                      {formatDate(doc.dateUploaded)}
+                    </div>
+                    <button
+                      onClick={(e) => handleDeleteDocument(e, doc.id)}
+                      className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-100/10"
+                      title="Delete document"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
