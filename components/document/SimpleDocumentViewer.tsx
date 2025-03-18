@@ -35,7 +35,7 @@ const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
     ) {
       setIsHtmlContent(true);
     } else {
-      // For PDF content, use the content as URL if it's already a data URL
+      // For PDF content, use content as URL if it's already a data URL
       if (document.content.startsWith('data:application/pdf')) {
         setPdfUrl(document.content);
       } else {
