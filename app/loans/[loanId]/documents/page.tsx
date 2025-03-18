@@ -368,31 +368,31 @@ export default function LoanDocumentsPage() {
               className="bg-[#1A2234] p-4 rounded-lg border border-gray-800"
             >
               <div className="flex justify-center mb-4">
-                <TabsList className="grid grid-cols-4 bg-[#0A0F1A] p-0 rounded-lg">
+                <TabsList className="grid grid-cols-4 bg-[#0A0F1A] p-1 rounded-lg h-[52px] w-full max-w-3xl">
                   <TabsTrigger 
                     value="borrower" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
                   >
                     <FileText className="h-4 w-4 mr-2" />
                     Borrower
                   </TabsTrigger>
                   <TabsTrigger 
                     value="property" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
                   >
                     <FolderOpen className="h-4 w-4 mr-2" />
                     Property
                   </TabsTrigger>
                   <TabsTrigger 
                     value="closing" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Closing
                   </TabsTrigger>
                   <TabsTrigger 
                     value="servicing" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
                   >
                     <AlertCircle className="h-4 w-4 mr-2" />
                     Servicing
