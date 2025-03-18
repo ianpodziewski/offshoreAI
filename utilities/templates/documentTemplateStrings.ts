@@ -222,11 +222,12 @@ const baseStyle = `
 
 // Document Template Functions
 export const getLoanApplicationTemplate = (loanData: LoanData): string => {
+  const formattedDate = formatDate();
   const content = `
     <div class="header">
       <h1>LOAN APPLICATION</h1>
       <div class="application-info">
-        <p>Application Date: ${formatDate()}</p>
+        <p>Application Date: ${formattedDate}</p>
         <p>Application ID: LA-DEMO-${Math.floor(Math.random() * 10000)}</p>
       </div>
     </div>
@@ -296,47 +297,48 @@ export const getLoanApplicationTemplate = (loanData: LoanData): string => {
     </div>
   `;
 
-  // Use documentStyleService without any custom CSS since we've included all necessary styles
   return documentStyleService.wrapContentWithWatermark(`Loan Application - ${loanData.borrowerName}`, content);
 };
 
 export const getPhotoIdTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
-    <div class="document">
-      <div class="document-header">
-        <div class="document-title">PHOTO ID</div>
-        <div class="document-subtitle">Date: ${formattedDate}</div>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Loan Details</div>
-        <table class="info-table">
-          <tr>
-            <th>Borrower:</th>
-            <td>${loanData.borrowerName}</td>
-          </tr>
-          <tr>
-            <th>Loan ID:</th>
-            <td>${loanData.id || 'DEMO-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000)}</td>
-          </tr>
-          <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.toUpperCase()}</td>
-          </tr>
-          <tr>
-            <th>Loan Amount:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-          <tr>
-            <th>Property Address:</th>
-            <td>${loanData.propertyAddress}</td>
-          </tr>
-        </table>
+  const content = `
+    <div class="header">
+      <h1>PHOTO ID</h1>
+      <div class="application-info">
+        <p>Date: ${formattedDate}</p>
       </div>
     </div>
+    
+    <div class="section">
+      <h2>Loan Details</h2>
+      <table>
+        <tr>
+          <th>Borrower:</th>
+          <td>${loanData.borrowerName}</td>
+        </tr>
+        <tr>
+          <th>Loan ID:</th>
+          <td>${loanData.id || 'DEMO-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000)}</td>
+        </tr>
+        <tr>
+          <th>Loan Type:</th>
+          <td>${loanData.loanType.toUpperCase()}</td>
+        </tr>
+        <tr>
+          <th>Loan Amount:</th>
+          <td>${formatCurrency(loanData.loanAmount)}</td>
+        </tr>
+        <tr>
+          <th>Property Address:</th>
+          <td>${loanData.propertyAddress}</td>
+        </tr>
+      </table>
+    </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Photo ID - ${loanData.borrowerName}`, content);
 };
 
 // Additional document templates can be exported here
@@ -344,56 +346,58 @@ export const getPhotoIdTemplate = (loanData: LoanData): string => {
 export const getCreditAuthorizationTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
-    <div class="document">
-      <div class="document-header">
-        <div class="document-title">CREDIT AUTHORIZATION</div>
-        <div class="document-subtitle">Date: ${formattedDate}</div>
-      </div>
-      
-      <div class="document-section">
-        <p>I/We authorize DocuLendAI, or its assigns, to obtain verification of any information necessary, including but not limited to the following:</p>
-        
-        <ul style="margin-left: 20px; margin-bottom: 20px;">
-          <li>My employment history and earnings, including future, past, and present</li>
-          <li>My bank accounts, stock holdings, and any other asset balances</li>
-          <li>My liability accounts including credit cards, loans, and mortgages</li>
-          <li>My credit history through a consumer credit report</li>
-        </ul>
-        
-        <p>This information will be used for loan qualification purposes only and will be kept confidential.</p>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Borrower Information</div>
-        <table class="info-table">
-          <tr>
-            <th>Borrower Name:</th>
-            <td>${loanData.borrowerName}</td>
-          </tr>
-          <tr>
-            <th>Social Security #:</th>
-            <td>XXX-XX-${Math.floor(1000 + Math.random() * 9000)}</td>
-          </tr>
-          <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
-          </tr>
-          <tr>
-            <th>Property Address:</th>
-            <td>${loanData.propertyAddress}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="signature-section">
-        <p>By signing below, I authorize the verification of the information provided on this form.</p>
-        <div class="signature-line"></div>
-        <div>${loanData.borrowerName}, Borrower</div>
-        <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+  const content = `
+    <div class="header">
+      <h1>CREDIT AUTHORIZATION</h1>
+      <div class="application-info">
+        <p>Date: ${formattedDate}</p>
       </div>
     </div>
+    
+    <div class="section">
+      <p>I/We authorize DocuLendAI, or its assigns, to obtain verification of any information necessary, including but not limited to the following:</p>
+      
+      <ul style="margin-left: 20px; margin-bottom: 20px;">
+        <li>My employment history and earnings, including future, past, and present</li>
+        <li>My bank accounts, stock holdings, and any other asset balances</li>
+        <li>My liability accounts including credit cards, loans, and mortgages</li>
+        <li>My credit history through a consumer credit report</li>
+      </ul>
+      
+      <p>This information will be used for loan qualification purposes only and will be kept confidential.</p>
+    </div>
+    
+    <div class="section">
+      <h2>Borrower Information</h2>
+      <table>
+        <tr>
+          <th>Borrower Name:</th>
+          <td>${loanData.borrowerName}</td>
+        </tr>
+        <tr>
+          <th>Social Security #:</th>
+          <td>XXX-XX-${Math.floor(1000 + Math.random() * 9000)}</td>
+        </tr>
+        <tr>
+          <th>Loan Type:</th>
+          <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
+        </tr>
+        <tr>
+          <th>Property Address:</th>
+          <td>${loanData.propertyAddress}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="margin-top: 50px;">
+      <p>By signing below, I authorize the verification of the information provided on this form.</p>
+      <div style="border-top: 1px solid #333; width: 60%; margin-top: 30px; margin-bottom: 5px;"></div>
+      <div>${loanData.borrowerName}, Borrower</div>
+      <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+    </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Credit Authorization - ${loanData.borrowerName}`, content);
 };
 
 // Other templates can be added here
@@ -405,490 +409,497 @@ export const getCreditAuthorizationTemplate = (loanData: LoanData): string => {
 export const getPromissoryNoteTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   // Template implementation for promissory note
-  return `${baseStyle}
-    <div class="document">
-      <div class="document-header">
-        <div class="document-title">PROMISSORY NOTE</div>
-        <div class="document-subtitle">Date: ${formattedDate}</div>
-      </div>
-      
-      <div class="document-section">
-        <p>
-          FOR VALUE RECEIVED, the undersigned, <strong>${loanData.borrowerName}</strong> ("Borrower"), 
-          hereby promises to pay to the order of DocuLendAI, or any subsequent holder hereof 
-          ("Lender"), the principal sum of <strong>${formatCurrency(loanData.loanAmount)}</strong>, with interest 
-          on the unpaid principal balance from the date of this Note, until paid, at an interest rate of 
-          <strong>${loanData.interestRate}%</strong> per annum.
-        </p>
-        
-        <div class="section-title">Loan Information</div>
-        <table class="info-table">
-          <tr>
-            <th>Property Address:</th>
-            <td>${loanData.propertyAddress}</td>
-          </tr>
-          <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.toUpperCase()}<br>
-            </td>
-          </tr>
-          <tr>
-            <th>Loan Amount:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-          <tr>
-            <th>Interest Rate:</th>
-            <td>${loanData.interestRate}%</td>
-          </tr>
-          <tr>
-            <th>Loan Term:</th>
-            <td>${loanData.loanTerm} months (${loanData.loanTerm / 12} years)</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="signature-section">
-        <p>IN WITNESS WHEREOF, Borrower has executed this Promissory Note as of the date first written above.</p>
-        <div class="signature-line"></div>
-        <div>${loanData.borrowerName}, Borrower</div>
-        <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+  const content = `
+    <div class="header">
+      <h1>PROMISSORY NOTE</h1>
+      <div class="application-info">
+        <p>Date: ${formattedDate}</p>
       </div>
     </div>
+    
+    <div class="section">
+      <p>
+        FOR VALUE RECEIVED, the undersigned, <strong>${loanData.borrowerName}</strong> ("Borrower"), 
+        hereby promises to pay to the order of DocuLendAI, or any subsequent holder hereof 
+        ("Lender"), the principal sum of <strong>${formatCurrency(loanData.loanAmount)}</strong>, with interest 
+        on the unpaid principal balance from the date of this Note, until paid, at an interest rate of 
+        <strong>${loanData.interestRate}%</strong> per annum.
+      </p>
+      
+      <h2>Loan Information</h2>
+      <table>
+        <tr>
+          <th>Property Address:</th>
+          <td>${loanData.propertyAddress}</td>
+        </tr>
+        <tr>
+          <th>Loan Type:</th>
+          <td>${loanData.loanType.toUpperCase()}</td>
+        </tr>
+        <tr>
+          <th>Loan Amount:</th>
+          <td>${formatCurrency(loanData.loanAmount)}</td>
+        </tr>
+        <tr>
+          <th>Interest Rate:</th>
+          <td>${loanData.interestRate}%</td>
+        </tr>
+        <tr>
+          <th>Loan Term:</th>
+          <td>${loanData.loanTerm} months (${loanData.loanTerm / 12} years)</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="margin-top: 50px;">
+      <p>IN WITNESS WHEREOF, Borrower has executed this Promissory Note as of the date first written above.</p>
+      <div style="border-top: 1px solid #333; width: 60%; margin-top: 30px; margin-bottom: 5px;"></div>
+      <div>${loanData.borrowerName}, Borrower</div>
+      <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+    </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Promissory Note - ${loanData.borrowerName}`, content);
 };
 
 export const getDeedOfTrustTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
-    <div class="document">
-      <div class="document-header">
-        <div class="document-title">DEED OF TRUST</div>
-        <div class="document-subtitle">Date: ${formattedDate}</div>
-      </div>
-      
-      <div class="document-section">
-        <p>
-          THIS DEED OF TRUST ("Security Instrument") is made on ${formattedDate}. 
-          The grantor is <strong>${loanData.borrowerName}</strong> ("Borrower"). 
-          The trustee is LEGAL TRUST SERVICES, INC., a California Corporation ("Trustee"). 
-          The beneficiary is DocuLendAI ("Lender").
-        </p>
-        
-        <p>
-          Borrower owes Lender the principal sum of <strong>${formatCurrency(loanData.loanAmount)}</strong> 
-          ("Note"). This debt is evidenced by Borrower's note dated ${formattedDate} 
-          and extensions and modifications of the note.
-        </p>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Property Description</div>
-        <p>
-          This Security Instrument secures to Lender: (a) the repayment of the debt evidenced by the Note, with interest, 
-          and all renewals, extensions and modifications of the Note; and (b) the performance of Borrower's covenants 
-          and agreements under this Security Instrument and the Note.
-        </p>
-        <p>
-          For this purpose, Borrower irrevocably grants and conveys to Trustee, in trust, with power of sale, the following 
-          described property located in the County of COUNTY, State of STATE:
-        </p>
-        <p style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; margin: 10px 0;">
-          Property Address: ${loanData.propertyAddress}<br>
-          Property Type: ${loanData.propertyType.replace(/_/g, ' ')}<br>
-          Legal Description: [Legal description to be attached as Exhibit A]
-        </p>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Terms and Conditions</div>
-        <p>
-          1. <strong>Payment of Principal and Interest.</strong> Borrower shall promptly pay when due the principal of and interest on the 
-          debt evidenced by the Note and any prepayment and late charges due under the Note.
-        </p>
-        <p>
-          2. <strong>Application of Payments.</strong> All payments accepted and applied by Lender shall be applied in the following order of 
-          priority: (a) interest due under the Note; (b) principal due under the Note; (c) amounts due for escrow items under Section 3.
-        </p>
-        <p>
-          3. <strong>Property Insurance.</strong> Borrower shall keep the improvements now existing or hereafter erected on the Property insured 
-          against loss by fire, hazards included within the term "extended coverage," and any other hazards for which Lender requires insurance.
-        </p>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Security Details</div>
-        <table class="info-table">
-          <tr>
-            <th>Loan Amount:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-          <tr>
-            <th>Interest Rate:</th>
-            <td>${loanData.interestRate}%</td>
-          </tr>
-          <tr>
-            <th>Loan Term:</th>
-            <td>${loanData.loanTerm} months</td>
-          </tr>
-          <tr>
-            <th>Maturity Date:</th>
-            <td>${loanData.maturityDate || 'To be determined'}</td>
-          </tr>
-          <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="signature-section">
-        <p>BY SIGNING BELOW, Borrower accepts and agrees to the terms and covenants contained in this Security Instrument.</p>
-        <div class="signature-line"></div>
-        <div>${loanData.borrowerName}, Borrower</div>
-        <div class="signature-line"></div>
-        <div>Trustee</div>
-        <div class="signature-line"></div>
-        <div>Lender</div>
-        <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+  const content = `
+    <div class="header">
+      <h1>DEED OF TRUST</h1>
+      <div class="application-info">
+        <p>Date: ${formattedDate}</p>
       </div>
     </div>
+    
+    <div class="section">
+      <p>
+        THIS DEED OF TRUST ("Security Instrument") is made on ${formattedDate}. 
+        The grantor is <strong>${loanData.borrowerName}</strong> ("Borrower"). 
+        The trustee is LEGAL TRUST SERVICES, INC., a California Corporation ("Trustee"). 
+        The beneficiary is DocuLendAI ("Lender").
+      </p>
+      
+      <p>
+        Borrower owes Lender the principal sum of <strong>${formatCurrency(loanData.loanAmount)}</strong> 
+        ("Note"). This debt is evidenced by Borrower's note dated ${formattedDate} 
+        and extensions and modifications of the note.
+      </p>
+    </div>
+    
+    <div class="section">
+      <h2>Property Description</h2>
+      <p>
+        This Security Instrument secures to Lender: (a) the repayment of the debt evidenced by the Note, with interest, 
+        and all renewals, extensions and modifications of the Note; and (b) the performance of Borrower's covenants 
+        and agreements under this Security Instrument and the Note.
+      </p>
+      <p>
+        For this purpose, Borrower irrevocably grants and conveys to Trustee, in trust, with power of sale, the following 
+        described property located in the County of COUNTY, State of STATE:
+      </p>
+      <p style="padding: 10px; border: 1px solid #ddd; background-color: #f9f9f9; margin: 10px 0;">
+        Property Address: ${loanData.propertyAddress}<br>
+        Property Type: ${loanData.propertyType.replace(/_/g, ' ')}<br>
+        Legal Description: [Legal description to be attached as Exhibit A]
+      </p>
+    </div>
+    
+    <div class="section">
+      <h2>Terms and Conditions</h2>
+      <p>
+        1. <strong>Payment of Principal and Interest.</strong> Borrower shall promptly pay when due the principal of and interest on the 
+        debt evidenced by the Note and any prepayment and late charges due under the Note.
+      </p>
+      <p>
+        2. <strong>Application of Payments.</strong> All payments accepted and applied by Lender shall be applied in the following order of 
+        priority: (a) interest due under the Note; (b) principal due under the Note; (c) amounts due for escrow items under Section 3.
+      </p>
+      <p>
+        3. <strong>Property Insurance.</strong> Borrower shall keep the improvements now existing or hereafter erected on the Property insured 
+        against loss by fire, hazards included within the term "extended coverage," and any other hazards for which Lender requires insurance.
+      </p>
+    </div>
+    
+    <div class="section">
+      <h2>Security Details</h2>
+      <table>
+        <tr>
+          <th>Loan Amount:</th>
+          <td>${formatCurrency(loanData.loanAmount)}</td>
+        </tr>
+        <tr>
+          <th>Interest Rate:</th>
+          <td>${loanData.interestRate}%</td>
+        </tr>
+        <tr>
+          <th>Loan Term:</th>
+          <td>${loanData.loanTerm} months</td>
+        </tr>
+        <tr>
+          <th>Maturity Date:</th>
+          <td>${loanData.maturityDate || 'To be determined'}</td>
+        </tr>
+        <tr>
+          <th>Loan Type:</th>
+          <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="margin-top: 50px;">
+      <p>BY SIGNING BELOW, Borrower accepts and agrees to the terms and covenants contained in this Security Instrument.</p>
+      <div style="border-top: 1px solid #333; width: 60%; margin-top: 30px; margin-bottom: 5px;"></div>
+      <div>${loanData.borrowerName}, Borrower</div>
+      <div style="border-top: 1px solid #333; width: 60%; margin-top: 30px; margin-bottom: 5px;"></div>
+      <div>Trustee</div>
+      <div style="border-top: 1px solid #333; width: 60%; margin-top: 30px; margin-bottom: 5px;"></div>
+      <div>Lender</div>
+      <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+    </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Deed of Trust - ${loanData.borrowerName}`, content);
 };
 
 export const getClosingDisclosureTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
-    <div class="document">
-      <div class="document-header">
-        <div class="document-title">CLOSING DISCLOSURE</div>
-        <div class="document-subtitle">Date: ${formattedDate}</div>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Transaction Information</div>
-        <table class="info-table">
-          <tr>
-            <th>Loan ID:</th>
-            <td>${loanData.id}</td>
-          </tr>
-          <tr>
-            <th>Closing Date:</th>
-            <td>${formattedDate}</td>
-          </tr>
-          <tr>
-            <th>Disbursement Date:</th>
-            <td>${formattedDate}</td>
-          </tr>
-          <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
-          </tr>
-          <tr>
-            <th>Loan Term:</th>
-            <td>${loanData.loanTerm} months</td>
-          </tr>
-          <tr>
-            <th>Purpose:</th>
-            <td>${loanData.loanType === 'fix_and_flip' ? 'Property Rehabilitation and Resale' : 
-                loanData.loanType === 'rental_brrrr' ? 'Property Acquisition and Rental' : 
-                loanData.loanType === 'bridge' ? 'Bridge Financing' : 
-                loanData.loanType === 'construction' ? 'Construction Financing' : 
-                'Commercial Real Estate Investment'}</td>
-          </tr>
-          <tr>
-            <th>Product:</th>
-            <td>Fixed Rate Hard Money Loan</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Loan Terms</div>
-        <table class="info-table">
-          <tr>
-            <th>Loan Amount:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-          <tr>
-            <th>Interest Rate:</th>
-            <td>${loanData.interestRate}%</td>
-          </tr>
-          <tr>
-            <th>Monthly Principal & Interest:</th>
-            <td>${formatCurrency((loanData.loanAmount * (loanData.interestRate/100/12)) + (loanData.loanAmount/loanData.loanTerm))}</td>
-          </tr>
-          <tr>
-            <th>Prepayment Penalty:</th>
-            <td>${loanData.prepaymentPenalty || 'None'}</td>
-          </tr>
-          <tr>
-            <th>Balloon Payment:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Projected Payments</div>
-        <table class="info-table">
-          <tr>
-            <th>Payment Calculation:</th>
-            <td>Interest-Only Payments</td>
-          </tr>
-          <tr>
-            <th>Monthly Interest Payment:</th>
-            <td>${formatCurrency(loanData.loanAmount * (loanData.interestRate/100/12))}</td>
-          </tr>
-          <tr>
-            <th>Monthly Principal Payment:</th>
-            <td>$0.00</td>
-          </tr>
-          <tr>
-            <th>Balloon Payment Due:</th>
-            <td>${formatCurrency(loanData.loanAmount)} (at maturity)</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Closing Cost Details</div>
-        <table class="info-table">
-          <tr>
-            <th>Origination Fee (${loanData.originationFee}%):</th>
-            <td>${formatCurrency(loanData.loanAmount * (loanData.originationFee/100))}</td>
-          </tr>
-          <tr>
-            <th>Underwriting Fee:</th>
-            <td>${formatCurrency(1500)}</td>
-          </tr>
-          <tr>
-            <th>Processing Fee:</th>
-            <td>${formatCurrency(500)}</td>
-          </tr>
-          <tr>
-            <th>Document Preparation:</th>
-            <td>${formatCurrency(750)}</td>
-          </tr>
-          <tr>
-            <th>Title Insurance:</th>
-            <td>${formatCurrency(loanData.loanAmount * 0.0035)}</td>
-          </tr>
-          <tr>
-            <th>Appraisal Fee:</th>
-            <td>${formatCurrency(750)}</td>
-          </tr>
-          <tr>
-            <th>Recording Fees:</th>
-            <td>${formatCurrency(250)}</td>
-          </tr>
-          <tr>
-            <th>Total Closing Costs:</th>
-            <td><strong>${formatCurrency((loanData.loanAmount * (loanData.originationFee/100)) + 1500 + 500 + 750 + (loanData.loanAmount * 0.0035) + 750 + 250)}</strong></td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Total Cash to Close</div>
-        <table class="info-table">
-          <tr>
-            <th>Total Loan Amount:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-          <tr>
-            <th>Total Closing Costs:</th>
-            <td>${formatCurrency((loanData.loanAmount * (loanData.originationFee/100)) + 1500 + 500 + 750 + (loanData.loanAmount * 0.0035) + 750 + 250)}</td>
-          </tr>
-          <tr>
-            <th>Initial Interest Reserve (3 months):</th>
-            <td>${formatCurrency(loanData.loanAmount * (loanData.interestRate/100/12) * 3)}</td>
-          </tr>
-          <tr>
-            <th>Net Proceeds to Borrower:</th>
-            <td><strong>${formatCurrency(loanData.loanAmount - ((loanData.loanAmount * (loanData.originationFee/100)) + 1500 + 500 + 750 + (loanData.loanAmount * 0.0035) + 750 + 250) - (loanData.loanAmount * (loanData.interestRate/100/12) * 3))}</strong></td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="signature-section">
-        <p>By signing, you acknowledge receipt of this Closing Disclosure and confirm its accuracy.</p>
-        <div class="signature-line"></div>
-        <div>${loanData.borrowerName}, Borrower</div>
-        <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+  const content = `
+    <div class="header">
+      <h1>CLOSING DISCLOSURE</h1>
+      <div class="application-info">
+        <p>Date: ${formattedDate}</p>
       </div>
     </div>
+    
+    <div class="section">
+      <h2>Transaction Information</h2>
+      <table>
+        <tr>
+          <th>Loan ID:</th>
+          <td>${loanData.id}</td>
+        </tr>
+        <tr>
+          <th>Closing Date:</th>
+          <td>${formattedDate}</td>
+        </tr>
+        <tr>
+          <th>Disbursement Date:</th>
+          <td>${formattedDate}</td>
+        </tr>
+        <tr>
+          <th>Loan Type:</th>
+          <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
+        </tr>
+        <tr>
+          <th>Loan Term:</th>
+          <td>${loanData.loanTerm} months</td>
+        </tr>
+        <tr>
+          <th>Purpose:</th>
+          <td>${loanData.loanType === 'fix_and_flip' ? 'Property Rehabilitation and Resale' : 
+              loanData.loanType === 'rental_brrrr' ? 'Property Acquisition and Rental' : 
+              loanData.loanType === 'bridge' ? 'Bridge Financing' : 
+              loanData.loanType === 'construction' ? 'Construction Financing' : 
+              'Commercial Real Estate Investment'}</td>
+        </tr>
+        <tr>
+          <th>Product:</th>
+          <td>Fixed Rate Hard Money Loan</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Loan Terms</h2>
+      <table>
+        <tr>
+          <th>Loan Amount:</th>
+          <td>${formatCurrency(loanData.loanAmount)}</td>
+        </tr>
+        <tr>
+          <th>Interest Rate:</th>
+          <td>${loanData.interestRate}%</td>
+        </tr>
+        <tr>
+          <th>Monthly Principal & Interest:</th>
+          <td>${formatCurrency((loanData.loanAmount * (loanData.interestRate/100/12)) + (loanData.loanAmount/loanData.loanTerm))}</td>
+        </tr>
+        <tr>
+          <th>Prepayment Penalty:</th>
+          <td>${loanData.prepaymentPenalty || 'None'}</td>
+        </tr>
+        <tr>
+          <th>Balloon Payment:</th>
+          <td>${formatCurrency(loanData.loanAmount)}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Projected Payments</h2>
+      <table>
+        <tr>
+          <th>Payment Calculation:</th>
+          <td>Interest-Only Payments</td>
+        </tr>
+        <tr>
+          <th>Monthly Interest Payment:</th>
+          <td>${formatCurrency(loanData.loanAmount * (loanData.interestRate/100/12))}</td>
+        </tr>
+        <tr>
+          <th>Monthly Principal Payment:</th>
+          <td>$0.00</td>
+        </tr>
+        <tr>
+          <th>Balloon Payment Due:</th>
+          <td>${formatCurrency(loanData.loanAmount)} (at maturity)</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Closing Cost Details</h2>
+      <table>
+        <tr>
+          <th>Origination Fee (${loanData.originationFee}%):</th>
+          <td>${formatCurrency(loanData.loanAmount * (loanData.originationFee/100))}</td>
+        </tr>
+        <tr>
+          <th>Underwriting Fee:</th>
+          <td>${formatCurrency(1500)}</td>
+        </tr>
+        <tr>
+          <th>Processing Fee:</th>
+          <td>${formatCurrency(500)}</td>
+        </tr>
+        <tr>
+          <th>Document Preparation:</th>
+          <td>${formatCurrency(750)}</td>
+        </tr>
+        <tr>
+          <th>Title Insurance:</th>
+          <td>${formatCurrency(loanData.loanAmount * 0.0035)}</td>
+        </tr>
+        <tr>
+          <th>Appraisal Fee:</th>
+          <td>${formatCurrency(750)}</td>
+        </tr>
+        <tr>
+          <th>Recording Fees:</th>
+          <td>${formatCurrency(250)}</td>
+        </tr>
+        <tr>
+          <th>Total Closing Costs:</th>
+          <td><strong>${formatCurrency((loanData.loanAmount * (loanData.originationFee/100)) + 1500 + 500 + 750 + (loanData.loanAmount * 0.0035) + 750 + 250)}</strong></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Total Cash to Close</h2>
+      <table>
+        <tr>
+          <th>Total Loan Amount:</th>
+          <td>${formatCurrency(loanData.loanAmount)}</td>
+        </tr>
+        <tr>
+          <th>Total Closing Costs:</th>
+          <td>${formatCurrency((loanData.loanAmount * (loanData.originationFee/100)) + 1500 + 500 + 750 + (loanData.loanAmount * 0.0035) + 750 + 250)}</td>
+        </tr>
+        <tr>
+          <th>Initial Interest Reserve (3 months):</th>
+          <td>${formatCurrency(loanData.loanAmount * (loanData.interestRate/100/12) * 3)}</td>
+        </tr>
+        <tr>
+          <th>Net Proceeds to Borrower:</th>
+          <td><strong>${formatCurrency(loanData.loanAmount - ((loanData.loanAmount * (loanData.originationFee/100)) + 1500 + 500 + 750 + (loanData.loanAmount * 0.0035) + 750 + 250) - (loanData.loanAmount * (loanData.interestRate/100/12) * 3))}</strong></td>
+        </tr>
+      </table>
+    </div>
+    
+    <div style="margin-top: 50px;">
+      <p>By signing, you acknowledge receipt of this Closing Disclosure and confirm its accuracy.</p>
+      <div style="border-top: 1px solid #333; width: 60%; margin-top: 30px; margin-bottom: 5px;"></div>
+      <div>${loanData.borrowerName}, Borrower</div>
+      <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+    </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Closing Disclosure - ${loanData.borrowerName}`, content);
 };
 
 export const getPropertyAppraisalTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
-    <div class="document">
-      <div class="document-header">
-        <div class="document-title">PROPERTY APPRAISAL REPORT</div>
-        <div class="document-subtitle">Date: ${formattedDate}</div>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Subject Property</div>
-        <table class="info-table">
-          <tr>
-            <th>Property Address:</th>
-            <td>${loanData.propertyAddress}</td>
-          </tr>
-          <tr>
-            <th>City:</th>
-            <td>${loanData.city || 'Not Specified'}</td>
-          </tr>
-          <tr>
-            <th>State/Zip:</th>
-            <td>${loanData.state || 'XX'} ${loanData.zipCode || '00000'}</td>
-          </tr>
-          <tr>
-            <th>County:</th>
-            <td>${loanData.county || 'Not Specified'}</td>
-          </tr>
-          <tr>
-            <th>Property Type:</th>
-            <td>${loanData.propertyType.replace(/_/g, ' ')}</td>
-          </tr>
-          <tr>
-            <th>Legal Description:</th>
-            <td>Lot XX, Block XX, SUBDIVISION NAME, according to the map or plat thereof as recorded in Plat Book XX, Page XX</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Property Characteristics</div>
-        <table class="info-table">
-          <tr>
-            <th>Year Built:</th>
-            <td>${loanData.yearBuilt || 'Not Available'}</td>
-          </tr>
-          <tr>
-            <th>Square Footage:</th>
-            <td>${loanData.squareFootage ? loanData.squareFootage.toLocaleString() + ' sq. ft.' : 'Not Available'}</td>
-          </tr>
-          <tr>
-            <th>Lot Size:</th>
-            <td>${loanData.lotSize || 'Not Available'}</td>
-          </tr>
-          <tr>
-            <th>Bedrooms:</th>
-            <td>${loanData.bedrooms || 'N/A'}</td>
-          </tr>
-          <tr>
-            <th>Bathrooms:</th>
-            <td>${loanData.bathrooms || 'N/A'}</td>
-          </tr>
-          <tr>
-            <th>Zoning Classification:</th>
-            <td>${loanData.zoning || 'Not Specified'}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Valuation Information</div>
-        <table class="info-table">
-          <tr>
-            <th>Appraisal Purpose:</th>
-            <td>To determine market value for lending purposes</td>
-          </tr>
-          <tr>
-            <th>Appraisal Approach:</th>
-            <td>Sales Comparison Approach</td>
-          </tr>
-          <tr>
-            <th>Current As-Is Value:</th>
-            <td>${formatCurrency(loanData.purchasePrice)}</td>
-          </tr>
-          <tr>
-            <th>After Repair Value (ARV):</th>
-            <td>${formatCurrency(loanData.afterRepairValue)}</td>
-          </tr>
-          <tr>
-            <th>Purchase Price:</th>
-            <td>${formatCurrency(loanData.purchasePrice)}</td>
-          </tr>
-          <tr>
-            <th>Rehabilitation Budget:</th>
-            <td>${formatCurrency(loanData.rehabBudget)}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Comparable Properties Analysis</div>
-        <table class="info-table">
-          <tr>
-            <th>Comparable #1 Address:</th>
-            <td>123 Nearby Street</td>
-          </tr>
-          <tr>
-            <th>Sale Date:</th>
-            <td>${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
-          </tr>
-          <tr>
-            <th>Sale Price:</th>
-            <td>${formatCurrency(loanData.purchasePrice * (Math.random() * 0.2 + 0.9))}</td>
-          </tr>
-          <tr>
-            <th>Comparable #2 Address:</th>
-            <td>456 Similar Avenue</td>
-          </tr>
-          <tr>
-            <th>Sale Date:</th>
-            <td>${new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
-          </tr>
-          <tr>
-            <th>Sale Price:</th>
-            <td>${formatCurrency(loanData.purchasePrice * (Math.random() * 0.2 + 0.9))}</td>
-          </tr>
-          <tr>
-            <th>Comparable #3 Address:</th>
-            <td>789 Equivalent Boulevard</td>
-          </tr>
-          <tr>
-            <th>Sale Date:</th>
-            <td>${new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
-          </tr>
-          <tr>
-            <th>Sale Price:</th>
-            <td>${formatCurrency(loanData.purchasePrice * (Math.random() * 0.2 + 0.9))}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Appraiser's Notes</div>
-        <p>
-          This property ${loanData.loanType === 'fix_and_flip' || loanData.loanType === 'rental_brrrr' ? 
-            'needs significant rehabilitation to achieve its potential market value. The After Repair Value (ARV) is contingent on completing all proposed renovations according to plan.' : 
-            'is in generally good condition with typical market appreciation expected over the loan term.'} 
-          The local real estate market is currently ${Math.random() > 0.5 ? 'experiencing moderate growth with stable demand.' : 'strong with increasing property values.'}
-        </p>
-        <p>
-          The subject property is located in a ${Math.random() > 0.5 ? 'well-established neighborhood with good access to amenities and transportation.' : 'developing area with improving infrastructure and services.'}
-          Overall, the property ${loanData.loanType === 'fix_and_flip' ? 'presents a good opportunity for rehabilitation and resale' : 
-            loanData.loanType === 'rental_brrrr' ? 'has good potential as a rental investment after repairs' : 
-            'is suitable for the intended purpose and loan type.'} 
-        </p>
-      </div>
-      
-      <div class="signature-section">
-        <p>This appraisal report is prepared for lending purposes and is subject to the stated assumptions and limiting conditions.</p>
-        <div class="signature-line"></div>
-        <div>Michael Anderson, Certified Appraiser</div>
-        <div>License #: AP-12345</div>
-        <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+  const content = `
+    <div class="header">
+      <h1>PROPERTY APPRAISAL REPORT</h1>
+      <div class="application-info">
+        <p>Date: ${formattedDate}</p>
       </div>
     </div>
+    
+    <div class="section">
+      <h2>Subject Property</h2>
+      <table>
+        <tr>
+          <th>Property Address:</th>
+          <td>${loanData.propertyAddress}</td>
+        </tr>
+        <tr>
+          <th>City:</th>
+          <td>${loanData.city || 'Not Specified'}</td>
+        </tr>
+        <tr>
+          <th>State/Zip:</th>
+          <td>${loanData.state || 'XX'} ${loanData.zipCode || '00000'}</td>
+        </tr>
+        <tr>
+          <th>County:</th>
+          <td>${loanData.county || 'Not Specified'}</td>
+        </tr>
+        <tr>
+          <th>Property Type:</th>
+          <td>${loanData.propertyType.replace(/_/g, ' ')}</td>
+        </tr>
+        <tr>
+          <th>Legal Description:</th>
+          <td>Lot XX, Block XX, SUBDIVISION NAME, according to the map or plat thereof as recorded in Plat Book XX, Page XX</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Property Characteristics</h2>
+      <table>
+        <tr>
+          <th>Year Built:</th>
+          <td>${loanData.yearBuilt || 'Not Available'}</td>
+        </tr>
+        <tr>
+          <th>Square Footage:</th>
+          <td>${loanData.squareFootage ? loanData.squareFootage.toLocaleString() + ' sq. ft.' : 'Not Available'}</td>
+        </tr>
+        <tr>
+          <th>Lot Size:</th>
+          <td>${loanData.lotSize || 'Not Available'}</td>
+        </tr>
+        <tr>
+          <th>Bedrooms:</th>
+          <td>${loanData.bedrooms || 'N/A'}</td>
+        </tr>
+        <tr>
+          <th>Bathrooms:</th>
+          <td>${loanData.bathrooms || 'N/A'}</td>
+        </tr>
+        <tr>
+          <th>Zoning Classification:</th>
+          <td>${loanData.zoning || 'Not Specified'}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Valuation Information</h2>
+      <table>
+        <tr>
+          <th>Appraisal Purpose:</th>
+          <td>To determine market value for lending purposes</td>
+        </tr>
+        <tr>
+          <th>Appraisal Approach:</th>
+          <td>Sales Comparison Approach</td>
+        </tr>
+        <tr>
+          <th>Current As-Is Value:</th>
+          <td>${formatCurrency(loanData.purchasePrice)}</td>
+        </tr>
+        <tr>
+          <th>After Repair Value (ARV):</th>
+          <td>${formatCurrency(loanData.afterRepairValue)}</td>
+        </tr>
+        <tr>
+          <th>Purchase Price:</th>
+          <td>${formatCurrency(loanData.purchasePrice)}</td>
+        </tr>
+        <tr>
+          <th>Rehabilitation Budget:</th>
+          <td>${formatCurrency(loanData.rehabBudget)}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Comparable Properties Analysis</h2>
+      <table>
+        <tr>
+          <th>Comparable #1 Address:</th>
+          <td>123 Nearby Street</td>
+        </tr>
+        <tr>
+          <th>Sale Date:</th>
+          <td>${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
+        </tr>
+        <tr>
+          <th>Sale Price:</th>
+          <td>${formatCurrency(loanData.purchasePrice * (Math.random() * 0.2 + 0.9))}</td>
+        </tr>
+        <tr>
+          <th>Comparable #2 Address:</th>
+          <td>456 Similar Avenue</td>
+        </tr>
+        <tr>
+          <th>Sale Date:</th>
+          <td>${new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
+        </tr>
+        <tr>
+          <th>Sale Price:</th>
+          <td>${formatCurrency(loanData.purchasePrice * (Math.random() * 0.2 + 0.9))}</td>
+        </tr>
+        <tr>
+          <th>Comparable #3 Address:</th>
+          <td>789 Equivalent Boulevard</td>
+        </tr>
+        <tr>
+          <th>Sale Date:</th>
+          <td>${new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toLocaleDateString()}</td>
+        </tr>
+        <tr>
+          <th>Sale Price:</th>
+          <td>${formatCurrency(loanData.purchasePrice * (Math.random() * 0.2 + 0.9))}</td>
+        </tr>
+      </table>
+    </div>
+    
+    <div class="section">
+      <h2>Appraiser's Notes</h2>
+      <p>
+        This property ${loanData.loanType === 'fix_and_flip' || loanData.loanType === 'rental_brrrr' ? 
+          'needs significant rehabilitation to achieve its potential market value. The After Repair Value (ARV) is contingent on completing all proposed renovations according to plan.' : 
+          'is in generally good condition with typical market appreciation expected over the loan term.'} 
+        The local real estate market is currently ${Math.random() > 0.5 ? 'experiencing moderate growth with stable demand.' : 'strong with increasing property values.'}
+      </p>
+      <p>
+        The subject property is located in a ${Math.random() > 0.5 ? 'well-established neighborhood with good access to amenities and transportation.' : 'developing area with improving infrastructure and services.'}
+        Overall, the property ${loanData.loanType === 'fix_and_flip' ? 'presents a good opportunity for rehabilitation and resale' : 
+          loanData.loanType === 'rental_brrrr' ? 'has good potential as a rental investment after repairs' : 
+          'is suitable for the intended purpose and loan type.'} 
+      </p>
+    </div>
+    
+    <div style="margin-top: 50px;">
+      <p>This appraisal report is prepared for lending purposes and is subject to the stated assumptions and limiting conditions.</p>
+      <div style="border-top: 1px solid #333; width: 60%; margin-top: 30px; margin-bottom: 5px;"></div>
+      <div>Michael Anderson, Certified Appraiser</div>
+      <div>License #: AP-12345</div>
+      <div style="margin-top: 10px;">Date: ${formattedDate}</div>
+    </div>
   `;
+
+  return documentStyleService.wrapContentWithWatermark(`Property Appraisal - ${loanData.propertyAddress}`, content);
 };
 
 export const getTermSheetTemplate = (loanData: LoanData): string => {
