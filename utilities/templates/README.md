@@ -50,8 +50,8 @@ This directory contains template functions for generating HTML documents for the
 ### Property Information (Partial Implementation)
 - ✅ `purchase_contract`
 - ✅ `preliminary_title_report`
-- ❌ `renovation_budget`
-- ❌ `draw_schedule`
+- ✅ `renovation_budget` / `construction_budget`
+- ✅ `draw_schedule`
 
 ### Valuation (Implemented)
 - ✅ `appraisal_report`

@@ -15,6 +15,10 @@ import {
   getAppraisalReportTemplate,
   getBrokerPriceOpinionTemplate
 } from './templates/valuationTemplates';
+import {
+  getRenovationBudgetTemplate,
+  getDrawScheduleTemplate
+} from './templates/projectDocumentationTemplates';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -26,11 +30,14 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'preliminary_title_report': getPreliminaryTitleReportTemplate,
   'appraisal_report': getAppraisalReportTemplate,
   'broker_price_opinion': getBrokerPriceOpinionTemplate,
-  'bpo': getBrokerPriceOpinionTemplate
+  'bpo': getBrokerPriceOpinionTemplate,
+  'renovation_budget': getRenovationBudgetTemplate,
+  'construction_budget': getRenovationBudgetTemplate,
+  'draw_schedule': getDrawScheduleTemplate
 };
 
 // A mapping of document types to their categories
-const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc' | 'property'> = {
+const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc' | 'property' | 'project'> = {
   'promissory_note': 'legal',
   'deed_of_trust': 'legal',
   'closing_disclosure': 'financial',
@@ -39,7 +46,10 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'preliminary_title_report': 'property',
   'appraisal_report': 'financial',
   'broker_price_opinion': 'financial',
-  'bpo': 'financial'
+  'bpo': 'financial',
+  'renovation_budget': 'project',
+  'construction_budget': 'project',
+  'draw_schedule': 'project'
 };
 
 // Document names for display
@@ -52,7 +62,10 @@ const documentNames: Record<string, string> = {
   'preliminary_title_report': 'Preliminary Title Report',
   'appraisal_report': 'Appraisal Report',
   'broker_price_opinion': 'Broker Price Opinion',
-  'bpo': 'Broker Price Opinion (BPO)'
+  'bpo': 'Broker Price Opinion (BPO)',
+  'renovation_budget': 'Renovation Budget',
+  'construction_budget': 'Construction Budget',
+  'draw_schedule': 'Draw Schedule'
 };
 
 export const fakeDocumentService = {
