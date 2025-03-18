@@ -47,9 +47,9 @@ This directory contains template functions for generating HTML documents for the
 ### Loan Monitoring (Implemented)
 - ✅ `draw_requests`
 
-### Property Information (Not Implemented)
-- ❌ `purchase_contract`
-- ❌ `preliminary_title`
+### Property Information (Partial Implementation)
+- ✅ `purchase_contract`
+- ✅ `preliminary_title_report`
 - ❌ `renovation_budget`
 - ❌ `draw_schedule`
 

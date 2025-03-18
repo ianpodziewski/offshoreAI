@@ -7,21 +7,29 @@ import {
   generateClosingDisclosure,
   generatePropertyAppraisal
 } from './enhancedDocumentGenerator';
+import { 
+  getPurchaseContractTemplate, 
+  getPreliminaryTitleReportTemplate 
+} from './templates/propertyInformationTemplates';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'promissory_note': generatePromissoryNote,
   'deed_of_trust': generateDeedOfTrust,
   'closing_disclosure': generateClosingDisclosure,
-  'property_appraisal': generatePropertyAppraisal
+  'property_appraisal': generatePropertyAppraisal,
+  'purchase_contract': getPurchaseContractTemplate,
+  'preliminary_title_report': getPreliminaryTitleReportTemplate
 };
 
 // A mapping of document types to their categories
-const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'> = {
+const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc' | 'property'> = {
   'promissory_note': 'legal',
   'deed_of_trust': 'legal',
   'closing_disclosure': 'financial',
-  'property_appraisal': 'financial'
+  'property_appraisal': 'financial',
+  'purchase_contract': 'property',
+  'preliminary_title_report': 'property'
 };
 
 // Document names for display
@@ -29,7 +37,9 @@ const documentNames: Record<string, string> = {
   'promissory_note': 'Promissory Note',
   'deed_of_trust': 'Deed of Trust',
   'closing_disclosure': 'Closing Disclosure',
-  'property_appraisal': 'Property Appraisal'
+  'property_appraisal': 'Property Appraisal',
+  'purchase_contract': 'Purchase Contract',
+  'preliminary_title_report': 'Preliminary Title Report'
 };
 
 export const fakeDocumentService = {
