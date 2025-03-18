@@ -237,6 +237,8 @@ export const getLoanApplicationTemplate = (loanData: LoanData): string => {
         <tr>
           <th>Borrower Name:</th>
           <td>${loanData.borrowerName}</td>
+          <th>Co-Borrower:</th>
+          <td>N/A</td>
         </tr>
         <tr>
           <th>Entity Type:</th>
@@ -294,38 +296,8 @@ export const getLoanApplicationTemplate = (loanData: LoanData): string => {
     </div>
   `;
 
-  // Custom CSS specific to loan application
-  const customCss = `
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-    }
-    h1 {
-      color: #1e5a9a;
-      margin-bottom: 10px;
-    }
-    .application-info {
-      margin-bottom: 20px;
-      font-size: 14px;
-    }
-    .section {
-      margin-bottom: 30px;
-      border: 1px solid #ddd;
-      padding: 15px;
-      border-radius: 5px;
-      background-color: #f9f9f9;
-    }
-    .section h2 {
-      margin-top: 0;
-      color: #333;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
-      font-size: 18px;
-    }
-  `;
-
-  return documentStyleService.wrapContentWithWatermark(`Loan Application - ${loanData.borrowerName}`, content, customCss);
+  // Use documentStyleService without any custom CSS since we've included all necessary styles
+  return documentStyleService.wrapContentWithWatermark(`SAMPLE - Loan Application - ${loanData.borrowerName}`, content);
 };
 
 export const getPhotoIdTemplate = (loanData: LoanData): string => {

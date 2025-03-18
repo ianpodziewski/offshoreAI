@@ -8,33 +8,39 @@
 // Function to get watermark styles for consistent usage
 export const getWatermarkStyle = (): string => {
   return `
-    /* Watermark styles */
-    html, body {
-      position: relative;
+    /* Reset and basic styling */
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
+    }
+    
+    html, body {
       width: 100%;
-      min-height: 100vh;
+      height: 100%;
       font-family: Arial, sans-serif;
     }
+    
     body {
+      padding: 20px;
       display: flex;
       justify-content: center;
     }
+    
+    /* Watermark styling */
     .watermark {
       position: fixed;
       top: 0;
       left: 0;
-      right: 0;
-      bottom: 0;
       width: 100%;
       height: 100%;
       display: flex;
       justify-content: center;
       align-items: center;
       pointer-events: none;
-      z-index: 1000;
+      z-index: 1;
     }
+    
     .watermark:after {
       content: "SAMPLE";
       font-size: 120px;
@@ -45,15 +51,18 @@ export const getWatermarkStyle = (): string => {
       font-weight: bold;
       letter-spacing: 10px;
     }
+    
+    /* Document content styling */
     .document-content {
       position: relative;
-      z-index: 1;
+      background-color: white;
       max-width: 850px;
       width: 100%;
-      margin: 20px auto;
-      padding: 20px;
-      box-sizing: border-box;
-      background-color: white;
+      padding: 30px;
+      margin: 0 auto;
+      z-index: 2;
+      border: 1px solid #ddd;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
   `;
 };
@@ -69,48 +78,89 @@ export const wrapContentWithWatermark = (title: string, content: string, customC
   <title>${title}</title>
   <style>
     ${getWatermarkStyle()}
+    
+    /* Document specific styles */
     .document-container {
-      background: white;
       width: 100%;
-      padding: 20px 30px;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      padding: 0;
+      margin: 0;
     }
+    
     h1 {
       color: #333;
       border-bottom: 2px solid #ddd;
       padding-bottom: 10px;
       margin-top: 0;
+      margin-bottom: 20px;
+      text-align: center;
     }
+    
     .warning {
       background-color: #fff8e1;
       border-left: 4px solid #ffc107;
       padding: 12px 20px;
       margin: 20px 0;
     }
+    
     .info {
       background-color: #e1f5fe;
       border-left: 4px solid #03a9f4;
       padding: 12px 20px;
       margin: 20px 0;
     }
+    
     table {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 20px;
     }
+    
     table, th, td {
       border: 1px solid #ddd;
     }
+    
     th, td {
       padding: 8px;
       text-align: left;
     }
+    
     th {
       background-color: #f2f2f2;
       font-weight: bold;
     }
+    
+    /* Section styling */
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .application-info {
+      margin-bottom: 20px;
+      font-size: 14px;
+      text-align: center;
+      color: #555;
+      line-height: 1.5;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    
+    .section h2 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    /* Custom CSS */
     ${customCss}
   </style>
 </head>
