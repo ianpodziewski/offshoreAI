@@ -26,6 +26,9 @@ import { getRenovationBudgetTemplate, getDrawScheduleTemplate } from './projectD
 // Import income document templates
 import { getLeaseAgreementTemplate, getDscrCalculationWorksheetTemplate, getPropertyManagementAgreementTemplate } from './incomeDocumentTemplates';
 
+// Import pre-closing document templates
+import { getPreApprovalLetterTemplate, getFeeDisclosureTemplate, getRateLockAgreementTemplate } from './preClosingDocuments';
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4619,6 +4622,10 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   lease_agreement: getLeaseAgreementTemplate,
   dscr_calculation: getDscrCalculationWorksheetTemplate,
   property_management_agreement: getPropertyManagementAgreementTemplate,
+  // Pre-closing document templates
+  pre_approval_letter: getPreApprovalLetterTemplate,
+  fee_disclosure: getFeeDisclosureTemplate,
+  rate_lock_agreement: getRateLockAgreementTemplate,
   // Add other document types and their corresponding template functions here
 };
 
