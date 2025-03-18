@@ -297,7 +297,7 @@ export const getLoanApplicationTemplate = (loanData: LoanData): string => {
   `;
 
   // Use documentStyleService without any custom CSS since we've included all necessary styles
-  return documentStyleService.wrapContentWithWatermark(`SAMPLE - Loan Application - ${loanData.borrowerName}`, content);
+  return documentStyleService.wrapContentWithWatermark(`Loan Application - ${loanData.borrowerName}`, content);
 };
 
 export const getPhotoIdTemplate = (loanData: LoanData): string => {

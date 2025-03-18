@@ -19,12 +19,14 @@ export const getWatermarkStyle = (): string => {
       width: 100%;
       height: 100%;
       font-family: Arial, sans-serif;
+      background-color: #f5f5f5;
     }
     
     body {
-      padding: 20px;
+      padding: 30px 20px 60px;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
     }
     
     /* Watermark styling */
@@ -38,7 +40,8 @@ export const getWatermarkStyle = (): string => {
       justify-content: center;
       align-items: center;
       pointer-events: none;
-      z-index: 1;
+      z-index: 1000;
+      overflow: hidden;
     }
     
     .watermark:after {
@@ -52,6 +55,17 @@ export const getWatermarkStyle = (): string => {
       letter-spacing: 10px;
     }
     
+    /* Page title styling */
+    .page-title {
+      width: 100%;
+      text-align: left;
+      margin-bottom: 20px;
+      color: #555;
+      font-size: 16px;
+      max-width: 850px;
+      font-family: monospace;
+    }
+    
     /* Document content styling */
     .document-content {
       position: relative;
@@ -59,7 +73,7 @@ export const getWatermarkStyle = (): string => {
       max-width: 850px;
       width: 100%;
       padding: 30px;
-      margin: 0 auto;
+      margin: 0 auto 60px;
       z-index: 2;
       border: 1px solid #ddd;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -69,6 +83,9 @@ export const getWatermarkStyle = (): string => {
 
 // Function to wrap content in a standard document template with watermark
 export const wrapContentWithWatermark = (title: string, content: string, customCss: string = ''): string => {
+  // Extract file name from title to display at the top
+  const fileTitle = title.includes('SAMPLE') ? 'SAMPLE_' + title.split('SAMPLE - ')[1].toLowerCase().replace(/ /g, '_') + '.html' : title.toLowerCase().replace(/ /g, '_') + '.html';
+  
   return `
 <!DOCTYPE html>
 <html>
@@ -160,15 +177,31 @@ export const wrapContentWithWatermark = (title: string, content: string, customC
       font-size: 18px;
     }
     
+    /* Table improvements */
+    .section table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 0;
+    }
+    
+    .section table tr:nth-child(even) {
+      background-color: #f0f0f0;
+    }
+    
+    .section table tr:hover {
+      background-color: #e9e9e9;
+    }
+    
     /* Custom CSS */
     ${customCss}
   </style>
 </head>
 <body>
-  <div class="watermark"></div>
+  <div class="page-title">${fileTitle}</div>
   <div class="document-content">
     ${content}
   </div>
+  <div class="watermark"></div>
 </body>
 </html>`;
 };
