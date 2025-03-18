@@ -115,119 +115,153 @@ export function LoanDocumentStructure({
     }
   };
   
-  // Render document action button
-  const renderDocumentAction = (category: string, section: string, docType: string) => {
-    const isUploaded = isDocumentUploaded(docType);
-    const documentId = getDocumentId(docType);
-    
-    if (isUploaded && documentId) {
-      return (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="text-blue-500 border-blue-500 hover:bg-blue-100 hover:text-blue-700"
-          onClick={() => onViewDocument && onViewDocument(documentId)}
-        >
-          <Eye className="h-4 w-4 mr-1" />
-          View
-        </Button>
-      );
-    }
-    
-    return (
-      <Button 
-        variant="outline" 
-        size="sm" 
-        className="text-green-500 border-green-500 hover:bg-green-100 hover:text-green-700"
-        onClick={() => onUploadDocument && onUploadDocument(category, section, docType)}
-      >
-        <Upload className="h-4 w-4 mr-1" />
-        Upload
-      </Button>
-    );
-  };
-  
   // Render document item
   const renderDocumentItem = (category: string, section: string, docType: string, label: string, isRequired: boolean) => {
     const isUploaded = isDocumentUploaded(docType);
     const document = getDocument(docType);
     
-    return (
-      <Card key={docType} className="bg-[#1A2234] border-gray-800 mb-4">
-        <CardHeader className="border-b border-gray-800 bg-[#0A0F1A] py-3">
-          <CardTitle className="text-base text-white">
-            {label}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="py-3">
-          {isUploaded && document ? (
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <a 
-                  href="#" 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Only open in a new tab, don't trigger the modal view
-                    if (document.content) {
-                      const newWindow = window.open('', '_blank');
-                      if (newWindow) {
-                        newWindow.document.write(`
-                          <html>
-                            <head>
-                              <title>${document.filename}</title>
-                              <style>
-                                body { 
-                                  font-family: Arial, sans-serif;
-                                  line-height: 1.6;
-                                  padding: 20px;
-                                  max-width: 800px;
-                                  margin: 0 auto;
-                                }
-                                .document-header {
-                                  text-align: center;
-                                  margin-bottom: 30px;
-                                  border-bottom: 2px solid #1e5a9a;
-                                  padding-bottom: 20px;
-                                }
-                                .document-content {
-                                  padding: 20px;
-                                  background-color: white;
-                                }
-                              </style>
-                            </head>
-                            <body>
-                              <div class="document-header">
-                                <h1>${document.filename}</h1>
-                              </div>
-                              <div class="document-content">
-                                ${document.content}
-                              </div>
-                            </body>
-                          </html>
-                        `);
-                      }
-                    }
-                  }}
-                  className="text-blue-500 hover:underline font-medium"
-                >
-                  {document.filename}
-                </a>
-              </div>
-              <div className="flex gap-2">
-                <div className="text-xs text-gray-400 mr-2">
-                  {formatDate(document.dateUploaded)}
+    const handleHeaderClick = () => {
+      // If document exists, open in new tab
+      if (document && document.content) {
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>${document.filename}</title>
+                <style>
+                  body { 
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    padding: 20px;
+                    max-width: 800px;
+                    margin: 0 auto;
+                  }
+                  .document-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #1e5a9a;
+                    padding-bottom: 20px;
+                  }
+                  .document-content {
+                    padding: 20px;
+                    background-color: white;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="document-header">
+                  <h1>${document.filename}</h1>
                 </div>
-                {renderDocumentAction(category, section, docType)}
+                <div class="document-content">
+                  ${document.content}
+                </div>
+              </body>
+            </html>
+          `);
+        }
+      } else {
+        // If no document, trigger file upload
+        onUploadDocument && onUploadDocument(category, section, docType);
+      }
+    };
+    
+    // Handle drag and drop functionality
+    const [isDragging, setIsDragging] = useState(false);
+    
+    const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+    
+    const handleDragLeave = () => {
+      setIsDragging(false);
+    };
+    
+    const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      
+      // Here we'd normally handle the file, but for now just trigger the upload modal
+      onUploadDocument && onUploadDocument(category, section, docType);
+    };
+    
+    return (
+      <div key={docType} className="mb-4">
+        <div 
+          className={`bg-[#1A2234] border-gray-800 rounded-lg cursor-pointer transition-colors duration-200 hover:bg-[#252e47] ${isDragging ? 'border-blue-500 border-2' : 'border'} ${!isUploaded ? 'rounded-b-lg' : 'rounded-b-none'}`}
+          onClick={handleHeaderClick}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          <div className="py-4 px-5">
+            <h3 className="text-base text-white">{label}</h3>
+            {!isUploaded && (
+              <p className="text-xs text-gray-400 mt-1">Click to upload or drag and drop</p>
+            )}
+          </div>
+        </div>
+        
+        {isUploaded && document && (
+          <div className="bg-[#0A0F1A] border border-t-0 border-gray-800 rounded-b-lg py-4 px-5">
+            <div className="flex justify-between items-center">
+              <a 
+                href="#" 
+                onClick={(e) => {
+                  e.preventDefault();
+                  // Only open in a new tab
+                  if (document.content) {
+                    const newWindow = window.open('', '_blank');
+                    if (newWindow) {
+                      newWindow.document.write(`
+                        <html>
+                          <head>
+                            <title>${document.filename}</title>
+                            <style>
+                              body { 
+                                font-family: Arial, sans-serif;
+                                line-height: 1.6;
+                                padding: 20px;
+                                max-width: 800px;
+                                margin: 0 auto;
+                              }
+                              .document-header {
+                                text-align: center;
+                                margin-bottom: 30px;
+                                border-bottom: 2px solid #1e5a9a;
+                                padding-bottom: 20px;
+                              }
+                              .document-content {
+                                padding: 20px;
+                                background-color: white;
+                              }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="document-header">
+                              <h1>${document.filename}</h1>
+                            </div>
+                            <div class="document-content">
+                              ${document.content}
+                            </div>
+                          </body>
+                        </html>
+                      `);
+                    }
+                  }
+                }}
+                className="text-blue-500 hover:underline font-medium"
+              >
+                {document.filename}
+              </a>
+              <div className="text-xs text-gray-400">
+                {formatDate(document.dateUploaded)}
               </div>
             </div>
-          ) : (
-            <div className="flex justify-between items-center">
-              <div className="text-gray-400 text-sm">No document uploaded</div>
-              {renderDocumentAction(category, section, docType)}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        )}
+      </div>
     );
   };
   
