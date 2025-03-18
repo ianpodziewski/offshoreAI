@@ -87,7 +87,6 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   
   // Placeholder templates for currently unimplemented documents that are being requested
   'investment_history': (loan: LoanData) => `<h1>Investment History</h1><p>Investment history for ${loan.borrowerName} is not yet implemented.</p>`,
-  'loan_servicing_agreement': (loan: LoanData) => `<h1>Loan Servicing Agreement</h1><p>Loan servicing agreement for ${loan.borrowerName} is not yet implemented.</p>`,
   'state_lending_disclosures': (loan: LoanData) => `<h1>State Lending Disclosures</h1><p>State lending disclosures for ${loan.borrowerName} are not yet implemented.</p>`,
   'federal_lending_disclosures': (loan: LoanData) => `<h1>Federal Lending Disclosures</h1><p>Federal lending disclosures for ${loan.borrowerName} are not yet implemented.</p>`,
   'ofac_check': (loan: LoanData) => `<h1>OFAC Check</h1><p>OFAC check for ${loan.borrowerName} is not yet implemented.</p>`,
@@ -201,7 +200,8 @@ export const fakeDocumentService = {
     'property_insurance': 'property_insurance_policy',
     'liability_insurance': 'liability_insurance_policy',
     'patriot_act_compliance': 'patriot_act_certification',
-    'closing_checklist': 'lender_closing_checklist'
+    'closing_checklist': 'lender_closing_checklist',
+    'loan_servicing_agreement': 'loan_agreement'
   } as Record<string, string>,
 
   /**
