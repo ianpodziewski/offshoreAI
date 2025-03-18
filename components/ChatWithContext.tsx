@@ -17,12 +17,9 @@ interface ChatWithContextProps {
   isLoanSpecific?: boolean; // New prop to determine if this is a loan-specific chat
 }
 
-// Add Atlas Capital's underwriting guidelines as context
-const ATLAS_CAPITAL_GUIDELINES = `
-ATLAS CAPITAL PARTNERS UNDERWRITING GUIDELINES
-
-COMPANY OVERVIEW
-Atlas Capital Partners is a private money lender specializing in asset-based lending solutions for real estate investors. We provide short-term financing for residential and commercial investment properties with a focus on value-add opportunities.
+// Add DocuLendAI's underwriting guidelines as context
+const LENDER_GUIDELINES = `
+DocuLendAI is a private money lender specializing in asset-based lending solutions for real estate investors. We provide short-term financing for residential and commercial investment properties with a focus on value-add opportunities.
 
 LOAN PRODUCTS
 Fix-and-Flip Program
@@ -112,9 +109,8 @@ export default function ChatWithContext({ loanSpecificContext, isLoanSpecific = 
       console.log("Loan context available:", loanSpecificContext.substring(0, 50) + "...");
     }
     
-    // Add Atlas Capital's guidelines to the context
-    const atlasCapitalContext = ATLAS_CAPITAL_GUIDELINES;
-    console.log("Atlas Capital guidelines available for chat context");
+    // Log that DocuLendAI guidelines are available
+    console.log("DocuLendAI guidelines available for chat context");
   }, [loanSpecificContext]);
   
   // Function to fetch documents with special handling for the problematic document

@@ -12,12 +12,12 @@ interface LoanChatMessage {
 // Storage key for loan documents
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
 
-// Atlas Capital's underwriting guidelines
-const ATLAS_CAPITAL_GUIDELINES = `
-ATLAS CAPITAL PARTNERS UNDERWRITING GUIDELINES
+// DocuLendAI's underwriting guidelines
+const DOCULENDAI_GUIDELINES = `
+DocuLendAI UNDERWRITING GUIDELINES
 
 COMPANY OVERVIEW
-Atlas Capital Partners is a private money lender specializing in asset-based lending solutions for real estate investors. We provide short-term financing for residential and commercial investment properties with a focus on value-add opportunities.
+DocuLendAI is a private money lender specializing in asset-based lending solutions for real estate investors. We provide short-term financing for residential and commercial investment properties with a focus on value-add opportunities.
 
 LOAN PRODUCTS
 Fix-and-Flip Program
@@ -120,11 +120,11 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
         ).join('\n')
       : 'No documents available for this loan.';
     
-    // Add Atlas Capital guidelines
-    const fullContext = `${loanContextStr}\n\nDocuments:\n${documentContextStr}\n\nATLAS CAPITAL GUIDELINES:\n${ATLAS_CAPITAL_GUIDELINES}`;
+    // Add DocuLendAI guidelines
+    const fullContext = `${loanContextStr}\n\nDocuments:\n${documentContextStr}\n\nDOCULENDAI GUIDELINES:\n${DOCULENDAI_GUIDELINES}`;
     setLoanContext(fullContext);
     
-    console.log('Loan context updated successfully with Atlas Capital guidelines');
+    console.log('Loan context updated successfully with DocuLendAI guidelines');
     return fullContext;
   }, [activeLoan, loanDocuments]);
   
@@ -137,7 +137,7 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
       // Add welcome message when loan changes
       setMessages([{
         role: 'assistant',
-        content: `Welcome to the Atlas Capital Partners loan assistant for loan #${activeLoan.id}. I can help you with information about this specific loan and our lending guidelines.`,
+        content: `Welcome to the DocuLendAI loan assistant for loan #${activeLoan.id}. I can help you with information about this specific loan and our lending guidelines.`,
         timestamp: new Date()
       }]);
     }
@@ -289,7 +289,7 @@ export default function useLoanChat(activeLoan: LoanData | null, loanDocuments: 
         }
       }
       
-      // Enhance loan context with document contents and Atlas Capital guidelines
+      // Enhance loan context with document contents and DocuLendAI guidelines
       const enhancedContext = documentContents 
         ? `${loanContext}\n\nDocument Contents:\n${documentContents}`
         : loanContext;

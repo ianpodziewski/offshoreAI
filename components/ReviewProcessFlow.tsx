@@ -21,7 +21,7 @@ import {
 import documentDatabase from '../utilities/documentDatabase';
 import { Textarea } from '../components/ui/textarea';
 
-// Define review stages based on Atlas Capital's underwriting process
+// Define review stages based on DocuLendAI's underwriting process
 const REVIEW_STAGES = [
   {
     id: 'initial_application',
@@ -92,9 +92,9 @@ const REVIEW_STAGES = [
   }
 ];
 
-// Define document types required for Atlas Capital's underwriting process
+// Define document types required for DocuLendAI's underwriting process
 const DOCUMENT_TYPES = {
-  loan_application: 'Atlas Capital Loan Application',
+  loan_application: 'DocuLendAI Loan Application',
   photo_id: 'Government-Issued Photo ID',
   credit_authorization: 'Credit Authorization Form',
   proof_of_funds: 'Proof of Funds for Down Payment',

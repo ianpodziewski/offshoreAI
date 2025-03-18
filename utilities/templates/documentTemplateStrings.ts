@@ -233,7 +233,7 @@ export const getCreditAuthorizationTemplate = (loanData: LoanData): string => {
       </div>
       
       <div class="document-section">
-        <p>I/We authorize Atlas Hard Money Lenders, or its assigns, to obtain verification of any information necessary, including but not limited to the following:</p>
+        <p>I/We authorize DocuLendAI, or its assigns, to obtain verification of any information necessary, including but not limited to the following:</p>
         
         <ul style="margin-left: 20px; margin-bottom: 20px;">
           <li>My employment history and earnings, including future, past, and present</li>
@@ -296,7 +296,7 @@ export const getPromissoryNoteTemplate = (loanData: LoanData): string => {
       <div class="document-section">
         <p>
           FOR VALUE RECEIVED, the undersigned, <strong>${loanData.borrowerName}</strong> ("Borrower"), 
-          hereby promises to pay to the order of ATLAS HARD MONEY LENDERS, or any subsequent holder hereof 
+          hereby promises to pay to the order of DocuLendAI, or any subsequent holder hereof 
           ("Lender"), the principal sum of <strong>${formatCurrency(loanData.loanAmount)}</strong>, with interest 
           on the unpaid principal balance from the date of this Note, until paid, at an interest rate of 
           <strong>${loanData.interestRate}%</strong> per annum.
@@ -353,7 +353,7 @@ export const getDeedOfTrustTemplate = (loanData: LoanData): string => {
           THIS DEED OF TRUST ("Security Instrument") is made on ${formattedDate}. 
           The grantor is <strong>${loanData.borrowerName}</strong> ("Borrower"). 
           The trustee is LEGAL TRUST SERVICES, INC., a California Corporation ("Trustee"). 
-          The beneficiary is ATLAS HARD MONEY LENDERS ("Lender").
+          The beneficiary is DocuLendAI ("Lender").
         </p>
         
         <p>
@@ -787,7 +787,7 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
         <table class="info-table">
           <tr>
             <th>Lender:</th>
-            <td>Atlas Hard Money Lenders</td>
+            <td>DocuLendAI</td>
           </tr>
           <tr>
             <th>Address:</th>
@@ -799,7 +799,7 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Email:</th>
-            <td>loans@atlashardmoney.com</td>
+            <td>loans@doculendai.com</td>
           </tr>
           <tr>
             <th>Contact Person:</th>
@@ -987,7 +987,7 @@ export const getPersonalGuaranteeTemplate = (loanData: LoanData): string => {
       
       <div class="document-section">
         <p>
-          FOR VALUE RECEIVED, and to induce ATLAS HARD MONEY LENDERS, LLC ("Lender") to make a loan to 
+          FOR VALUE RECEIVED, and to induce DocuLendAI, LLC ("Lender") to make a loan to 
           ${loanData.entityName || `${loanData.borrowerName} Properties LLC`} ("Borrower"), 
           the undersigned, <strong>${loanData.borrowerName}</strong> ("Guarantor"), irrevocably, absolutely, 
           and unconditionally guarantees to Lender the full and prompt payment and performance of all obligations 
@@ -1089,7 +1089,7 @@ export const getAssignmentRentsLeasesTemplate = (loanData: LoanData): string => 
         <p>
           THIS ASSIGNMENT OF RENTS AND LEASES (this "Assignment") is made as of ${formattedDate}, by 
           <strong>${loanData.entityName || `${loanData.borrowerName} Properties LLC`}</strong> ("Assignor") 
-          in favor of <strong>ATLAS HARD MONEY LENDERS, LLC</strong> ("Assignee").
+          in favor of <strong>DocuLendAI, LLC</strong> ("Assignee").
         </p>
         
         <p>
@@ -1169,7 +1169,7 @@ export const getAssignmentRentsLeasesTemplate = (loanData: LoanData): string => 
           </tr>
           <tr>
             <th>Lender (Assignee):</th>
-            <td>ATLAS HARD MONEY LENDERS, LLC</td>
+            <td>DocuLendAI, LLC</td>
           </tr>
           <tr>
             <th>Loan Amount:</th>
@@ -1219,7 +1219,7 @@ export const getSecurityAgreementTemplate = (loanData: LoanData): string => {
         <p>
           THIS SECURITY AGREEMENT (this "Agreement") is made as of ${formattedDate}, by and between 
           <strong>${loanData.entityName || `${loanData.borrowerName} Properties LLC`}</strong> ("Debtor") and 
-          <strong>ATLAS HARD MONEY LENDERS, LLC</strong> ("Secured Party").
+          <strong>DocuLendAI, LLC</strong> ("Secured Party").
         </p>
         
         <p>
@@ -1331,7 +1331,7 @@ export const getSecurityAgreementTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Secured Party:</th>
-            <td>ATLAS HARD MONEY LENDERS, LLC</td>
+            <td>DocuLendAI, LLC</td>
           </tr>
           <tr>
             <th>Property Address:</th>
@@ -1669,7 +1669,7 @@ export const getBackgroundCheckTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Check Performed By:</th>
-            <td>Atlas Hard Money Lenders Compliance Department</td>
+            <td>DocuLendAI Compliance Department</td>
           </tr>
           <tr>
             <th>Check Completed On:</th>
@@ -1759,7 +1759,7 @@ export const getBackgroundCheckTemplate = (loanData: LoanData): string => {
           has provided written consent for this background check.
         </p>
         <p>
-          This report is confidential and for the exclusive use of Atlas Hard Money Lenders in 
+          This report is confidential and for the exclusive use of DocuLendAI in 
           evaluating the loan application for property at ${loanData.propertyAddress}.
         </p>
       </div>
@@ -1779,7 +1779,7 @@ export const getBackgroundCheckTemplate = (loanData: LoanData): string => {
       </div>
       
       <div class="signature-section">
-        <p>This report generated by Atlas Hard Money Lenders Compliance Department</p>
+        <p>This report generated by DocuLendAI Compliance Department</p>
         <div class="signature-line"></div>
         <div>Compliance Officer</div>
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
@@ -1993,7 +1993,7 @@ export const getContactInformationTemplate = (loanData: LoanData): string => {
       <div class="document-section">
         <p>
           I certify that the information provided above is true and correct to the best of my knowledge.
-          I understand that it is my responsibility to notify Atlas Hard Money Lenders of any changes
+          I understand that it is my responsibility to notify DocuLendAI of any changes
           to the above information during the term of my loan.
         </p>
       </div>
@@ -2335,7 +2335,7 @@ export const getPersonalFinancialStatementTemplate = (loanData: LoanData): strin
         <div class="section-title">Certification</div>
         <p>
           I certify that the information provided in this personal financial statement is true and correct. 
-          The information has been furnished to Atlas Hard Money Lenders to obtain or maintain credit. 
+          The information has been furnished to DocuLendAI to obtain or maintain credit. 
           I understand that you will retain this financial statement whether or not credit is granted, and 
           I authorize you to verify this information and to obtain additional information concerning my 
           financial standing.
@@ -2698,7 +2698,7 @@ export const getPersonalTaxReturnsTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Verified By:</th>
-            <td>Atlas Hard Money Lenders Underwriting Team</td>
+            <td>DocuLendAI Underwriting Team</td>
           </tr>
           <tr>
             <th>Verification Date:</th>
@@ -3147,7 +3147,7 @@ export const getBusinessTaxReturnsTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Verified By:</th>
-            <td>Atlas Hard Money Lenders Underwriting Team</td>
+            <td>DocuLendAI Underwriting Team</td>
           </tr>
           <tr>
             <th>Verification Date:</th>
@@ -3458,7 +3458,7 @@ export const getBankStatementsTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Verified By:</th>
-            <td>Atlas Hard Money Lenders Underwriting Team</td>
+            <td>DocuLendAI Underwriting Team</td>
           </tr>
           <tr>
             <th>Verification Date:</th>
@@ -3743,7 +3743,7 @@ export const getIncomeVerificationTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Verified By:</th>
-            <td>Atlas Hard Money Lenders Underwriting Team</td>
+            <td>DocuLendAI Underwriting Team</td>
           </tr>
           <tr>
             <th>Verification Date:</th>
