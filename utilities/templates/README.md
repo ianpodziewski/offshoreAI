@@ -40,6 +40,8 @@ This directory contains template functions for generating HTML documents for the
 - ✅ `assignment_rents_leases`
 - ✅ `term_sheet`
 - ✅ `closing_disclosure`
+- ✅ `lender_closing_checklist`
+- ✅ `loan_agreement`
 
 ### Credit & Background (Implemented)
 - ✅ `background_check`

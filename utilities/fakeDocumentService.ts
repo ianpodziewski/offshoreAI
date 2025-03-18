@@ -29,6 +29,10 @@ import {
   getFeeDisclosureTemplate,
   getRateLockAgreementTemplate
 } from './templates/preClosingDocuments';
+import {
+  getLenderClosingChecklistTemplate,
+  getLoanAgreementTemplate
+} from './templates/lenderLoanDocs';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -49,7 +53,9 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'property_management_agreement': getPropertyManagementAgreementTemplate,
   'pre_approval_letter': getPreApprovalLetterTemplate,
   'fee_disclosure': getFeeDisclosureTemplate,
-  'rate_lock_agreement': getRateLockAgreementTemplate
+  'rate_lock_agreement': getRateLockAgreementTemplate,
+  'lender_closing_checklist': getLenderClosingChecklistTemplate,
+  'loan_agreement': getLoanAgreementTemplate
 };
 
 // A mapping of document types to their categories
@@ -71,7 +77,9 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'property_management_agreement': 'financial',
   'pre_approval_letter': 'loan',
   'fee_disclosure': 'financial',
-  'rate_lock_agreement': 'loan'
+  'rate_lock_agreement': 'loan',
+  'lender_closing_checklist': 'loan',
+  'loan_agreement': 'loan'
 };
 
 // Document names for display
@@ -93,7 +101,9 @@ const documentNames: Record<string, string> = {
   'property_management_agreement': 'Property Management Agreement',
   'pre_approval_letter': 'Pre-Approval Letter',
   'fee_disclosure': 'Fee Disclosure',
-  'rate_lock_agreement': 'Rate Lock Agreement'
+  'rate_lock_agreement': 'Rate Lock Agreement',
+  'lender_closing_checklist': 'Lender Closing Checklist',
+  'loan_agreement': 'Loan Agreement'
 };
 
 export const fakeDocumentService = {
