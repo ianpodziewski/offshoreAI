@@ -42,6 +42,14 @@ import {
   getPatriotActComplianceTemplate
 } from './complianceDocuments';
 
+// Import insurance document templates
+import {
+  getPropertyInsurancePolicyTemplate,
+  getFloodInsurancePolicyTemplate,
+  getBuildersRiskPolicyTemplate,
+  getLiabilityInsurancePolicyTemplate
+} from "./insuranceDocumentTemplates";
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4644,7 +4652,12 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   loan_agreement: getLoanAgreementTemplate,
   // Compliance document templates
   aml_documentation: getAntiMoneyLaunderingDocTemplate,
-  patriot_act_certification: getPatriotActComplianceTemplate
+  patriot_act_certification: getPatriotActComplianceTemplate,
+  // Insurance document templates
+  property_insurance_policy: getPropertyInsurancePolicyTemplate,
+  flood_insurance_policy: getFloodInsurancePolicyTemplate,
+  builders_risk_policy: getBuildersRiskPolicyTemplate,
+  liability_insurance_policy: getLiabilityInsurancePolicyTemplate,
 };
 
 // This function provides a convenient way to get the right template

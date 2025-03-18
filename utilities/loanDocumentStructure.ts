@@ -160,8 +160,7 @@ export const DOCUMENT_STRUCTURE = {
         { docType: "property_insurance", label: "Property Insurance Policy", isRequired: true },
         { docType: "flood_insurance", label: "Flood Insurance", isRequired: false },
         { docType: "builders_risk_policy", label: "Builder's Risk Policy", isRequired: false },
-        { docType: "liability_insurance", label: "Liability Insurance", isRequired: true },
-        { docType: "insurance_binder", label: "Insurance Binder Naming Lender", isRequired: true }
+        { docType: "liability_insurance", label: "Liability Insurance", isRequired: true }
       ]
     },
     funding: {
