@@ -201,9 +201,9 @@ export const DOCUMENT_STRUCTURE = {
     asset_management: {
       title: "Asset Management",
       documents: [
-        { docType: "property_tax_verification", label: "Property tax verification", isRequired: true },
-        { docType: "insurance_renewal", label: "Insurance renewal tracking", isRequired: true },
-        { docType: "annual_financial_review", label: "Annual financial review", isRequired: true },
+        { docType: "property_tax_verification", label: "Property tax verification", isRequired: false },
+        { docType: "insurance_renewal", label: "Insurance renewal tracking", isRequired: false },
+        { docType: "annual_financial_review", label: "Annual financial review", isRequired: false },
         { docType: "property_condition_reports", label: "Periodic property condition reports", isRequired: false },
         { docType: "lease_tenant_monitoring", label: "Lease/tenant monitoring", isRequired: false }
       ]
