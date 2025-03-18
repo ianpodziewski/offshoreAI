@@ -271,7 +271,7 @@ export default function LoanDocumentsPage() {
                 </Button>
                 <Button onClick={() => setIsUploaderOpen(true)} className="bg-blue-600 hover:bg-blue-700">
                   <Upload className="h-4 w-4 mr-2" />
-                  Upload Document
+                  Add Document
                 </Button>
               </div>
             </div>

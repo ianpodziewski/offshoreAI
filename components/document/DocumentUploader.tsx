@@ -169,9 +169,9 @@ export function DocumentUploader({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
+          <DialogTitle>Add Document</DialogTitle>
           <DialogDescription>
-            Upload a document for this loan. Supported formats: PDF, JPG, PNG, DOCX.
+            Add a document to this loan. Supported formats: PDF, JPG, PNG, DOCX.
           </DialogDescription>
         </DialogHeader>
         
@@ -262,7 +262,7 @@ export function DocumentUploader({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={uploading || success}>
-            {uploading ? 'Uploading...' : 'Upload Document'}
+            {uploading ? 'Uploading...' : 'Add Document'}
           </Button>
         </DialogFooter>
       </DialogContent>

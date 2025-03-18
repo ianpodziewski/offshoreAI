@@ -204,7 +204,7 @@ export function LoanDocumentStructure({
           <div className="py-4 px-5">
             <h3 className="text-base text-white">{label}</h3>
             <p className="text-xs text-gray-400 mt-1">
-              {isUploaded ? "Click to replace file" : "Click to upload or drag and drop"}
+              {isUploaded ? "Click to add file" : "Click to upload or drag and drop"}
             </p>
           </div>
         </div>
