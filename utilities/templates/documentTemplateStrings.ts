@@ -905,7 +905,7 @@ export const getPropertyAppraisalTemplate = (loanData: LoanData): string => {
 export const getTermSheetTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">TERM SHEET</div>
@@ -969,11 +969,7 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
         <table class="info-table">
           <tr>
             <th>Loan Purpose:</th>
-            <td>${loanData.loanType === 'fix_and_flip' ? 'Acquisition and Rehabilitation for Resale' : 
-                loanData.loanType === 'rental_brrrr' ? 'Buy, Rehab, Rent, Refinance, Repeat Strategy' : 
-                loanData.loanType === 'bridge' ? 'Bridge Financing' : 
-                loanData.loanType === 'construction' ? 'Construction Financing' : 
-                'Commercial Real Estate Investment'}</td>
+            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
           </tr>
           <tr>
             <th>Loan Amount:</th>
@@ -981,23 +977,23 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Interest Rate:</th>
-            <td>${loanData.interestRate}% fixed</td>
+            <td>${loanData.interestRate}%</td>
           </tr>
           <tr>
-            <th>Loan Term:</th>
+            <th>Term:</th>
             <td>${loanData.loanTerm} months</td>
           </tr>
           <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
-          </tr>
-          <tr>
             <th>Amortization:</th>
-            <td>Interest-Only with Balloon Payment at Maturity</td>
+            <td>Interest Only</td>
           </tr>
           <tr>
             <th>Payment Schedule:</th>
-            <td>Monthly Interest Payments</td>
+            <td>Monthly payments of principal and interest</td>
+          </tr>
+          <tr>
+            <th>Collateral:</th>
+            <td>First position mortgage/deed of trust on subject property</td>
           </tr>
         </table>
       </div>
@@ -1011,15 +1007,15 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
           </tr>
           <tr>
             <th>Property Type:</th>
-            <td>${loanData.propertyType.replace(/_/g, ' ')}</td>
+            <td>${loanData.propertyType.replace(/_/g, ' ').toUpperCase()}</td>
           </tr>
           <tr>
             <th>Purchase Price:</th>
             <td>${formatCurrency(loanData.purchasePrice)}</td>
           </tr>
           <tr>
-            <th>Rehabilitation Budget:</th>
-            <td>${formatCurrency(loanData.rehabBudget)}</td>
+            <th>Current As-Is Value:</th>
+            <td>${formatCurrency(loanData.purchasePrice)}</td>
           </tr>
           <tr>
             <th>After Repair Value (ARV):</th>
@@ -1103,12 +1099,14 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Term Sheet - ${loanData.borrowerName}`, content);
 };
 
 export const getPersonalGuaranteeTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">PERSONAL GUARANTEE</div>
@@ -1119,96 +1117,22 @@ export const getPersonalGuaranteeTemplate = (loanData: LoanData): string => {
         <p>
           FOR VALUE RECEIVED, and to induce DocuLendAI, LLC ("Lender") to make a loan to 
           ${loanData.entityName || `${loanData.borrowerName} Properties LLC`} ("Borrower"), 
-          the undersigned, <strong>${loanData.borrowerName}</strong> ("Guarantor"), irrevocably, absolutely, 
-          and unconditionally guarantees to Lender the full and prompt payment and performance of all obligations 
-          of Borrower to Lender arising out of or relating to the loan in the principal amount of 
-          <strong>${formatCurrency(loanData.loanAmount)}</strong> ("Loan"), evidenced by that certain Promissory Note 
-          of even date herewith (the "Note"), as well as any and all other documents executed by Borrower 
-          in connection with the Loan (collectively, the "Loan Documents").
+          the undersigned, ${loanData.borrowerName} ("Guarantor"), hereby unconditionally guarantees 
+          the prompt payment when due, whether by acceleration or otherwise, of all obligations 
+          of Borrower to Lender, together with all interest thereon and all attorney's fees, costs 
+          and expenses of collection incurred by Lender in enforcing any of such obligations.
         </p>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Terms and Conditions</div>
-        <p>
-          <strong>1. Nature of Guarantee.</strong> This is a guarantee of payment and performance and not of collection. 
-          Lender shall not be required to pursue any remedies it may have against Borrower or any collateral for the Loan 
-          before seeking payment from Guarantor of any of the guaranteed obligations.
-        </p>
-        <p>
-          <strong>2. Duration.</strong> This Guarantee shall remain in full force and effect until all obligations under the Loan 
-          Documents have been satisfied in full. This Guarantee shall bind Guarantor's heirs, successors, and assigns, and shall 
-          inure to the benefit of Lender's successors and assigns.
-        </p>
-        <p>
-          <strong>3. Guarantor's Representations.</strong> Guarantor represents and warrants that this Guarantee has been duly 
-          executed and delivered and constitutes Guarantor's valid and legally binding obligation enforceable in accordance 
-          with its terms.
-        </p>
-        <p>
-          <strong>4. Lender's Rights.</strong> Lender may, without notice to Guarantor and without affecting Guarantor's 
-          obligations hereunder: (a) renew, extend, accelerate, or otherwise change the terms of the Loan Documents; 
-          (b) take and hold collateral for this Guarantee or the Loan Documents; and (c) release or substitute any other guarantor.
-        </p>
-        <p>
-          <strong>5. Waiver.</strong> Guarantor waives: (a) presentment, demand, protest, notice of acceptance, notice of dishonor, 
-          notice of nonpayment, and any other notice with respect to the Loan and this Guarantee; (b) any right to require Lender 
-          to proceed against Borrower; (c) any right to require Lender to proceed against or exhaust any security held from Borrower; 
-          (d) any right to require Lender to pursue any remedy in Lender's power; and (e) any defense arising by reason of any 
-          disability or other defense of Borrower.
-        </p>
-      </div>
-      
-      <div class="document-section">
-        <div class="section-title">Loan Information</div>
-        <table class="info-table">
-          <tr>
-            <th>Borrower:</th>
-            <td>${loanData.entityName || `${loanData.borrowerName} Properties LLC`}</td>
-          </tr>
-          <tr>
-            <th>Guarantor:</th>
-            <td>${loanData.borrowerName}</td>
-          </tr>
-          <tr>
-            <th>Loan Amount:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-          <tr>
-            <th>Interest Rate:</th>
-            <td>${loanData.interestRate}%</td>
-          </tr>
-          <tr>
-            <th>Loan Term:</th>
-            <td>${loanData.loanTerm} months</td>
-          </tr>
-          <tr>
-            <th>Property Address:</th>
-            <td>${loanData.propertyAddress}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="document-section">
-        <p><strong>Entire Agreement.</strong> This Guarantee constitutes the entire agreement between Guarantor and Lender 
-        with respect to the subject matter hereof and supersedes all prior negotiations or agreements, whether oral or written. 
-        This Guarantee may not be amended except by a writing signed by Guarantor and Lender.</p>
-      </div>
-      
-      <div class="signature-section">
-        <p>IN WITNESS WHEREOF, Guarantor has executed this Personal Guarantee as of the date first written above.</p>
-        <div class="signature-line"></div>
-        <div>${loanData.borrowerName}, Guarantor</div>
-        <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Personal Guarantee - ${loanData.borrowerName}`, content);
 };
 
 export const getAssignmentRentsLeasesTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">ASSIGNMENT OF RENTS AND LEASES</div>
@@ -1333,12 +1257,14 @@ export const getAssignmentRentsLeasesTemplate = (loanData: LoanData): string => 
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Assignment of Rents and Leases - ${loanData.borrowerName}`, content);
 };
 
 export const getSecurityAgreementTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">SECURITY AGREEMENT</div>
@@ -1488,12 +1414,14 @@ export const getSecurityAgreementTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Security Agreement - ${loanData.borrowerName}`, content);
 };
 
 export const getDrawRequestTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">CONSTRUCTION DRAW REQUEST</div>
@@ -1748,12 +1676,14 @@ export const getDrawRequestTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Construction Draw Request - ${loanData.borrowerName}`, content);
 };
 
 export const getBackgroundCheckTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">BACKGROUND CHECK RESULTS</div>
@@ -1916,12 +1846,14 @@ export const getBackgroundCheckTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Background Check Results - ${loanData.borrowerName}`, content);
 };
 
 export const getContactInformationTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">CONTACT INFORMATION SHEET</div>
@@ -2135,12 +2067,14 @@ export const getContactInformationTemplate = (loanData: LoanData): string => {
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Contact Information Sheet - ${loanData.borrowerName}`, content);
 };
 
 export const getPersonalFinancialStatementTemplate = (loanData: LoanData): string => {
   const formattedDate = formatDate();
   
-  return `${baseStyle}
+  const content = `
     <div class="document">
       <div class="document-header">
         <div class="document-title">PERSONAL FINANCIAL STATEMENT</div>
@@ -2484,6 +2418,8 @@ export const getPersonalFinancialStatementTemplate = (loanData: LoanData): strin
       </div>
     </div>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`Personal Financial Statement - ${loanData.borrowerName}`, content);
 };
 
 export const getPersonalTaxReturnsTemplate = (loanData: LoanData): string => {
