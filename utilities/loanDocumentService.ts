@@ -269,13 +269,20 @@ export const loanDocumentService = {
       // Get existing documents for this loan
       const existingDocs = loanDocumentService.getDocumentsForLoan(loanId);
       
-      // Count total required documents
+      // Count total required document types (sockets)
       const total = requiredDocTypes.length;
       
-      // Count completed documents (status is not 'required')
-      const completed = existingDocs.filter(doc => 
-        requiredDocTypes.some(rt => rt.docType === doc.docType) && 
-        doc.status !== 'required'
+      // Get unique docTypes that have at least one document (status not 'required')
+      // This counts each document socket only once, regardless of how many documents it contains
+      const uniqueCompletedDocTypes = new Set(
+        existingDocs
+          .filter(doc => doc.status !== 'required')
+          .map(doc => doc.docType)
+      );
+      
+      // Count completed document sockets (those with at least one document)
+      const completed = [...uniqueCompletedDocTypes].filter(docType => 
+        requiredDocTypes.some(rt => rt.docType === docType)
       ).length;
       
       // Calculate completion percentage
@@ -289,10 +296,19 @@ export const loanDocumentService = {
       categories.forEach(category => {
         const categoryRequiredDocs = requiredDocTypes.filter(doc => doc.category === category);
         const categoryTotal = categoryRequiredDocs.length;
-        const categoryCompleted = existingDocs.filter(doc => 
-          categoryRequiredDocs.some(rt => rt.docType === doc.docType) && 
-          doc.status !== 'required'
+        
+        // Get unique docTypes in this category that have at least one document
+        const categoryCompletedDocTypes = new Set(
+          existingDocs
+            .filter(doc => doc.category === category && doc.status !== 'required')
+            .map(doc => doc.docType)
+        );
+        
+        // Count document sockets that have at least one document
+        const categoryCompleted = [...categoryCompletedDocTypes].filter(docType => 
+          categoryRequiredDocs.some(rt => rt.docType === docType)
         ).length;
+        
         const categoryPercentage = categoryTotal > 0 ? Math.round((categoryCompleted / categoryTotal) * 100) : 0;
         
         byCategory[category] = {
