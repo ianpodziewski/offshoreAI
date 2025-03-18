@@ -1,4 +1,5 @@
 import { LoanData } from '@/utilities/loanGenerator';
+import { documentStyleService } from '@/utilities/documentStyleService';
 // Import entity document templates
 import {
   getFormationDocumentsTemplate,
@@ -85,14 +86,17 @@ const formatCurrency = (amount: number): string => {
 const getWatermarkStyle = (): string => {
   return `
     /* Watermark styles */
-    body {
+    html, body {
       position: relative;
       margin: 0;
       padding: 0;
-      display: flex;
-      justify-content: center;
+      width: 100%;
       min-height: 100vh;
       font-family: Arial, sans-serif;
+    }
+    body {
+      display: flex;
+      justify-content: center;
     }
     .watermark {
       position: fixed;
@@ -123,9 +127,10 @@ const getWatermarkStyle = (): string => {
       z-index: 1;
       max-width: 850px;
       width: 100%;
-      margin: 40px auto;
+      margin: 20px auto;
       padding: 20px;
       box-sizing: border-box;
+      background-color: white;
     }
   `;
 };
@@ -136,16 +141,18 @@ const baseStyle = `
   <html>
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
     ${getWatermarkStyle()}
+    
     .document {
-      background: white;
-      max-width: 800px;
+      font-family: Arial, sans-serif;
+      color: #333;
+      line-height: 1.5;
       width: 100%;
-      padding: 30px;
-      border: 1px solid #ddd;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
       box-sizing: border-box;
+      position: relative;
+      z-index: 1;
     }
     
     .document-header {
@@ -215,149 +222,110 @@ const baseStyle = `
 
 // Document Template Functions
 export const getLoanApplicationTemplate = (loanData: LoanData): string => {
-  return `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>Loan Application - ${loanData.borrowerName}</title>
-    <style>
-      ${getWatermarkStyle()}
-      .section {
-        background: white;
-        margin-bottom: 30px;
-        border: 1px solid #ddd;
-        padding: 20px;
-        border-radius: 5px;
-      }
-      .header {
-        text-align: center;
-        margin-bottom: 30px;
-      }
-      .header h1 {
-        color: #2c3e50;
-        margin-bottom: 5px;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-      table, th, td {
-        border: 1px solid #ddd;
-      }
-      th, td {
-        padding: 12px;
-        text-align: left;
-      }
-      th {
-        background-color: #f8f9fa;
-        font-weight: bold;
-        width: 30%;
-      }
-      .signature-block {
-        margin-top: 50px;
-        border-top: 1px solid #eee;
-        padding-top: 20px;
-      }
-      .signature-line {
-        display: inline-block;
-        margin-right: 50px;
-        min-width: 250px;
-        border-top: 1px solid #000;
-        margin-top: 70px;
-        text-align: center;
-      }
-      .disclaimer {
-        margin-top: 30px;
-        font-size: 0.8em;
-        color: #777;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="watermark"></div>
-    <div class="document-content">
-      <div class="header">
-        <h1>LOAN APPLICATION</h1>
+  const content = `
+    <div class="header">
+      <h1>LOAN APPLICATION</h1>
+      <div class="application-info">
         <p>Application Date: ${formatDate()}</p>
-        <p>Application ID: LA-${loanData.id}</p>
-      </div>
-      
-      <div class="section">
-        <h2>Borrower Information</h2>
-        <table>
-          <tr>
-            <th>Borrower Name:</th>
-            <td>${loanData.borrowerName}</td>
-            <th>Co-Borrower:</th>
-            <td>N/A</td>
-          </tr>
-          <tr>
-            <th>Entity Type:</th>
-            <td>${loanData.entityType || 'Individual'}</td>
-            <th>Tax ID/SSN:</th>
-            <td>XXX-XX-${Math.floor(1000 + Math.random() * 9000)}</td>
-          </tr>
-          <tr>
-            <th>Address:</th>
-            <td colspan="3">${loanData.borrowerAddress || '123 Main St, Anytown, CA 90210'}</td>
-          </tr>
-          <tr>
-            <th>Phone:</th>
-            <td>${loanData.borrowerPhone || '(555) 123-4567'}</td>
-            <th>Email:</th>
-            <td>${loanData.borrowerEmail || 'borrower@email.com'}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="section">
-        <h2>Property Information</h2>
-        <table>
-          <tr>
-            <th>Property Address:</th>
-            <td colspan="3">${loanData.propertyAddress}</td>
-          </tr>
-          <tr>
-            <th>Property Type:</th>
-            <td>${loanData.propertyType.replace(/_/g, ' ')}</td>
-            <th>Purchase Price:</th>
-            <td>${formatCurrency(loanData.purchasePrice)}</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="section">
-        <h2>Loan Details</h2>
-        <table>
-          <tr>
-            <th>Loan Type:</th>
-            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
-            <th>Loan Amount:</th>
-            <td>${formatCurrency(loanData.loanAmount)}</td>
-          </tr>
-          <tr>
-            <th>Interest Rate:</th>
-            <td>${loanData.interestRate}%</td>
-            <th>Loan Term:</th>
-            <td>${loanData.loanTerm} months</td>
-          </tr>
-        </table>
-      </div>
-      
-      <div class="signature-block">
-        <div class="signature-line">Borrower Signature</div>
-        <div class="signature-line">Date</div>
-      </div>
-      
-      <div class="disclaimer">
-        <p>By signing above, I certify that the information provided in this application is true and correct to the best of my knowledge.</p>
+        <p>Application ID: LA-DEMO-${Math.floor(Math.random() * 10000)}</p>
       </div>
     </div>
-  </body>
-  </html>
+
+    <div class="section">
+      <h2>Borrower Information</h2>
+      <table>
+        <tr>
+          <th>Borrower Name:</th>
+          <td>${loanData.borrowerName}</td>
+        </tr>
+        <tr>
+          <th>Entity Type:</th>
+          <td>${loanData.entityType || 'LLC'}</td>
+          <th>Tax ID/SSN:</th>
+          <td>XXX-XX-${Math.floor(1000 + Math.random() * 9000)}</td>
+        </tr>
+        <tr>
+          <th>Address:</th>
+          <td>${loanData.borrowerAddress || '4227 Flip Street, Charlotte, GA 29748'}</td>
+          <th>Email:</th>
+          <td>${loanData.borrowerEmail || 'david.garcia@investormail.com'}</td>
+        </tr>
+        <tr>
+          <th>Phone:</th>
+          <td>(${Math.floor(100 + Math.random() * 900)})-${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+          <th></th>
+          <td></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Property Information</h2>
+      <table>
+        <tr>
+          <th>Property Address:</th>
+          <td colspan="3">${loanData.propertyAddress}</td>
+        </tr>
+        <tr>
+          <th>Property Type:</th>
+          <td>${loanData.propertyType}</td>
+          <th>Purchase Price:</th>
+          <td>$${loanData.purchasePrice.toLocaleString()}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>Loan Details</h2>
+      <table>
+        <tr>
+          <th>Loan Type:</th>
+          <td>${loanData.loanType.replace('_', ' ').toUpperCase()}</td>
+          <th>Loan Amount:</th>
+          <td>$${loanData.loanAmount.toLocaleString()}</td>
+        </tr>
+        <tr>
+          <th>Interest Rate:</th>
+          <td>${loanData.interestRate}%</td>
+          <th>Loan Term:</th>
+          <td>${loanData.loanTerm} months</td>
+        </tr>
+      </table>
+    </div>
   `;
+
+  // Custom CSS specific to loan application
+  const customCss = `
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    h1 {
+      color: #1e5a9a;
+      margin-bottom: 10px;
+    }
+    .application-info {
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .section {
+      margin-bottom: 30px;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 5px;
+      background-color: #f9f9f9;
+    }
+    .section h2 {
+      margin-top: 0;
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+  `;
+
+  return documentStyleService.wrapContentWithWatermark(`Loan Application - ${loanData.borrowerName}`, content, customCss);
 };
 
 export const getPhotoIdTemplate = (loanData: LoanData): string => {
@@ -396,9 +364,6 @@ export const getPhotoIdTemplate = (loanData: LoanData): string => {
         </table>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -415,6 +380,19 @@ export const getCreditAuthorizationTemplate = (loanData: LoanData): string => {
       </div>
       
       <div class="document-section">
+        <p>I/We authorize DocuLendAI, or its assigns, to obtain verification of any information necessary, including but not limited to the following:</p>
+        
+        <ul style="margin-left: 20px; margin-bottom: 20px;">
+          <li>My employment history and earnings, including future, past, and present</li>
+          <li>My bank accounts, stock holdings, and any other asset balances</li>
+          <li>My liability accounts including credit cards, loans, and mortgages</li>
+          <li>My credit history through a consumer credit report</li>
+        </ul>
+        
+        <p>This information will be used for loan qualification purposes only and will be kept confidential.</p>
+      </div>
+      
+      <div class="document-section">
         <div class="section-title">Borrower Information</div>
         <table class="info-table">
           <tr>
@@ -422,31 +400,27 @@ export const getCreditAuthorizationTemplate = (loanData: LoanData): string => {
             <td>${loanData.borrowerName}</td>
           </tr>
           <tr>
-            <th>Email:</th>
-            <td>${loanData.borrowerName.replace(' ', '.').toLowerCase()}@example.com</td>
+            <th>Social Security #:</th>
+            <td>XXX-XX-${Math.floor(1000 + Math.random() * 9000)}</td>
           </tr>
           <tr>
-            <th>Phone:</th>
-            <td>(555) ${Math.floor(100 + Math.random() * 900)}-${Math.floor(1000 + Math.random() * 9000)}</td>
+            <th>Loan Type:</th>
+            <td>${loanData.loanType.replace(/_/g, ' ').toUpperCase()}</td>
+          </tr>
+          <tr>
+            <th>Property Address:</th>
+            <td>${loanData.propertyAddress}</td>
           </tr>
         </table>
       </div>
       
-      <div class="document-section">
-        <p>I hereby authorize ${loanData.lender || 'DocuLendAI Lending'} and its designated credit reporting agency to obtain a consumer credit report and verify other credit information, including past and present mortgage and landlord references. It is understood that a photocopy of this form will serve as authorization.</p>
-        <p>The information obtained is only to be used in the processing of my mortgage loan application.</p>
-      </div>
-      
       <div class="signature-section">
-        <p>By signing below, I acknowledge and accept the terms outlined in this authorization form.</p>
+        <p>By signing below, I authorize the verification of the information provided on this form.</p>
         <div class="signature-line"></div>
-        <div>${loanData.borrowerName}, Applicant</div>
+        <div>${loanData.borrowerName}, Borrower</div>
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -508,9 +482,6 @@ export const getPromissoryNoteTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -610,9 +581,6 @@ export const getDeedOfTrustTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -779,9 +747,6 @@ export const getClosingDisclosureTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -951,9 +916,6 @@ export const getPropertyAppraisalTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -1157,9 +1119,6 @@ export const getTermSheetTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -1260,9 +1219,6 @@ export const getPersonalGuaranteeTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -1393,9 +1349,6 @@ export const getAssignmentRentsLeasesTemplate = (loanData: LoanData): string => 
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -1551,9 +1504,6 @@ export const getSecurityAgreementTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -1814,9 +1764,6 @@ export const getDrawRequestTemplate = (loanData: LoanData): string => {
         </div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -1985,9 +1932,6 @@ export const getBackgroundCheckTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -2207,9 +2151,6 @@ export const getContactInformationTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -2559,9 +2500,6 @@ export const getPersonalFinancialStatementTemplate = (loanData: LoanData): strin
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -2938,9 +2876,6 @@ export const getPersonalTaxReturnsTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -3390,9 +3325,6 @@ export const getBusinessTaxReturnsTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -3704,9 +3636,6 @@ export const getBankStatementsTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -3995,9 +3924,6 @@ export const getIncomeVerificationTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -4209,9 +4135,6 @@ export const getRealEstateScheduleTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -4610,9 +4533,6 @@ export const getDebtScheduleTemplate = (loanData: LoanData): string => {
         <div style="margin-top: 10px;">Date: ${formattedDate}</div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 
@@ -4770,9 +4690,6 @@ const getCreditExplanationLettersTemplate = (loanData: LoanData): string => {
         </div>
       </div>
     </div>
-  </div>
-  </body>
-  </html>
   `;
 };
 

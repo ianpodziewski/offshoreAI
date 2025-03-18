@@ -50,6 +50,7 @@ import {
   getEscrowAgreementTemplate,
   getWiringInstructionsTemplate
 } from './templates/fundingDocumentTemplates';
+import { documentStyleService } from './documentStyleService';
 
 // Define document name prefixes based on loan type
 const getLoanTypePrefix = (loanType: string): string => {
@@ -64,118 +65,29 @@ const getLoanTypePrefix = (loanType: string): string => {
   return prefixMap[loanType] || 'STD';
 };
 
-// Function to get watermark styles for consistent usage
-const getWatermarkStyle = (): string => {
-  return `
-    /* Watermark styles */
-    body {
-      position: relative;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-      font-family: Arial, sans-serif;
-    }
-    .watermark {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      pointer-events: none;
-      z-index: 1000;
-    }
-    .watermark:after {
-      content: "SAMPLE";
-      font-size: 120px;
-      color: rgba(220, 53, 69, 0.3);
-      transform: rotate(-45deg);
-      white-space: nowrap;
-      text-transform: uppercase;
-      font-weight: bold;
-      letter-spacing: 10px;
-    }
-    .document-content {
-      position: relative;
-      z-index: 1;
-      max-width: 850px;
-      width: 100%;
-      margin: 40px auto;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-  `;
-};
-
 // Helper function to generate unimplemented document templates
 const generateUnimplementedTemplate = (title: string, borrowerName: string): string => {
-  return `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <meta charset="UTF-8">
-    <title>${title} - ${borrowerName}</title>
-    <style>
-      ${getWatermarkStyle()}
-      .document-container {
-        background: white;
-        max-width: 800px;
-        width: 100%;
-        padding: 30px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-      }
-      h1 {
-        color: #333;
-        border-bottom: 2px solid #ddd;
-        padding-bottom: 10px;
-        margin-top: 0;
-      }
-      .warning {
-        background-color: #fff8e1;
-        border-left: 4px solid #ffc107;
-        padding: 12px 20px;
-        margin: 20px 0;
-      }
-      .info {
-        background-color: #e1f5fe;
-        border-left: 4px solid #03a9f4;
-        padding: 12px 20px;
-        margin: 20px 0;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="watermark"></div>
-    <div class="document-content">
-      <div class="document-container">
-        <h1>${title}</h1>
-        
-        <div class="warning">
-          <p><strong>Document Not Yet Implemented</strong></p>
-          <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
-        </div>
-        
-        <div class="info">
-          <p><strong>What This Document Will Include:</strong></p>
-          <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
-          <p>If you need this document urgently, please contact your system administrator.</p>
-        </div>
-        
-        <p>Document ID: SAMPLE-${Date.now()}</p>
-        <p>Generated: ${new Date().toLocaleDateString()}</p>
+  const content = `
+    <div class="document-container">
+      <h1>${title}</h1>
+      
+      <div class="warning">
+        <p><strong>Document Not Yet Implemented</strong></p>
+        <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
       </div>
+      
+      <div class="info">
+        <p><strong>What This Document Will Include:</strong></p>
+        <p>When implemented, this document will contain relevant information about ${title.toLowerCase()} for the borrower.</p>
+        <p>If you need this document urgently, please contact your system administrator.</p>
+      </div>
+      
+      <p>Document ID: SAMPLE-${Date.now()}</p>
+      <p>Generated: ${new Date().toLocaleDateString()}</p>
     </div>
-  </body>
-  </html>
   `;
+  
+  return documentStyleService.wrapContentWithWatermark(`${title} - ${borrowerName}`, content);
 };
 
 // A mapping of document types to their generation functions
@@ -383,66 +295,11 @@ export const fakeDocumentService = {
     
     // Add watermark to the content if it doesn't already have one
     if (!content.includes('class="watermark"')) {
-      // Check if we need to insert the watermark in the head section
-      if (content.includes('<head>')) {
-        // Add watermark style to the head section
-        content = content.replace('</head>', `${getWatermarkStyle()}</head>`);
-        
-        // Update the body tag with necessary attributes
-        content = content.replace(/<body[^>]*>/i, '<body>');
-        
-        // Add watermark div after the body tag
-        content = content.replace('<body>', '<body><div class="watermark"></div><div class="document-content">');
-        
-        // Close the document-content div before the body end tag
-        content = content.replace('</body>', '</div></body>');
-      } else {
-        // Full document wrapper with watermark
-        content = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${docType.replace(/_/g, ' ')} - Sample</title>
-  <style>
-    ${getWatermarkStyle()}
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      min-height: 100vh;
-    }
-    .document-content {
-      position: relative;
-      z-index: 1;
-      max-width: 850px;
-      width: 100%;
-      margin: 40px auto;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 8px;
-      text-align: left;
-    }
-  </style>
-</head>
-<body>
-  <div class="watermark"></div>
-  <div class="document-content">
-    ${content}
-  </div>
-</body>
-</html>`;
+      // If the content is just a fragment and not a complete HTML document
+      if (!content.includes('<!DOCTYPE html>')) {
+        // Wrap it with our standard watermark template
+        const docTitle = documentNames[standardDocType] || docType.replace(/_/g, ' ');
+        content = documentStyleService.wrapContentWithWatermark(`${docTitle} - ${loan.borrowerName}`, content);
       }
     }
     
