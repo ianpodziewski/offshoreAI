@@ -249,7 +249,7 @@ export default function LoanDocumentsPage() {
           <div className="w-full lg:w-3/4 space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-semibold text-white">Document Management</h2>
+                {/* Removing the Document Management text as requested */}
               </div>
               <div className="flex space-x-2">
                 <Button 
@@ -265,7 +265,7 @@ export default function LoanDocumentsPage() {
                       }
                     }
                   }} 
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800"
                   title="Generate sample documents for this loan"
                 >
                   <FileText className="h-4 w-4 mr-2" />
@@ -286,13 +286,13 @@ export default function LoanDocumentsPage() {
                       setCompletionStatus(status);
                     }
                   }} 
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800"
                   title="Generate sample documents for all loans in the system"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Generate For All Loans
                 </Button>
-                <Button onClick={() => setIsUploaderOpen(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={() => setIsUploaderOpen(true)} className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800">
                   <Upload className="h-4 w-4 mr-2" />
                   Add Document
                 </Button>
@@ -317,7 +317,9 @@ export default function LoanDocumentsPage() {
                   </CardContent>
                 </Card>
                 
-                {Object.entries(completionStatus.byCategory).map(([category, data]: [string, any]) => (
+                {Object.entries(completionStatus.byCategory)
+                  .filter(([category]) => category !== 'misc') // Filter out the Miscellaneous card
+                  .map(([category, data]: [string, any]) => (
                   <Card key={category} className="bg-[#1A2234] border-gray-800">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-lg capitalize text-white">{category}</CardTitle>
