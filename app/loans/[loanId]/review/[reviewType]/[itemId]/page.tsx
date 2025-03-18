@@ -54,6 +54,36 @@ type ReviewData = {
   [key in ReviewType]: ReviewSection;
 };
 
+// Required documents for specific review items
+const requiredDocumentsForItems: Record<string, string[]> = {
+  'initial_inquiry-1': [
+    'credit_report', 
+    'borrower_identification', 
+    'background_check', 
+    'ofac_verification', 
+    'experience_documentation'
+  ],
+  'initial_inquiry-2': ['property_photos', 'title_report', 'purchase_contract'],
+  'initial_inquiry-3': ['loan_application', 'financial_statement'],
+  'application-1': ['financial_statement', 'bank_statements', 'tax_returns'],
+};
+
+// Descriptions for each document type to help users understand what to upload
+const documentDescriptions: Record<string, string> = {
+  'credit_report': 'Credit report showing borrower\'s credit score and history',
+  'borrower_identification': 'Government-issued ID or passport',
+  'background_check': 'Background check report showing no foreclosures or bankruptcies',
+  'ofac_verification': 'OFAC verification results showing borrower is not on the list',
+  'experience_documentation': 'Documentation of borrower\'s real estate investment experience',
+  'property_photos': 'Recent photos of the property (interior and exterior)',
+  'title_report': 'Preliminary title report',
+  'purchase_contract': 'Executed purchase agreement',
+  'loan_application': 'Completed loan application form',
+  'financial_statement': 'Personal financial statement',
+  'bank_statements': 'Last 3 months of bank statements',
+  'tax_returns': 'Last 2 years of tax returns'
+};
+
 // Mock review data - in a real app, this would come from an API or database
 const mockReviewData: ReviewData = {
   initial_inquiry: {
@@ -127,36 +157,6 @@ const mockReviewData: ReviewData = {
   servicing: { status: 'not_started', items: [] }
 };
 
-// Required documents for specific review items
-const requiredDocumentsForItems: Record<string, string[]> = {
-  'initial_inquiry-1': [
-    'credit_report', 
-    'borrower_identification', 
-    'background_check', 
-    'ofac_verification', 
-    'experience_documentation'
-  ],
-  'initial_inquiry-2': ['property_photos', 'title_report', 'purchase_contract'],
-  'initial_inquiry-3': ['loan_application', 'financial_statement'],
-  'application-1': ['financial_statement', 'bank_statements', 'tax_returns'],
-};
-
-// Descriptions for each document type to help users understand what to upload
-const documentDescriptions: Record<string, string> = {
-  'credit_report': 'Credit report showing borrower\'s credit score and history',
-  'borrower_identification': 'Government-issued ID or passport',
-  'background_check': 'Background check report showing no foreclosures or bankruptcies',
-  'ofac_verification': 'OFAC verification results showing borrower is not on the list',
-  'experience_documentation': 'Documentation of borrower\'s real estate investment experience',
-  'property_photos': 'Recent photos of the property (interior and exterior)',
-  'title_report': 'Preliminary title report',
-  'purchase_contract': 'Executed purchase agreement',
-  'loan_application': 'Completed loan application form',
-  'financial_statement': 'Personal financial statement',
-  'bank_statements': 'Last 3 months of bank statements',
-  'tax_returns': 'Last 2 years of tax returns'
-};
-
 export default function ReviewItemPage() {
   const params = useParams();
   const router = useRouter();
@@ -170,6 +170,13 @@ export default function ReviewItemPage() {
   const [refreshKey, setRefreshKey] = useState<number>(0);
   const [currentDocument, setCurrentDocument] = useState<SimpleDocument | null>(null);
   const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, SimpleDocument>>({});
+  
+  // Helper functions moved up to avoid reference errors
+  // Get relevant documents for this review item
+  const getRelevantDocuments = () => {
+    const key = `${reviewType}-${itemId}`;
+    return requiredDocumentsForItems[key] || [];
+  };
   
   // Load loan data and existing documents
   useEffect(() => {
@@ -292,12 +299,6 @@ export default function ReviewItemPage() {
     return type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
   
-  // Get relevant documents for this review item
-  const getRelevantDocuments = () => {
-    const key = `${reviewType}-${itemId}`;
-    return requiredDocumentsForItems[key] || [];
-  };
-  
   // Get document label from type
   const getDocumentLabel = (docType: string): string => {
     return docType
@@ -406,7 +407,7 @@ export default function ReviewItemPage() {
                 </CardHeader>
                 <CardContent className="p-1">
                   <div className="bg-white rounded h-[500px] overflow-auto">
-                    {currentDocument.content.startsWith('<html') || currentDocument.content.includes('<!DOCTYPE html') ? (
+                    {currentDocument.content && (currentDocument.content.startsWith('<html') || currentDocument.content.includes('<!DOCTYPE html')) ? (
                       <div 
                         className="h-full" 
                         dangerouslySetInnerHTML={{ __html: currentDocument.content }}
