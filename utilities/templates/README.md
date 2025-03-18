@@ -77,11 +77,11 @@ This directory contains template functions for generating HTML documents for the
 - ❌ `ofac_check`
 - ✅ `patriot_act_compliance`
 
-### Insurance (Not Implemented)
-- ❌ `property_insurance`
-- ❌ `flood_insurance`
-- ❌ `builders_risk_policy`
-- ❌ `liability_insurance`
+### Insurance (Implemented)
+- ✅ `property_insurance`
+- ✅ `flood_insurance`
+- ✅ `builders_risk_policy`
+- ✅ `liability_insurance`
 - ❌ `insurance_binder`
 
 ### Funding (Partial Implementation)

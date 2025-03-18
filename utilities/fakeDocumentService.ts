@@ -37,6 +37,12 @@ import {
   getAntiMoneyLaunderingDocTemplate,
   getPatriotActComplianceTemplate
 } from './templates/complianceDocuments';
+import {
+  getPropertyInsurancePolicyTemplate,
+  getFloodInsurancePolicyTemplate,
+  getBuildersRiskPolicyTemplate,
+  getLiabilityInsurancePolicyTemplate
+} from './templates/insuranceDocumentTemplates';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -61,7 +67,11 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'lender_closing_checklist': getLenderClosingChecklistTemplate,
   'loan_agreement': getLoanAgreementTemplate,
   'aml_documentation': getAntiMoneyLaunderingDocTemplate,
-  'patriot_act_certification': getPatriotActComplianceTemplate
+  'patriot_act_certification': getPatriotActComplianceTemplate,
+  'property_insurance_policy': getPropertyInsurancePolicyTemplate,
+  'flood_insurance_policy': getFloodInsurancePolicyTemplate,
+  'builders_risk_policy': getBuildersRiskPolicyTemplate,
+  'liability_insurance_policy': getLiabilityInsurancePolicyTemplate
 };
 
 // A mapping of document types to their categories
@@ -87,7 +97,11 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'lender_closing_checklist': 'loan',
   'loan_agreement': 'loan',
   'aml_documentation': 'legal',
-  'patriot_act_certification': 'legal'
+  'patriot_act_certification': 'legal',
+  'property_insurance_policy': 'property',
+  'flood_insurance_policy': 'property',
+  'builders_risk_policy': 'property',
+  'liability_insurance_policy': 'property'
 };
 
 // Document names for display
@@ -113,7 +127,11 @@ const documentNames: Record<string, string> = {
   'lender_closing_checklist': 'Lender Closing Checklist',
   'loan_agreement': 'Loan Agreement',
   'aml_documentation': 'Anti-Money Laundering Documentation',
-  'patriot_act_certification': 'Patriot Act Certification'
+  'patriot_act_certification': 'Patriot Act Certification',
+  'property_insurance_policy': 'Property Insurance Policy',
+  'flood_insurance_policy': 'Flood Insurance Policy',
+  'builders_risk_policy': 'Builders Risk Policy',
+  'liability_insurance_policy': 'Liability Insurance Policy'
 };
 
 export const fakeDocumentService = {
