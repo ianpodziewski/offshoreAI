@@ -19,6 +19,11 @@ import {
   getRenovationBudgetTemplate,
   getDrawScheduleTemplate
 } from './templates/projectDocumentationTemplates';
+import {
+  getLeaseAgreementTemplate,
+  getDscrCalculationWorksheetTemplate,
+  getPropertyManagementAgreementTemplate
+} from './templates/incomeDocumentTemplates';
 
 // A mapping of document types to their generation functions
 const documentGenerators: Record<string, (loan: LoanData) => string> = {
@@ -33,7 +38,10 @@ const documentGenerators: Record<string, (loan: LoanData) => string> = {
   'bpo': getBrokerPriceOpinionTemplate,
   'renovation_budget': getRenovationBudgetTemplate,
   'construction_budget': getRenovationBudgetTemplate,
-  'draw_schedule': getDrawScheduleTemplate
+  'draw_schedule': getDrawScheduleTemplate,
+  'lease_agreement': getLeaseAgreementTemplate,
+  'dscr_calculation': getDscrCalculationWorksheetTemplate,
+  'property_management_agreement': getPropertyManagementAgreementTemplate
 };
 
 // A mapping of document types to their categories
@@ -49,7 +57,10 @@ const documentCategories: Record<string, 'loan' | 'legal' | 'financial' | 'misc'
   'bpo': 'financial',
   'renovation_budget': 'project',
   'construction_budget': 'project',
-  'draw_schedule': 'project'
+  'draw_schedule': 'project',
+  'lease_agreement': 'financial',
+  'dscr_calculation': 'financial',
+  'property_management_agreement': 'financial'
 };
 
 // Document names for display
@@ -65,7 +76,10 @@ const documentNames: Record<string, string> = {
   'bpo': 'Broker Price Opinion (BPO)',
   'renovation_budget': 'Renovation Budget',
   'construction_budget': 'Construction Budget',
-  'draw_schedule': 'Draw Schedule'
+  'draw_schedule': 'Draw Schedule',
+  'lease_agreement': 'Lease Agreement',
+  'dscr_calculation': 'DSCR Calculation Worksheet',
+  'property_management_agreement': 'Property Management Agreement'
 };
 
 export const fakeDocumentService = {

@@ -47,7 +47,7 @@ This directory contains template functions for generating HTML documents for the
 ### Loan Monitoring (Implemented)
 - ✅ `draw_requests`
 
-### Property Information (Partial Implementation)
+### Property Information (Implemented)
 - ✅ `purchase_contract`
 - ✅ `preliminary_title_report`
 - ✅ `renovation_budget` / `construction_budget`
@@ -57,10 +57,10 @@ This directory contains template functions for generating HTML documents for the
 - ✅ `appraisal_report`
 - ✅ `broker_price_opinion` / `bpo`
 
-### Income Property Documents (Not Implemented)
-- ❌ `lease_agreements`
-- ❌ `dscr_calculation`
-- ❌ `property_management_agreement`
+### Income Property Documents (Implemented)
+- ✅ `lease_agreement`
+- ✅ `dscr_calculation`
+- ✅ `property_management_agreement`
 
 ### Pre-Closing (Partial Implementation)
 - ✅ `term_sheet`
