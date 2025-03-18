@@ -256,7 +256,7 @@ export default function ReviewItemPage() {
       <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="mb-6">
           <button
-            onClick={() => router.push(`/loans/${loanId}/review/${reviewType}`)}
+            onClick={() => router.back()}
             className="flex items-center text-gray-400 hover:text-white transition-colors"
           >
             <ArrowLeft size={16} className="mr-2" />

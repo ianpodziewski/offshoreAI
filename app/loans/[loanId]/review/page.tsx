@@ -561,10 +561,10 @@ export default function LoanReviewPage() {
     }
   };
 
-  // Open detailed review in a new tab
+  // Open detailed review in a same page instead of new tab
   const openDetailedReview = (reviewType: ReviewType, itemId?: number) => {
     const url = `/loans/${loanId}/review/${reviewType}${itemId ? `/${itemId}` : ''}`;
-    window.open(url, '_blank');
+    router.push(url);
   };
   
   return (
@@ -639,8 +639,8 @@ export default function LoanReviewPage() {
                           className="w-full bg-blue-600 hover:bg-blue-700"
                           onClick={() => openDetailedReview(reviewType as ReviewType)}
                         >
-                          <ExternalLink size={16} className="mr-2" />
-                          Open Full Review
+                          <FileText size={16} className="mr-2" />
+                          View Review
                         </Button>
                       </CardFooter>
                     </Card>
@@ -758,8 +758,8 @@ export default function LoanReviewPage() {
                                 className="w-full bg-blue-600 hover:bg-blue-700"
                                 onClick={() => openDetailedReview(activeTab, item.id)}
                               >
-                                <ExternalLink size={16} className="mr-2" />
-                                Open Detailed Review
+                                <FileText size={16} className="mr-2" />
+                                View Details
                               </Button>
                             </CardContent>
                           </Card>
