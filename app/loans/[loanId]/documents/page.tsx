@@ -288,7 +288,7 @@ export default function LoanDocumentsPage() {
                       }
                     }
                   }} 
-                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800"
+                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"
                   title="Generate sample documents for this loan"
                 >
                   <FileText className="h-4 w-4 mr-2" />
@@ -309,13 +309,13 @@ export default function LoanDocumentsPage() {
                       setCompletionStatus(status);
                     }
                   }} 
-                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800"
+                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"
                   title="Generate sample documents for all loans in the system"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Generate For All Loans
                 </Button>
-                <Button onClick={() => setIsUploaderOpen(true)} className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800">
+                <Button onClick={() => setIsUploaderOpen(true)} className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white">
                   <Upload className="h-4 w-4 mr-2" />
                   Add Document
                 </Button>
