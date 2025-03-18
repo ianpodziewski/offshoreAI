@@ -29,6 +29,14 @@ import { getLeaseAgreementTemplate, getDscrCalculationWorksheetTemplate, getProp
 // Import pre-closing document templates
 import { getPreApprovalLetterTemplate, getFeeDisclosureTemplate, getRateLockAgreementTemplate } from './preClosingDocuments';
 
+// Import templates from other files
+import { 
+  getLenderClosingChecklistTemplate,
+  getPromissoryNoteTemplate as getLenderPromissoryNoteTemplate,
+  getDeedOfTrustTemplate as getLenderDeedOfTrustTemplate,
+  getLoanAgreementTemplate
+} from './lenderLoanDocs';
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4580,8 +4588,8 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   loan_application: getLoanApplicationTemplate,
   photo_id: getPhotoIdTemplate,
   credit_authorization: getCreditAuthorizationTemplate,
-  promissory_note: getPromissoryNoteTemplate,
-  deed_of_trust: getDeedOfTrustTemplate,
+  promissory_note: getLenderPromissoryNoteTemplate, // Using new template from lenderLoanDocs
+  deed_of_trust: getLenderDeedOfTrustTemplate, // Using new template from lenderLoanDocs
   closing_disclosure: getClosingDisclosureTemplate,
   property_appraisal: getPropertyAppraisalTemplate,
   term_sheet: getTermSheetTemplate,
@@ -4626,30 +4634,17 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   pre_approval_letter: getPreApprovalLetterTemplate,
   fee_disclosure: getFeeDisclosureTemplate,
   rate_lock_agreement: getRateLockAgreementTemplate,
-  // Add other document types and their corresponding template functions here
+  // Lender loan document templates
+  lender_closing_checklist: getLenderClosingChecklistTemplate,
+  loan_agreement: getLoanAgreementTemplate
 };
 
 // This function provides a convenient way to get the right template
 export const getDocumentTemplate = (docType: string, loanData: LoanData): string => {
-  console.log('Document template requested for type:', docType);
-  
-  const templateFunction = documentTemplates[docType];
-  if (templateFunction) {
-    console.log('Found template function for:', docType);
-    return templateFunction(loanData);
-  } else {
-    console.log('No template found for:', docType, 'Using fallback template');
-    // Fallback for unknown document types
-    return `${baseStyle}
-      <div class="document">
-        <div class="document-header">
-          <div class="document-title">${docType.toUpperCase().replace(/_/g, ' ')}</div>
-          <div class="document-subtitle">Date: ${formatDate()}</div>
-        </div>
-        <div class="document-section">
-          <p>Document template for "${docType}" not implemented yet.</p>
-        </div>
-      </div>
-    `;
+  if (documentTemplates[docType]) {
+    return documentTemplates[docType](loanData);
   }
+  
+  console.error(`Unknown document type: ${docType}`);
+  return `<div class="error">Unknown document type: ${docType}</div>`;
 }; 
