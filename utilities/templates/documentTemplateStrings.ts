@@ -8,6 +8,9 @@ import {
   getResolutionToBorrowTemplate
 } from './entityDocumentTemplates';
 
+// Import credit report template
+import { getCreditReportTemplate } from './creditBackgroundTemplate';
+
 /**
  * Document template functions return HTML strings for various loan document types
  * This file centralizes all document templates to improve maintainability
@@ -4584,6 +4587,8 @@ export const documentTemplates: Record<string, (loanData: LoanData) => string> =
   certificate_good_standing: getCertificateGoodStandingTemplate,
   ein_documentation: getEinDocumentationTemplate,
   resolution_to_borrow: getResolutionToBorrowTemplate,
+  // Credit report template
+  credit_report: getCreditReportTemplate,
   // Add other document types and their corresponding template functions here
 };
 
