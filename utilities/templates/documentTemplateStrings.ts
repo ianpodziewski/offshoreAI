@@ -1,4 +1,12 @@
 import { LoanData } from '../loanGenerator';
+// Import entity document templates
+import {
+  getFormationDocumentsTemplate,
+  getOperatingAgreementTemplate,
+  getCertificateGoodStandingTemplate,
+  getEinDocumentationTemplate,
+  getResolutionToBorrowTemplate
+} from './entityDocumentTemplates';
 
 /**
  * Document template functions return HTML strings for various loan document types
@@ -4570,6 +4578,12 @@ export const documentTemplates: { [key: string]: (loanData: LoanData) => string 
   real_estate_schedule: getRealEstateScheduleTemplate,
   debt_schedule: getDebtScheduleTemplate,
   credit_explanation: getCreditExplanationLettersTemplate,
+  // Entity documentation templates
+  formation_documents: getFormationDocumentsTemplate,
+  operating_agreement: getOperatingAgreementTemplate,
+  certificate_good_standing: getCertificateGoodStandingTemplate,
+  ein_documentation: getEinDocumentationTemplate,
+  resolution_to_borrow: getResolutionToBorrowTemplate,
   // Add other document types and their corresponding template functions here
 };
 
