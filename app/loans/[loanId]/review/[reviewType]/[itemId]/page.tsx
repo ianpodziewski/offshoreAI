@@ -27,6 +27,9 @@ import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDoc
 import DocumentSockets from '@/components/document/DocumentSockets';
 import LayoutWrapper from '@/app/layout-wrapper';
 
+// Import types but don't directly use loanDocumentService to prevent TypeScript errors
+import type { DocumentCategory, LoanDocument } from '@/utilities/loanDocumentStructure';
+
 // Define review types
 type ReviewType = 'initial_inquiry' | 'application' | 'property_evaluation' | 'underwriting' | 'closing_prep' | 'closing' | 'post_closing' | 'servicing';
 
@@ -54,34 +57,60 @@ type ReviewData = {
   [key in ReviewType]: ReviewSection;
 };
 
-// Required documents for specific review items
-const requiredDocumentsForItems: Record<string, string[]> = {
+// Type for loan document as stored in the database (might differ from LoanDocument)
+interface LoanDBDocument {
+  id: string;
+  loanId: string;
+  filename: string;
+  fileType?: string;
+  docType?: string;
+  content?: string;
+  dateUploaded: string;
+  status: string;
+  category: string;
+  notes?: string;
+  url?: string;
+}
+
+// Type to match the actual structure of documents in the loan database
+interface LoanCategoryDocuments {
+  category: string;
+  files: {
+    filename: string;
+    uploadDate: string;
+    status: string;
+    url?: string;
+  }[];
+}
+
+// Map review items to document types from loan document structure
+const reviewToDocumentTypeMap: Record<string, string[]> = {
   'initial_inquiry-1': [
     'credit_report', 
-    'borrower_identification', 
+    'photo_id', 
     'background_check', 
-    'ofac_verification', 
-    'experience_documentation'
+    'ofac_check', 
+    'investment_history'
   ],
-  'initial_inquiry-2': ['property_photos', 'title_report', 'purchase_contract'],
+  'initial_inquiry-2': ['property_photos', 'preliminary_title', 'purchase_contract'],
   'initial_inquiry-3': ['loan_application', 'financial_statement'],
-  'application-1': ['financial_statement', 'bank_statements', 'tax_returns'],
+  'application-1': ['financial_statement', 'bank_statements', 'personal_tax_returns'],
 };
 
 // Descriptions for each document type to help users understand what to upload
 const documentDescriptions: Record<string, string> = {
   'credit_report': 'Credit report showing borrower\'s credit score and history',
-  'borrower_identification': 'Government-issued ID or passport',
+  'photo_id': 'Government-issued ID or passport',
   'background_check': 'Background check report showing no foreclosures or bankruptcies',
-  'ofac_verification': 'OFAC verification results showing borrower is not on the list',
-  'experience_documentation': 'Documentation of borrower\'s real estate investment experience',
+  'ofac_check': 'OFAC verification results showing borrower is not on the list',
+  'investment_history': 'Documentation of borrower\'s real estate investment experience',
   'property_photos': 'Recent photos of the property (interior and exterior)',
-  'title_report': 'Preliminary title report',
+  'preliminary_title': 'Preliminary title report',
   'purchase_contract': 'Executed purchase agreement',
   'loan_application': 'Completed loan application form',
   'financial_statement': 'Personal financial statement',
   'bank_statements': 'Last 3 months of bank statements',
-  'tax_returns': 'Last 2 years of tax returns'
+  'personal_tax_returns': 'Last 2 years of tax returns'
 };
 
 // Mock review data - in a real app, this would come from an API or database
@@ -168,14 +197,38 @@ export default function ReviewItemPage() {
   const [reviewItem, setReviewItem] = useState<ReviewItem | null>(null);
   const [notes, setNotes] = useState<string>('');
   const [refreshKey, setRefreshKey] = useState<number>(0);
-  const [currentDocument, setCurrentDocument] = useState<SimpleDocument | null>(null);
-  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, SimpleDocument>>({});
+  const [currentDocument, setCurrentDocument] = useState<LoanDBDocument | SimpleDocument | null>(null);
+  const [uploadedDocuments, setUploadedDocuments] = useState<Record<string, LoanDBDocument | SimpleDocument>>({});
+  const [loanDocuments, setLoanDocuments] = useState<LoanDBDocument[]>([]);
   
   // Helper functions moved up to avoid reference errors
   // Get relevant documents for this review item
   const getRelevantDocuments = () => {
     const key = `${reviewType}-${itemId}`;
-    return requiredDocumentsForItems[key] || [];
+    return reviewToDocumentTypeMap[key] || [];
+  };
+  
+  // Convert a loan document to the expected format for display
+  const convertToDisplayDoc = (doc: any): LoanDBDocument => {
+    // If it's already in the correct format, return as is
+    if (doc.id && doc.loanId && doc.filename && doc.dateUploaded) {
+      return doc as LoanDBDocument;
+    }
+    
+    // Otherwise, try to convert the document to the expected format
+    return {
+      id: doc.id || `doc-${Math.random().toString(36).substring(2, 9)}`,
+      loanId: loanId,
+      filename: doc.filename || 'Unknown document',
+      docType: doc.docType || '',
+      fileType: doc.fileType || 'text/plain',
+      content: doc.content || '',
+      dateUploaded: doc.dateUploaded || new Date().toISOString(),
+      status: doc.status || 'pending',
+      category: doc.category || 'borrower',
+      notes: doc.notes || '',
+      url: doc.url
+    };
   };
   
   // Load loan data and existing documents
@@ -197,10 +250,49 @@ export default function ReviewItemPage() {
         // Load existing documents for this loan
         const existingDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
         
-        // Organize documents by docType for easy access
-        const docMap: Record<string, SimpleDocument> = {};
+        // Get documents from the loan object
+        // The loan documents are organized by category, with each category containing an array of files
+        const loanDocsCategories = loanData.documents || [];
         
+        // Extract document files and flatten into individual documents
+        const extractedDocs: LoanDBDocument[] = [];
+        loanDocsCategories.forEach((category: LoanCategoryDocuments) => {
+          if (category.files && Array.isArray(category.files)) {
+            category.files.forEach(file => {
+              // Create a LoanDBDocument for each file
+              const doc: LoanDBDocument = {
+                id: `file-${Math.random().toString(36).substring(2, 9)}`,
+                loanId: loanId,
+                filename: file.filename || 'Unknown document',
+                docType: getDocTypeFromFilename(file.filename || ''),
+                fileType: getFileTypeFromFilename(file.filename || ''),
+                content: '',
+                dateUploaded: file.uploadDate || new Date().toISOString(),
+                status: file.status || 'pending',
+                category: category.category,
+                notes: '',
+                url: file.url
+              };
+              extractedDocs.push(doc);
+            });
+          }
+        });
+        
+        // Store the extracted documents
+        setLoanDocuments(extractedDocs);
+        
+        // Organize documents by docType for easy access
+        const docMap: Record<string, LoanDBDocument | SimpleDocument> = {};
+        
+        // First populate with documents from simpleDocumentService
         existingDocuments.forEach(doc => {
+          if (doc.docType) {
+            docMap[doc.docType] = doc;
+          }
+        });
+        
+        // Then add documents from the extracted loan documents (these take precedence)
+        extractedDocs.forEach(doc => {
           if (doc.docType) {
             docMap[doc.docType] = doc;
           }
@@ -219,6 +311,47 @@ export default function ReviewItemPage() {
       }
     }
   }, [loanId, reviewType, itemId]);
+  
+  // Helper function to derive docType from filename
+  const getDocTypeFromFilename = (filename: string): string => {
+    // Convert to lowercase and remove extension
+    const name = filename.toLowerCase().split('.')[0];
+    
+    // Try to match with known document types
+    if (name.includes('credit') && name.includes('report')) return 'credit_report';
+    if (name.includes('id') || name.includes('identification') || name.includes('passport')) return 'photo_id';
+    if (name.includes('background') && name.includes('check')) return 'background_check';
+    if (name.includes('ofac')) return 'ofac_check';
+    if (name.includes('experience') || name.includes('investment') && name.includes('history')) return 'investment_history';
+    if (name.includes('property') && (name.includes('photo') || name.includes('picture') || name.includes('image'))) return 'property_photos';
+    if (name.includes('title') && name.includes('report')) return 'preliminary_title';
+    if (name.includes('purchase') && name.includes('contract')) return 'purchase_contract';
+    if (name.includes('loan') && name.includes('application')) return 'loan_application';
+    if (name.includes('financial') && name.includes('statement')) return 'financial_statement';
+    if (name.includes('bank') && name.includes('statement')) return 'bank_statements';
+    if (name.includes('tax') && name.includes('return')) return 'personal_tax_returns';
+    
+    // Default fallback
+    return '';
+  };
+  
+  // Helper function to get file type based on filename extension
+  const getFileTypeFromFilename = (filename: string): string => {
+    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    
+    switch (ext) {
+      case 'pdf': return 'application/pdf';
+      case 'doc':
+      case 'docx': return 'application/msword';
+      case 'xls':
+      case 'xlsx': return 'application/vnd.ms-excel';
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      case 'txt': return 'text/plain';
+      default: return 'application/octet-stream';
+    }
+  };
   
   // Render loading state
   if (!loan || !reviewItem) {
@@ -264,7 +397,7 @@ export default function ReviewItemPage() {
   };
   
   // View a document
-  const handleViewDocument = (document: SimpleDocument) => {
+  const handleViewDocument = (document: LoanDBDocument | SimpleDocument) => {
     setCurrentDocument(document);
   };
   
@@ -301,6 +434,13 @@ export default function ReviewItemPage() {
   
   // Get document label from type
   const getDocumentLabel = (docType: string): string => {
+    // First try to get label from loan document structure
+    const docTypeInfo = loanDocuments.find(doc => doc.docType === docType);
+    if (docTypeInfo) {
+      return docTypeInfo.filename.split('.')[0]; // Remove extension
+    }
+    
+    // Fall back to formatting the docType
     return docType
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -407,7 +547,10 @@ export default function ReviewItemPage() {
                 </CardHeader>
                 <CardContent className="p-1">
                   <div className="bg-white rounded h-[500px] overflow-auto">
-                    {currentDocument.content && (currentDocument.content.startsWith('<html') || currentDocument.content.includes('<!DOCTYPE html')) ? (
+                    {currentDocument.content && (
+                      typeof currentDocument.content === 'string' && 
+                      (currentDocument.content.startsWith('<html') || currentDocument.content.includes('<!DOCTYPE html'))
+                    ) ? (
                       <div 
                         className="h-full" 
                         dangerouslySetInnerHTML={{ __html: currentDocument.content }}
@@ -431,9 +574,9 @@ export default function ReviewItemPage() {
                       onClick={() => {
                         // Approve document logic
                         if (currentDocument && currentDocument.docType) {
-                          const updatedDoc: SimpleDocument = {
+                          const updatedDoc = {
                             ...currentDocument,
-                            status: 'approved' as 'pending' | 'approved' | 'rejected'
+                            status: 'approved'
                           };
                           setUploadedDocuments(prev => ({
                             ...prev,
@@ -453,9 +596,9 @@ export default function ReviewItemPage() {
                       onClick={() => {
                         // Reject document logic
                         if (currentDocument && currentDocument.docType) {
-                          const updatedDoc: SimpleDocument = {
+                          const updatedDoc = {
                             ...currentDocument,
-                            status: 'rejected' as 'pending' | 'approved' | 'rejected'
+                            status: 'rejected'
                           };
                           setUploadedDocuments(prev => ({
                             ...prev,
