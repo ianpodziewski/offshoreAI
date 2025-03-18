@@ -7,7 +7,8 @@ import {
   CardContent, 
   CardHeader, 
   CardTitle,
-  CardDescription
+  CardDescription,
+  CardFooter
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -21,7 +22,8 @@ import {
   RefreshCw,
   Home,
   Briefcase,
-  FileText
+  FileText,
+  ExternalLink
 } from 'lucide-react';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import LayoutWrapper from '@/app/layout-wrapper';
@@ -43,6 +45,7 @@ type ReviewItem = {
   name: string;
   status: string;
   checklist?: ChecklistItem[];
+  description?: string;
 };
 
 type ReviewSection = {
@@ -557,6 +560,12 @@ export default function LoanReviewPage() {
         return 'Not Started';
     }
   };
+
+  // Open detailed review in a new tab
+  const openDetailedReview = (reviewType: ReviewType, itemId?: number) => {
+    const url = `/loans/${loanId}/review/${reviewType}${itemId ? `/${itemId}` : ''}`;
+    window.open(url, '_blank');
+  };
   
   return (
     <LayoutWrapper>
@@ -570,7 +579,7 @@ export default function LoanReviewPage() {
             Back to Loan Overview
           </button>
           <h1 className="text-3xl font-bold mt-4 text-white">
-            #{loanId}
+            Loan Review Process for #{loanId}
           </h1>
           <p className="text-lg mt-1 text-gray-400">
             {loan.propertyAddress}
@@ -580,163 +589,187 @@ export default function LoanReviewPage() {
         <div className="flex flex-col-reverse lg:flex-row gap-6">
           {/* Main Content */}
           <div className="w-full lg:w-3/4 space-y-6">
-            {/* Review Tabs */}
-            <Tabs 
-              defaultValue="initial_inquiry" 
-              onValueChange={(value) => setActiveTab(value as ReviewType)}
-              className="bg-[#1A2234] p-4 rounded-lg border border-gray-800"
-            >
-              <div className="flex justify-center mb-4">
-                <TabsList className="grid grid-cols-4 bg-[#0A0F1A] p-0 rounded-lg">
-                  <TabsTrigger 
-                    value="initial_inquiry" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <ClipboardCheck className="h-4 w-4 mr-2" />
-                    Initial Inquiry
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="application" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <FileCheck className="h-4 w-4 mr-2" />
-                    Application
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="property_evaluation" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <Home className="h-4 w-4 mr-2" />
-                    Property
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="underwriting" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <Briefcase className="h-4 w-4 mr-2" />
-                    Underwriting
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="closing_prep" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Closing Prep
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="closing" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <FileSignature className="h-4 w-4 mr-2" />
-                    Closing
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="post_closing" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Post-Closing
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="servicing" 
-                    className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Servicing
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-              
-              {/* Tab Contents */}
-              <TabsContent value={activeTab}>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h2 className="text-xl font-semibold text-white">
-                        {activeTab === 'initial_inquiry' && 'Initial Inquiry & Pre-Qualification'}
-                        {activeTab === 'application' && 'Application & Initial Underwriting'}
-                        {activeTab === 'property_evaluation' && 'Property & Project Evaluation'}
-                        {activeTab === 'underwriting' && 'Comprehensive Underwriting'}
-                        {activeTab === 'closing_prep' && 'Closing Preparation'}
-                        {activeTab === 'closing' && 'Closing & Funding'}
-                        {activeTab === 'post_closing' && 'Post-Closing Quality Control'}
-                        {activeTab === 'servicing' && 'Servicing Setup & Monitoring'}
-                      </h2>
-                      <p className="text-sm text-gray-400">
-                        {activeTab === 'initial_inquiry' && 'Review borrower eligibility and property preliminary assessment'}
-                        {activeTab === 'application' && 'Review borrower financial verification and property documentation'}
-                        {activeTab === 'property_evaluation' && 'Review property condition, appraisal, and renovation plans'}
-                        {activeTab === 'underwriting' && 'Review final loan analysis, risk assessment, and compliance'}
-                        {activeTab === 'closing_prep' && 'Review document preparation and closing logistics'}
-                        {activeTab === 'closing' && 'Review document execution and funding authorization'}
-                        {activeTab === 'post_closing' && 'Review file completeness and policy adherence'}
-                        {activeTab === 'servicing' && 'Review loan boarding and ongoing monitoring setup'}
-                      </p>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-400 mr-2">Status:</span>
-                      <span className="flex items-center" style={{ 
-                        color: reviewData[activeTab].status === 'complete' ? '#10B981' : 
-                               reviewData[activeTab].status === 'incomplete' ? '#FBBF24' : '#6B7280' 
-                      }}>
-                        {getStatusIcon(reviewData[activeTab].status)}
-                        <span className="ml-1">{getStatusText(reviewData[activeTab].status)}</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 gap-4">
-                    {reviewData[activeTab].items.map((item: ReviewItem) => (
-                      <Card key={item.id} className="bg-[#141b2d] border-gray-800 hover:border-gray-700 transition-colors">
-                        <CardHeader className="p-4 flex flex-row items-center justify-between">
-                          <div>
-                            <CardTitle className="text-white text-lg">{item.name}</CardTitle>
-                          </div>
+            <Card className="bg-[#1A2234] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-xl text-white">Review Progress Overview</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Click on any review item to open the detailed review interface in a new tab
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {Object.entries(reviewData).map(([reviewType, section]) => (
+                    <Card key={reviewType} className="bg-[#141b2d] border-gray-800 hover:border-gray-700 transition-colors">
+                      <CardHeader className="p-4 pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-lg text-white">
+                            {reviewType === 'initial_inquiry' && 'Initial Inquiry'}
+                            {reviewType === 'application' && 'Application'}
+                            {reviewType === 'property_evaluation' && 'Property Evaluation'}
+                            {reviewType === 'underwriting' && 'Underwriting'}
+                            {reviewType === 'closing_prep' && 'Closing Prep'}
+                            {reviewType === 'closing' && 'Closing'}
+                            {reviewType === 'post_closing' && 'Post-Closing'}
+                            {reviewType === 'servicing' && 'Servicing'}
+                          </CardTitle>
                           <div className="flex items-center">
-                            {getStatusIcon(item.status)}
-                            <span className="ml-2 text-sm" style={{ color: item.status === 'complete' ? '#10B981' : item.status === 'incomplete' ? '#FBBF24' : '#6B7280' }}>
-                              {getStatusText(item.status)}
-                            </span>
+                            {getStatusIcon(section.status)}
                           </div>
-                        </CardHeader>
-                        <CardContent className="p-4 pt-0">
-                          {/* Checklist Items */}
-                          {item.checklist && (
-                            <div className="mb-4 mt-2">
-                              <h4 className="text-sm font-medium text-gray-400 mb-2">Checklist Items:</h4>
-                              <div className="space-y-2">
-                                {item.checklist.map((checkItem: ChecklistItem) => (
-                                  <div key={checkItem.id} className="flex items-start">
-                                    <div className="flex h-5 items-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={checkItem.checked}
-                                        onChange={() => handleCheckboxChange(activeTab, item.id, checkItem.id)}
-                                        className="h-4 w-4 rounded border-gray-600 bg-gray-800 text-blue-600 focus:ring-blue-600"
-                                      />
-                                    </div>
-                                    <label className="ml-2 text-sm text-gray-300">
-                                      {checkItem.text}
-                                    </label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          <Button 
-                            className="bg-blue-600 hover:bg-blue-700"
-                            onClick={() => console.log(`Start review for ${item.name}`)}
-                          >
-                            {item.status === 'not_started' ? 'Start Review' : 'Continue Review'}
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
+                        </div>
+                        <CardDescription className="text-gray-400">
+                          {getStatusText(section.status)}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-2 pb-2">
+                        <div className="text-xs text-gray-400 mb-2">
+                          {section.items.length} review items
+                        </div>
+                        <div className="h-2 bg-gray-800 rounded overflow-hidden">
+                          <div 
+                            className="h-full rounded" 
+                            style={{ 
+                              width: `${section.items.filter(item => item.status === 'complete').length / section.items.length * 100}%`,
+                              backgroundColor: section.status === 'complete' ? '#10B981' : section.status === 'incomplete' ? '#FBBF24' : '#6B7280' 
+                            }}
+                          ></div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="p-4 pt-2">
+                        <Button 
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          onClick={() => openDetailedReview(reviewType as ReviewType)}
+                        >
+                          <ExternalLink size={16} className="mr-2" />
+                          Open Full Review
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
                 </div>
-              </TabsContent>
-            </Tabs>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-[#1A2234] border-gray-800">
+              <CardHeader>
+                <CardTitle className="text-xl text-white">Review Items</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Click on any item to open its detailed review interface
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs 
+                  defaultValue="initial_inquiry" 
+                  onValueChange={(value) => setActiveTab(value as ReviewType)}
+                  className="w-full"
+                >
+                  <TabsList className="grid grid-cols-4 bg-[#0A0F1A] p-0 rounded-lg mb-4">
+                    <TabsTrigger 
+                      value="initial_inquiry" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      Initial Inquiry
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="application" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <FileCheck className="h-4 w-4 mr-2" />
+                      Application
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="property_evaluation" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <Home className="h-4 w-4 mr-2" />
+                      Property
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="underwriting" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      Underwriting
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="closing_prep" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      Closing Prep
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="closing" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <FileSignature className="h-4 w-4 mr-2" />
+                      Closing
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="post_closing" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Post-Closing
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="servicing" 
+                      className="text-base px-6 py-3 rounded-md data-[state=active]:bg-blue-900/70 data-[state=active]:text-blue-300 transition-all"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Servicing
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value={activeTab} className="mt-0">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {reviewData[activeTab].items.map((item: ReviewItem) => (
+                          <Card key={item.id} className="bg-[#141b2d] border-gray-800 hover:border-gray-700 transition-colors">
+                            <CardHeader className="p-4 flex flex-row items-center justify-between">
+                              <div>
+                                <CardTitle className="text-white">{item.name}</CardTitle>
+                              </div>
+                              <div className="flex items-center">
+                                {getStatusIcon(item.status)}
+                                <span className="ml-2 text-sm" style={{ color: item.status === 'complete' ? '#10B981' : item.status === 'incomplete' ? '#FBBF24' : '#6B7280' }}>
+                                  {getStatusText(item.status)}
+                                </span>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-4 pt-0">
+                              {item.checklist && (
+                                <div className="mb-4">
+                                  <p className="text-sm text-gray-400 mb-2">
+                                    {item.checklist.filter(c => c.checked).length} of {item.checklist.length} items completed
+                                  </p>
+                                  <div className="h-2 bg-gray-800 rounded overflow-hidden">
+                                    <div 
+                                      className="h-full bg-blue-600 rounded" 
+                                      style={{ 
+                                        width: `${(item.checklist.filter(c => c.checked).length / item.checklist.length) * 100}%` 
+                                      }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <Button 
+                                className="w-full bg-blue-600 hover:bg-blue-700"
+                                onClick={() => openDetailedReview(activeTab, item.id)}
+                              >
+                                <ExternalLink size={16} className="mr-2" />
+                                Open Detailed Review
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
           </div>
           
           {/* Sidebar */}
