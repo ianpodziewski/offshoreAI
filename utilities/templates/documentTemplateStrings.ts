@@ -4555,7 +4555,7 @@ const getCreditExplanationLettersTemplate = (loanData: LoanData): string => {
 };
 
 // Export a mapping of document types to their template functions
-export const documentTemplates: { [key: string]: (loanData: LoanData) => string } = {
+export const documentTemplates: Record<string, (loanData: LoanData) => string> = {
   loan_application: getLoanApplicationTemplate,
   photo_id: getPhotoIdTemplate,
   credit_authorization: getCreditAuthorizationTemplate,
