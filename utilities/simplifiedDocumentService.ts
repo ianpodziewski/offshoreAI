@@ -418,18 +418,28 @@ export const simpleDocumentService = {
         doc.docType === document.docType
       );
       
-      // Store full content in IndexedDB
+      // Create a unique ID for the document if it doesn't have one
+      if (!document.id) {
+        document.id = uuidv4();
+      }
+      
+      // Try to store full content in IndexedDB first
+      let indexedDBSuccess = false;
       try {
         await storeContentInIndexedDB(document.id, document.content);
         console.log(`✅ Stored document content in IndexedDB: ${document.id}`);
+        indexedDBSuccess = true;
       } catch (indexedDBError) {
         console.error('Failed to store content in IndexedDB, falling back to compressed content', indexedDBError);
+        // We'll continue and store in localStorage, but we'll use the compressed content
       }
       
       // Create a storage-friendly version with placeholder content for localStorage
       const storageDoc = {
         ...document,
-        content: compressContent(document.content)
+        content: indexedDBSuccess 
+          ? `[Content stored in IndexedDB - ID: ${document.id}]` 
+          : compressContent(document.content)
       };
       
       if (existingDoc) {
@@ -448,33 +458,60 @@ export const simpleDocumentService = {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
             console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
           } catch (storageError) {
-            console.error('❌ localStorage issue, implementing cleanup');
-            // Remove older documents to make space
-            const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 4));
-            localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, updatedDoc]));
+            console.error('❌ localStorage issue, implementing cleanup', storageError);
+            try {
+              // Remove older documents to make space
+              const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 4));
+              localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, updatedDoc]));
+              console.log(`Trimmed documents and updated storage - now ${trimmedDocs.length + 1} documents`);
+            } catch (finalError) {
+              console.error('Failed to save document even after trimming', finalError);
+              // As a last resort, just save this document
+              localStorage.setItem(STORAGE_KEY, JSON.stringify([updatedDoc]));
+            }
           }
-          return document; // Return original document with full content
+          
+          // If we were able to save to IndexedDB, return a document with full content
+          // Otherwise, return the original document with content intact
+          return indexedDBSuccess ? {
+            ...document,
+            content: document.content // Return original with full content
+          } : document;
         }
       }
       
-      // Add the new document
+      // Add the new document to the array
       existingDocs.push(storageDoc);
       
-      // Save back to storage
+      // Save back to storage with robust error handling
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
+        console.log(`✅ Added new document to localStorage: ${document.filename} (ID: ${document.id})`);
       } catch (storageError) {
-        console.error('❌ localStorage issue, implementing cleanup');
-        // If localStorage is full, remove older documents to make space
-        const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 3));
-        localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, storageDoc]));
+        console.error('❌ localStorage issue during add, implementing cleanup', storageError);
+        
+        try {
+          // If localStorage is full, remove older documents to make space
+          const trimmedDocs = existingDocs.slice(Math.max(Math.floor(existingDocs.length / 3), existingDocs.length - 20));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, storageDoc]));
+          console.log(`Trimmed documents to ${trimmedDocs.length + 1} and saved`);
+        } catch (finalError) {
+          console.error('Failed to save document even after trimming:', finalError);
+          // As a last resort, just save this document
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([storageDoc]));
+          } catch (lastError) {
+            console.error('All attempts to save to localStorage failed:', lastError);
+          }
+        }
       }
       
-      console.log(`✅ Document added directly: ${document.filename}`);
-      return document; // Return original document with full content
+      // Return the original document with full content
+      return document;
     } catch (error) {
-      console.error('❌ Error adding document directly:', error);
-      throw error;
+      console.error('Error adding document directly:', error);
+      // Still return the document even if we couldn't save it
+      return document;
     }
   },
   

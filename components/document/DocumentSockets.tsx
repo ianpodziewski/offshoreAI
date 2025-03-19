@@ -6,6 +6,7 @@ import { SimpleDocument, simpleDocumentService } from '@/utilities/simplifiedDoc
 import { fakeDocumentService } from '@/utilities/fakeDocumentService';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { COLORS } from '@/app/theme/colors';
+import { useLoanContext } from '@/components/LoanContextProvider';
 
 // Define the required document types for loans
 export const REQUIRED_DOCUMENT_TYPES: {
@@ -37,18 +38,79 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   const [uploading, setUploading] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [generatingAll, setGeneratingAll] = useState(false);
+  const { refreshLoanDocuments } = useLoanContext();
+  const [documentGenerated, setDocumentGenerated] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Add states for document type selection
+  const [selectedDocType, setSelectedDocType] = useState('');
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(refreshTrigger);
+  const documentTypes = Object.keys(REQUIRED_DOCUMENT_TYPES.reduce((acc, doc) => {
+    acc[doc.docType] = doc.label;
+    return acc;
+  }, {} as Record<string, string>));
   
   // Fetch documents when component mounts or refreshTrigger changes
   useEffect(() => {
     const fetchDocuments = () => {
       setLoading(true);
-      const loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
+      // First get documents from localStorage (metadata only)
+      let loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
       setDocuments(loanDocuments);
       setLoading(false);
+      
+      // Then also refresh the loan context to ensure it has the latest data
+      if (documentGenerated) {
+        refreshLoanDocuments();
+        
+        // Double-check after a short delay to make sure documents are persisted
+        setTimeout(() => {
+          const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+          if (refreshedDocs.length !== loanDocuments.length) {
+            console.log(`Document count changed from ${loanDocuments.length} to ${refreshedDocs.length}`);
+            setDocuments(refreshedDocs);
+          }
+          setDocumentGenerated(false);
+        }, 500);
+      }
     };
 
     fetchDocuments();
-  }, [loanId, refreshTrigger]);
+    
+    // Also set up a refresh interval to check for documents
+    const intervalId = setInterval(() => {
+      if (!loading) {
+        const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+        if (refreshedDocs.length !== documents.length) {
+          console.log(`Document count changed from ${documents.length} to ${refreshedDocs.length}`);
+          setDocuments(refreshedDocs);
+        }
+      }
+    }, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [loanId, localRefreshTrigger, documentGenerated, refreshLoanDocuments, loading, documents.length]);
+  
+  // Also refresh documents from context when component mounts
+  useEffect(() => {
+    refreshLoanDocuments();
+    
+    // Store a marker in sessionStorage that we've loaded this loan's documents
+    // This helps with persistence between page navigations
+    const storageKey = `doc_loaded_${loanId}`;
+    if (!sessionStorage.getItem(storageKey)) {
+      sessionStorage.setItem(storageKey, 'true');
+      
+      // Check for documents after a delay to ensure they're properly loaded
+      setTimeout(() => {
+        const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+        if (refreshedDocs.length > 0 && refreshedDocs.length !== documents.length) {
+          console.log(`Initial document retrieval found ${refreshedDocs.length} documents`);
+          setDocuments(refreshedDocs);
+        }
+      }, 1000);
+    }
+  }, [refreshLoanDocuments, loanId, documents.length]);
 
   // Get document for a specific docType if it exists
   const getDocumentForType = (docType: string): SimpleDocument | undefined => {
@@ -57,54 +119,80 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
 
   // Generate a sample document for a specific type
   const handleGenerateSample = async (docType: string) => {
-    const loan = loanDatabase.getLoanById(loanId);
-    
-    if (!loan) {
-      console.error('Loan not found');
-      return;
-    }
-    
     try {
-      // Generate the document
-      const document = await fakeDocumentService.generateFakeDocument(loan, docType);
+      setLoading(true);
+      console.log(`Generating sample document of type: ${docType}`);
+
+      // Get the current loan
+      const loan = loanDatabase.getLoanById(loanId);
       
-      if (document) {
-        // Update the documents list
-        setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), document]);
+      if (!loan) {
+        throw new Error(`Loan with ID ${loanId} not found`);
       }
-    } catch (error) {
-      console.error(`Error generating sample document for ${docType}:`, error);
+
+      // Use our fake document service to generate a realistic document
+      const newDoc = await fakeDocumentService.generateFakeDocument(loan, docType);
+
+      if (newDoc) {
+        console.log(`Generated document: ${newDoc.id}`);
+        
+        // Set a flag that documents were generated to trigger refresh
+        setDocumentGenerated(true);
+        
+        // Trigger an immediate refresh
+        const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+        setDocuments(updatedDocs);
+        
+        // Show success message
+        setSuccessMessage(`Generated ${docType} document successfully`);
+        setTimeout(() => setSuccessMessage(""), 3000);
+      }
+    } catch (error: any) {
+      console.error("Error generating sample document:", error);
+      setErrorMessage(`Failed to generate ${docType} document: ${error?.message || "Unknown error"}`);
+      setTimeout(() => setErrorMessage(""), 5000);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Generate all sample documents
   const handleGenerateAllSamples = async () => {
-    setGeneratingAll(true);
-    
     try {
+      setLoading(true);
+      console.log("Generating all sample documents");
+
+      // Get the current loan
       const loan = loanDatabase.getLoanById(loanId);
       
       if (!loan) {
-        console.error('Loan not found');
-        return;
+        throw new Error(`Loan with ID ${loanId} not found`);
       }
+
+      // Use our fake document service to generate all document types
+      await fakeDocumentService.generateAllFakeDocuments(loan);
+
+      console.log("All documents generated");
       
-      // Generate all documents
-      const generatedDocs = await fakeDocumentService.generateAllFakeDocuments(loan);
+      // Set a flag that documents were generated to trigger refresh
+      setDocumentGenerated(true);
       
-      // Update the state with new documents
-      if (generatedDocs.length > 0) {
-        setDocuments(prev => {
-          const existingDocTypes = new Set(generatedDocs.map(doc => doc.docType));
-          // Keep only documents that weren't regenerated
-          const filteredPrev = prev.filter(doc => !existingDocTypes.has(doc.docType));
-          return [...filteredPrev, ...generatedDocs];
-        });
-      }
-    } catch (error) {
-      console.error('Error generating all sample documents:', error);
+      // Trigger an immediate refresh
+      const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+      setDocuments(updatedDocs);
+      
+      // Refresh loan context to ensure documents are persisted
+      refreshLoanDocuments();
+      
+      // Show success message
+      setSuccessMessage("Generated all sample documents successfully");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error: any) {
+      console.error("Error generating all sample documents:", error);
+      setErrorMessage(`Failed to generate all documents: ${error?.message || "Unknown error"}`);
+      setTimeout(() => setErrorMessage(""), 5000);
     } finally {
-      setGeneratingAll(false);
+      setLoading(false);
     }
   };
 
@@ -246,6 +334,105 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     }
   }, [loanId]);
 
+  const handleFilesAccepted = useCallback(async (files: File[]) => {
+    try {
+      setLoading(true);
+      console.log(`Uploading ${files.length} documents`);
+
+      for (const file of files) {
+        // Validate file type
+        if (file.type !== "application/pdf") {
+          console.error(`File ${file.name} is not a PDF`);
+          continue;
+        }
+        
+        setUploading(file.name);
+        
+        // Simulate progress
+        const progressInterval = setInterval(() => {
+          setUploadProgress(prev => {
+            if (prev >= 90) {
+              clearInterval(progressInterval);
+              return 90;
+            }
+            return prev + 10;
+          });
+        }, 200);
+        
+        try {
+          // Handle the upload
+          const uploadedDoc = await simpleDocumentService.addDocument(
+            file, 
+            loanId,
+            { docType: file.name, category: 'misc' }
+          );
+          
+          if (uploadedDoc) {
+            setDocuments(prev => [...prev.filter(doc => doc.docType !== file.name), uploadedDoc]);
+          }
+        } catch (error) {
+          console.error(`Error uploading file ${file.name}:`, error);
+        } finally {
+          clearInterval(progressInterval);
+          setUploadProgress(0);
+          setUploading(null);
+        }
+      }
+
+      setSuccessMessage(`${files.length} documents uploaded successfully`);
+      setTimeout(() => setSuccessMessage(""), 3000);
+    } catch (error) {
+      console.error("Error uploading documents:", error);
+      setErrorMessage("Failed to upload documents. Please try again later.");
+      setTimeout(() => setErrorMessage(""), 5000);
+    } finally {
+      setLoading(false);
+    }
+  }, [loanId]);
+
+  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    try {
+      setLoading(true);
+      const files = Array.from(event.target.files);
+      console.log(`Uploading ${files.length} documents`);
+
+      for (const file of files) {
+        try {
+          const uploadedDoc = await simpleDocumentService.addDocument(
+            file, 
+            loanId,
+            { docType: file.name.replace(/\.[^/.]+$/, ""), category: 'misc' }
+          );
+          
+          if (uploadedDoc) {
+            setSuccessMessage(`Uploaded document: ${file.name}`);
+            setDocumentGenerated(true);
+            setLocalRefreshTrigger(prev => prev + 1);
+          }
+        } catch (error: any) {
+          console.error(`Error uploading file ${file.name}:`, error);
+          setErrorMessage(`Failed to upload ${file.name}: ${error?.message || "Unknown error"}`);
+        }
+      }
+      
+      setTimeout(() => {
+        setSuccessMessage(null);
+        setErrorMessage(null);
+      }, 3000);
+      
+    } catch (error: any) {
+      console.error("Error handling file upload:", error);
+      setErrorMessage(`Upload failed: ${error?.message || "Unknown error"}`);
+      setTimeout(() => setErrorMessage(null), 3000);
+    } finally {
+      setLoading(false);
+      // Reset the input value
+      if (event.target.value) event.target.value = '';
+    }
+  }, [loanId]);
+
   if (loading) {
     return (
       <div className="p-6 text-center">
@@ -257,8 +444,86 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {/* We're removing the button from here as it appears to be handled elsewhere */}
+    <div className="document-sockets">
+      <div className="document-header">
+        <h2>Loan Documents</h2>
+        <div className="document-controls">
+          {/* Add a button to add new documents from upload */}
+          <div style={{ position: 'relative' }}>
+            <button className="file-upload-button" onClick={() => {
+              document.getElementById('main-file-upload')?.click();
+            }}>
+              <Upload size={18} />
+              <span>Upload Document</span>
+            </button>
+            <input
+              type="file"
+              id="main-file-upload"
+              accept=".pdf,.doc,.docx,.html,.txt"
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+              multiple
+            />
+          </div>
+          
+          {/* Sample document generator */}
+          <div className="sample-document-controls">
+            <select 
+              value={selectedDocType} 
+              onChange={(e) => setSelectedDocType(e.target.value)}
+              className="document-type-selector"
+            >
+              <option value="">Select Document Type</option>
+              {documentTypes.map(docType => (
+                <option key={docType} value={docType}>
+                  {docType.replace(/_/g, ' ')}
+                </option>
+              ))}
+            </select>
+            <button 
+              onClick={() => handleGenerateSample(selectedDocType)}
+              disabled={!selectedDocType || loading}
+              className="generate-button"
+            >
+              Generate Sample
+            </button>
+            <button 
+              onClick={handleGenerateAllSamples}
+              disabled={loading || generatingAll}
+              className="generate-all-button"
+            >
+              Generate All
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Status messages */}
+      {successMessage && (
+        <div className="alert alert-success" style={{
+          padding: '10px',
+          margin: '10px 0',
+          borderRadius: '4px',
+          backgroundColor: '#d4edda',
+          color: '#155724',
+          border: '1px solid #c3e6cb'
+        }}>
+          {successMessage}
+        </div>
+      )}
+      
+      {errorMessage && (
+        <div className="alert alert-error" style={{
+          padding: '10px',
+          margin: '10px 0',
+          borderRadius: '4px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          border: '1px solid #f5c6cb'
+        }}>
+          {errorMessage}
+        </div>
+      )}
 
       {REQUIRED_DOCUMENT_TYPES.map((docTypeInfo) => {
         const document = getDocumentForType(docTypeInfo.docType);
@@ -360,48 +625,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                         id={`file-upload-${docTypeInfo.docType}`}
                         className="hidden" 
                         accept=".pdf"
-                        onChange={async (e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            if (file.type !== "application/pdf") {
-                              alert("Please upload a PDF file");
-                              return;
-                            }
-                            
-                            // Use the same upload function as for drag and drop
-                            setUploading(docTypeInfo.docType);
-                            
-                            const progressInterval = setInterval(() => {
-                              setUploadProgress(prev => {
-                                if (prev >= 90) {
-                                  clearInterval(progressInterval);
-                                  return 90;
-                                }
-                                return prev + 10;
-                              });
-                            }, 200);
-                            
-                            try {
-                              const uploadedDoc = await simpleDocumentService.addDocument(
-                                file, 
-                                loanId,
-                                { docType: docTypeInfo.docType, category: docTypeInfo.category }
-                              );
-                              
-                              if (uploadedDoc) {
-                                setDocuments(prev => [...prev.filter(doc => doc.docType !== docTypeInfo.docType), uploadedDoc]);
-                              }
-                            } catch (error) {
-                              console.error("Error uploading document:", error);
-                            } finally {
-                              clearInterval(progressInterval);
-                              setUploadProgress(0);
-                              setUploading(null);
-                              // Reset file input
-                              e.target.value = '';
-                            }
-                          }
-                        }}
+                        onChange={handleFileUpload}
                       />
                     </label>
                     <span className="text-xs" style={{ color: COLORS.textMuted }}>or</span>

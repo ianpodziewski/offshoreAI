@@ -66,9 +66,14 @@ export default function LoansPage() {
       
       if (validLoans.length === 0) {
         // If no valid loans, reset the database
-        const resetLoans = loanDatabase.reset();
-        setLoans(resetLoans);
-        setFilteredLoans(resetLoans);
+        try {
+          const resetLoans = await loanDatabase.reset();
+          setLoans(resetLoans);
+          setFilteredLoans(resetLoans);
+        } catch (error) {
+          console.error('Error resetting database:', error);
+          setError('Failed to reset the loan database. Please try again.');
+        }
       } else {
         setLoans(validLoans);
         setFilteredLoans(validLoans);
@@ -126,9 +131,17 @@ export default function LoansPage() {
     setFilteredLoans(result);
   }, [loans, searchQuery, statusFilter, loanTypeFilter, propertyTypeFilter, originationTypeFilter]);
   
-  const resetDatabase = () => {
-    loanDatabase.reset();
-    fetchLoans();
+  const resetDatabase = async () => {
+    setLoading(true);
+    try {
+      await loanDatabase.reset();
+      await fetchLoans();
+    } catch (error) {
+      console.error('Error during database reset:', error);
+      setError('Failed to reset the database. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
   
   const createNewLoan = () => {

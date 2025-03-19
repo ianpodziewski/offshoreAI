@@ -75,17 +75,36 @@ export const loanDatabase = {
   },
   
   // Reset the database (useful for testing)
-  reset: (count = DEFAULT_LOAN_COUNT) => {
+  reset: async (count = DEFAULT_LOAN_COUNT) => {
+    console.log('Resetting database and clearing all documents...');
+    
     // Clear all existing documents first
     if (typeof localStorage !== 'undefined') {
-      // Clear document database using the documentService
-      documentService.clearAllDocuments();
+      const clearPromises = [];
       
-      // Also clear simplified document service if it exists in the global scope
+      // Clear document database using the documentService
+      try {
+        documentService.clearAllDocuments();
+        console.log('Cleared document service storage');
+      } catch (error) {
+        console.warn('Error clearing document service:', error);
+      }
+      
+      // Clear simplified document service
       try {
         const simplifiedDocService = require('./simplifiedDocumentService').simpleDocumentService;
         if (simplifiedDocService && typeof simplifiedDocService.clearAllDocuments === 'function') {
-          simplifiedDocService.clearAllDocuments();
+          const clearPromise = simplifiedDocService.clearAllDocuments()
+            .then(() => {
+              console.log('Successfully cleared simplified document service including IndexedDB');
+              // Remove the migration flag to force a clean migration on next load
+              localStorage.removeItem('indexeddb_migration_done');
+            })
+            .catch(error => {
+              console.warn('Error during simplified document service clearing:', error);
+            });
+          
+          clearPromises.push(clearPromise);
         }
       } catch (error) {
         console.warn('Could not clear simplified document service:', error);
@@ -96,20 +115,45 @@ export const loanDatabase = {
         const docDatabase = require('./documentDatabase').default;
         if (docDatabase && typeof docDatabase.clearAllData === 'function') {
           docDatabase.clearAllData();
+          console.log('Cleared document database');
         }
       } catch (error) {
         console.warn('Could not clear document database:', error);
       }
+      
+      // Ensure all document-related localStorage keys are removed
+      try {
+        localStorage.removeItem('loan_documents');
+        localStorage.removeItem('simple_documents');
+        localStorage.removeItem('extracted_document_data');
+        localStorage.removeItem('indexeddb_migration_done');
+        console.log('Removed all document-related localStorage keys');
+      } catch (error) {
+        console.warn('Error clearing localStorage keys:', error);
+      }
+      
+      // Wait for all clearance operations to complete
+      if (clearPromises.length > 0) {
+        try {
+          await Promise.all(clearPromises);
+          console.log('All document clearing operations completed');
+        } catch (error) {
+          console.warn('Error waiting for document clearing operations:', error);
+        }
+      }
     }
     
+    // Generate fresh loans
     const initialLoans = generateLoans(count);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initialLoans));
+    console.log(`Generated ${count} new loans`);
     
     // Generate documents for each loan
     initialLoans.forEach(loan => {
       documentService.generateDocumentsForLoan(loan);
     });
     
+    console.log('Database reset complete');
     return initialLoans;
   }
 };
