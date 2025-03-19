@@ -108,35 +108,36 @@ const BATCH_SIZE = 5;
 
 // Helper function to deduplicate documents by docType
 const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
-  // Group documents by loanId and docType
-  const docGroups: Record<string, LoanDocument[]> = {};
+  // Group by docType
+  const docTypeGroups: Record<string, LoanDocument[]> = {};
   
-  // Group documents 
   documents.forEach(doc => {
-    const key = `${doc.loanId}_${doc.docType}`;
-    if (!docGroups[key]) {
-      docGroups[key] = [];
+    if (!docTypeGroups[doc.docType]) {
+      docTypeGroups[doc.docType] = [];
     }
-    docGroups[key].push(doc);
+    docTypeGroups[doc.docType].push(doc);
   });
   
-  // For each group, keep only the most recent document
-  const dedupedDocs: LoanDocument[] = [];
+  // For each group, keep only the latest document by dateUploaded
+  const result: LoanDocument[] = [];
   
-  Object.values(docGroups).forEach(group => {
-    if (group.length > 1) {
-      // Sort by dateUploaded (newest first)
-      group.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
-      // Keep only the newest document
-      dedupedDocs.push(group[0]);
-      console.log(`Deduplicated document type ${group[0].docType} - kept 1 of ${group.length} documents`);
+  Object.values(docTypeGroups).forEach(docsOfType => {
+    if (docsOfType.length === 1) {
+      // Only one document of this type, keep it
+      result.push(docsOfType[0]);
     } else {
-      // Only one document, just add it
-      dedupedDocs.push(group[0]);
+      // Multiple documents, sort by dateUploaded descending and keep the first one
+      const sortedDocs = [...docsOfType].sort((a, b) => {
+        const dateA = new Date(a.dateUploaded).getTime();
+        const dateB = new Date(b.dateUploaded).getTime();
+        return dateB - dateA; // Descending order
+      });
+      
+      result.push(sortedDocs[0]);
     }
   });
   
-  return dedupedDocs;
+  return result;
 };
 
 // Check if Redis is available for server-side operations
@@ -256,25 +257,24 @@ const saveDocumentToRedis = async (document: LoanDocument): Promise<boolean> => 
 export const loanDocumentService = {
   // Get all documents
   getAllDocuments: (): LoanDocument[] => {
-    const docsJson = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
-    const documents = docsJson ? JSON.parse(docsJson) : [];
-    
-    // Deduplicate documents to prevent duplicate display issues
-    const dedupedDocs = deduplicateDocuments(documents);
-    
-    // If we actually removed duplicates, save the deduplicated list back to storage
-    if (dedupedDocs.length < documents.length) {
-      console.log(`Removed ${documents.length - dedupedDocs.length} duplicate documents during getAllDocuments`);
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(dedupedDocs));
+    try {
+      const docsJson = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+      return docsJson ? JSON.parse(docsJson) : [];
+    } catch (error) {
+      console.error('Error getting all documents:', error);
+      return [];
     }
-    
-    return dedupedDocs;
   },
   
   // Get documents for a specific loan
   getDocumentsForLoan: (loanId: string): LoanDocument[] => {
-    const allDocs = loanDocumentService.getAllDocuments();
-    return allDocs.filter(doc => doc.loanId === loanId);
+    try {
+      const allDocs = loanDocumentService.getAllDocuments();
+      return allDocs.filter(doc => doc.loanId === loanId);
+    } catch (error) {
+      console.error(`Error getting documents for loan ${loanId}:`, error);
+      return [];
+    }
   },
   
   // Get documents for a specific loan by category
@@ -514,22 +514,10 @@ export const loanDocumentService = {
   // Generate fake documents for a loan
   generateFakeDocuments: async (loanId: string, loanType: string): Promise<LoanDocument[]> => {
     try {
-      console.log(`Generating fake documents for loan ${loanId} (type: ${loanType})`);
-      
-      // Check if localStorage is getting full - if so, use simpleDocumentService instead
-      if (isLocalStorageFull()) {
-        console.log('localStorage is close to full, using simpleDocumentService instead');
-        return await loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType);
-      }
+      console.log(`Generating fake documents for loan ${loanId} of type ${loanType}`);
       
       // Get all required document types for this loan type
       const requiredDocTypes = getRequiredDocuments(loanType);
-      
-      // Get existing documents for this loan
-      const existingDocs = loanDocumentService.getDocumentsForLoan(loanId);
-      
-      // Create fake documents for each required type
-      const fakeDocuments: LoanDocument[] = [];
       
       // Fetch loan data
       const loanData = loanDatabase.getLoanById(loanId);
@@ -538,105 +526,78 @@ export const loanDocumentService = {
         return [];
       }
       
-      // Generate a random date within the last 30 days
-      const getRandomDate = (): string => {
-        const now = new Date();
-        const daysAgo = Math.floor(Math.random() * 30);
-        const randomDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
-        return randomDate.toISOString();
-      };
+      // Create an array to store the fake documents
+      const fakeDocuments: LoanDocument[] = [];
       
-      // Generate a random status with bias towards 'approved' and 'received'
-      const getRandomStatus = (): DocumentStatus => {
-        const rand = Math.random();
-        if (rand < 0.4) return 'approved';
-        if (rand < 0.7) return 'received';
-        if (rand < 0.85) return 'reviewed';
-        return 'pending';
-      };
-      
-      // Generate a random file type
-      const getRandomFileType = (): string => {
-        return FILE_TYPES[Math.floor(Math.random() * FILE_TYPES.length)];
-      };
-      
-      // Generate fake documents in batches to avoid memory issues
-      console.log(`Need to generate ${requiredDocTypes.length} document types`);
-      
-      // First collect all existing document IDs to delete them properly
-      const existingDocIds = existingDocs.map(doc => doc.id);
-      console.log(`Found ${existingDocIds.length} existing documents to remove before generating new ones`);
-
-      // Delete existing documents before generating new ones to prevent duplicates
-      for (const docId of existingDocIds) {
-        loanDocumentService.deleteDocument(docId);
-      }
-      
-      // Generate new documents after deleting existing ones
-      console.log(`Deleted existing documents, now generating ${requiredDocTypes.length} new documents`);
-      
-      // Process in small batches
-      for (let i = 0; i < requiredDocTypes.length; i += BATCH_SIZE) {
-        const batch = requiredDocTypes.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${i/BATCH_SIZE + 1} (${batch.length} docs)`);
+      // Process each document type
+      for (const docType of requiredDocTypes) {
+        // Generate random document attributes
+        const fileType = ['.pdf', '.docx', '.html'][Math.floor(Math.random() * 3)];
+        const fileSize = Math.floor(Math.random() * 1000000) + 100000; // Random size between 100KB and 1.1MB
+        const uploadDate = new Date().toISOString();
         
-        // Process each doc type in this batch
-        for (const docType of batch) {
-          // Generate random document attributes
-          const fileType = getRandomFileType();
-          const fileSize = getRandomFileSize();
-          const uploadDate = getRandomDate();
-          const status = getRandomStatus();
-          
-          // Generate a filename
-          const filename = `${docType.docType.replace(/_/g, '-')}${fileType}`;
-          
-          // Generate document content based on the document type
-          const content = generateDocumentContent(docType.docType, loanData);
-          
-          // Create the fake document
-          const fakeDocument: LoanDocument = {
-            id: uuidv4(),
-            loanId,
-            filename,
-            fileType,
-            fileSize,
-            dateUploaded: uploadDate,
-            category: docType.category,
-            section: docType.section,
-            subsection: docType.subsection,
-            docType: docType.docType,
-            status,
-            isRequired: true,
-            version: 1,
-            content, // Add the generated content
-            notes: `This is a sample document for ${loanData.borrowerName} with loan amount ${loanData.loanAmount} for the property at ${loanData.propertyAddress}. Status: ${status === 'approved' ? 'Document verified and approved.' : 
+        // Generate random status with higher probability for 'pending'
+        const statuses: DocumentStatus[] = ['pending', 'approved', 'rejected', 'reviewed'];
+        const statusWeights = [0.7, 0.1, 0.1, 0.1]; // Higher probability for 'pending'
+        const randomValue = Math.random();
+        let statusIndex = 0;
+        let cumulativeWeight = 0;
+        
+        for (let i = 0; i < statusWeights.length; i++) {
+          cumulativeWeight += statusWeights[i];
+          if (randomValue <= cumulativeWeight) {
+            statusIndex = i;
+            break;
+          }
+        }
+        
+        const status = statuses[statusIndex];
+        
+        // Generate a filename
+        const filename = `${docType.docType.replace(/_/g, '-')}${fileType}`;
+        
+        // Generate document content based on the document type
+        const content = generateDocumentContent(docType.docType, loanData);
+        
+        // Create a unique ID with timestamp to ensure uniqueness
+        const docId = uuidv4();
+        
+        // Create the fake document
+        const fakeDocument: LoanDocument = {
+          id: docId,
+          loanId,
+          filename,
+          fileType,
+          fileSize,
+          dateUploaded: uploadDate,
+          category: docType.category,
+          section: docType.section,
+          subsection: docType.subsection,
+          docType: docType.docType,
+          status,
+          isRequired: true,
+          version: 1,
+          content, // Add the generated content
+          notes: `This is a sample document for ${loanData.borrowerName} with loan amount ${loanData.loanAmount} for the property at ${loanData.propertyAddress}. Status: ${status === 'approved' ? 'Document verified and approved.' : 
                    status === 'rejected' ? 'Document rejected. Please resubmit.' : 
                    status === 'reviewed' ? 'Document reviewed, pending approval.' : 
                    'Document uploaded, awaiting review.'}`
-          };
-          
-          // Add expiration date for certain document types
-          if (['insurance_policy', 'appraisal_report', 'credit_report', 'background_check'].includes(docType.docType)) {
-            const expirationDate = new Date();
-            expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-            fakeDocument.expirationDate = expirationDate.toISOString();
-          }
-          
-          // Add to the list of fake documents
-          fakeDocuments.push(fakeDocument);
-          
-          // Save to localStorage
-          const allExistingDocs = loanDocumentService.getAllDocuments();
-          allExistingDocs.push(fakeDocument);
-          localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
-          
-          // Save to Redis for the chatbot
-          await saveDocumentToRedis(fakeDocument);
-          
-          // Index document content for searching
-          await loanDocumentService.indexDocumentContent(fakeDocument);
+        };
+        
+        // Add expiration date for certain document types
+        if (['insurance_policy', 'appraisal_report', 'credit_report', 'background_check'].includes(docType.docType)) {
+          const expirationDate = new Date();
+          expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+          fakeDocument.expirationDate = expirationDate.toISOString();
         }
+        
+        // Add to the list of fake documents
+        fakeDocuments.push(fakeDocument);
+        
+        // Save to localStorage
+        const allExistingDocs = loanDocumentService.getAllDocuments();
+        allExistingDocs.push(fakeDocument);
+        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
       }
       
       console.log(`Generated and stored ${fakeDocuments.length} fake documents for loan ${loanId}`);
@@ -648,10 +609,10 @@ export const loanDocumentService = {
     }
   },
   
-  // Generate fake documents using simpleDocumentService (which uses IndexedDB for content)
+  // Generate fake documents using simpleDocumentService
   generateFakeDocumentsUsingSimpleService: async (loanId: string, loanType: string, existingFakeDocs: LoanDocument[] = []): Promise<LoanDocument[]> => {
     try {
-      console.log('Generating fake documents using simpleDocumentService with IndexedDB');
+      console.log('Generating fake documents using simpleDocumentService');
       
       // Get all required document types for this loan type
       const requiredDocTypes = getRequiredDocuments(loanType);
