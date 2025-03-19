@@ -111,7 +111,16 @@ export function LoanDocumentStructure({
   
   // Get all documents of a specific type
   const getAllDocumentsOfType = (docType: string) => {
-    return uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required')
+    // First deduplicate documents by ID (in case there are multiple documents with same ID)
+    const uniqueDocsByID = new Map();
+    uploadedDocuments
+      .filter(doc => doc.docType === docType && doc.status !== 'required')
+      .forEach(doc => {
+        uniqueDocsByID.set(doc.id, doc);
+      });
+    
+    // Convert back to array and sort by dateUploaded (newest first)
+    return Array.from(uniqueDocsByID.values())
       .sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
   };
   

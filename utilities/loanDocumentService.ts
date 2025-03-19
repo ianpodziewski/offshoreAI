@@ -91,12 +91,56 @@ const isLocalStorageFull = (): boolean => {
 // Batch size for generating fake documents
 const BATCH_SIZE = 5;
 
+// Helper function to deduplicate documents by docType
+const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
+  // Group documents by loanId and docType
+  const docGroups: Record<string, LoanDocument[]> = {};
+  
+  // Group documents 
+  documents.forEach(doc => {
+    const key = `${doc.loanId}_${doc.docType}`;
+    if (!docGroups[key]) {
+      docGroups[key] = [];
+    }
+    docGroups[key].push(doc);
+  });
+  
+  // For each group, keep only the most recent document
+  const dedupedDocs: LoanDocument[] = [];
+  
+  Object.values(docGroups).forEach(group => {
+    if (group.length > 1) {
+      // Sort by dateUploaded (newest first)
+      group.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
+      // Keep only the newest document
+      dedupedDocs.push(group[0]);
+      console.log(`Deduplicated document type ${group[0].docType} - kept 1 of ${group.length} documents`);
+    } else {
+      // Only one document, just add it
+      dedupedDocs.push(group[0]);
+    }
+  });
+  
+  return dedupedDocs;
+};
+
 // Document service for managing loan documents
 export const loanDocumentService = {
   // Get all documents
   getAllDocuments: (): LoanDocument[] => {
     const docsJson = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
-    return docsJson ? JSON.parse(docsJson) : [];
+    const documents = docsJson ? JSON.parse(docsJson) : [];
+    
+    // Deduplicate documents to prevent duplicate display issues
+    const dedupedDocs = deduplicateDocuments(documents);
+    
+    // If we actually removed duplicates, save the deduplicated list back to storage
+    if (dedupedDocs.length < documents.length) {
+      console.log(`Removed ${documents.length - dedupedDocs.length} duplicate documents during getAllDocuments`);
+      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(dedupedDocs));
+    }
+    
+    return dedupedDocs;
   },
   
   // Get documents for a specific loan
@@ -126,8 +170,18 @@ export const loanDocumentService = {
   // Add a document
   addDocument: (document: LoanDocument): LoanDocument => {
     const allDocs = loanDocumentService.getAllDocuments();
-    allDocs.push(document);
-    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+    
+    // Remove any existing documents with the same loanId and docType
+    const filteredDocs = allDocs.filter(doc => !(doc.loanId === document.loanId && doc.docType === document.docType));
+    
+    // If we filtered out documents, log it
+    if (filteredDocs.length < allDocs.length) {
+      console.log(`Removed ${allDocs.length - filteredDocs.length} existing documents with docType ${document.docType} before adding new one`);
+    }
+    
+    // Add the new document
+    filteredDocs.push(document);
+    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
     return document;
   },
   
@@ -219,10 +273,18 @@ export const loanDocumentService = {
       // Get existing documents from storage
       const existingDocs = loanDocumentService.getAllDocuments();
       
-      // Save the combined documents
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...existingDocs, ...placeholderDocs]));
+      // Filter out any documents that already exist for this loan
+      const uniqueDocs = placeholderDocs.filter(newDoc => 
+        !existingDocs.some(existingDoc => 
+          existingDoc.loanId === loanId && 
+          existingDoc.docType === newDoc.docType
+        )
+      );
       
-      return placeholderDocs;
+      // Save the combined documents
+      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...existingDocs, ...uniqueDocs]));
+      
+      return uniqueDocs;
     } catch (error) {
       console.error('Error initializing documents for loan:', error);
       return [];
@@ -367,29 +429,25 @@ export const loanDocumentService = {
       // Generate fake documents in batches to avoid memory issues
       console.log(`Need to generate ${requiredDocTypes.length} document types`);
       
-      // For explicit generation requests, don't filter by existing docs
-      // This ensures we generate ALL document types when requested
-      // Filter out document types that already exist
-      //const existingDocTypes = new Set(existingDocs.map(doc => doc.docType));
-      //const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
-      const docTypesToGenerate = requiredDocTypes;
+      // First collect all existing document IDs to delete them properly
+      const existingDocIds = existingDocs.map(doc => doc.id);
+      console.log(`Found ${existingDocIds.length} existing documents to remove before generating new ones`);
+
+      // Delete existing documents before generating new ones to prevent duplicates
+      for (const docId of existingDocIds) {
+        loanDocumentService.deleteDocument(docId);
+      }
       
-      console.log(`After filtering existing docs, need to generate ${docTypesToGenerate.length} document types`);
+      // Generate new documents after deleting existing ones
+      console.log(`Deleted existing documents, now generating ${requiredDocTypes.length} new documents`);
       
       // Process in small batches
-      for (let i = 0; i < docTypesToGenerate.length; i += BATCH_SIZE) {
-        const batch = docTypesToGenerate.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < requiredDocTypes.length; i += BATCH_SIZE) {
+        const batch = requiredDocTypes.slice(i, i + BATCH_SIZE);
         console.log(`Processing batch ${i/BATCH_SIZE + 1} (${batch.length} docs)`);
         
         // Process each doc type in this batch
         for (const docType of batch) {
-          // Check for existing document of this type and remove it
-          const existingDoc = existingDocs.find(doc => doc.docType === docType.docType);
-          if (existingDoc) {
-            console.log(`Removing existing document of type ${docType.docType} before generating new one`);
-            loanDocumentService.deleteDocument(existingDoc.id);
-          }
-        
           // Generate random document attributes
           const fileType = getRandomFileType();
           const fileSize = getRandomFileSize();
@@ -437,8 +495,18 @@ export const loanDocumentService = {
         // Save this batch
         if (fakeDocuments.length > 0) {
           const allDocs = loanDocumentService.getAllDocuments();
+          
+          // Ensure we don't have duplicates by filtering out documents with same loanId and docType
+          const uniqueDocs = allDocs.filter(existingDoc => 
+            !fakeDocuments.some(fakeDoc => 
+              existingDoc.loanId === fakeDoc.loanId && 
+              existingDoc.docType === fakeDoc.docType
+            )
+          );
+          
           try {
-            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...allDocs, ...fakeDocuments]));
+            // Save the combined documents (existing + new fake docs)
+            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...uniqueDocs, ...fakeDocuments]));
           } catch (error) {
             console.error('localStorage quota exceeded, switching to simpleDocumentService:', error);
             
@@ -473,16 +541,6 @@ export const loanDocumentService = {
         await simpleDocumentService.deleteDocument(doc.id);
       }
       
-      // Don't filter by existing docs - generate all document types
-      // const existingDocTypes = new Set([
-      //   ...existingSimpleDocs.map(doc => doc.docType),
-      //   ...existingFakeDocs.map(doc => doc.docType)
-      // ]);
-      
-      // Generate all document types
-      // const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
-      const docTypesToGenerate = requiredDocTypes;
-      
       // Fetch loan data
       const loanData = loanDatabase.getLoanById(loanId);
       if (!loanData) {
@@ -494,8 +552,8 @@ export const loanDocumentService = {
       const generatedDocs: LoanDocument[] = [...existingFakeDocs];
       
       // Process in small batches
-      for (let i = 0; i < docTypesToGenerate.length; i += BATCH_SIZE) {
-        const batch = docTypesToGenerate.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < requiredDocTypes.length; i += BATCH_SIZE) {
+        const batch = requiredDocTypes.slice(i, i + BATCH_SIZE);
         console.log(`Processing batch ${i/BATCH_SIZE + 1} (${batch.length} docs) with simpleDocumentService`);
         
         // Process each doc type in this batch
@@ -584,5 +642,56 @@ export const loanDocumentService = {
   // Clear all documents (for testing and reset)
   clearAllDocuments: (): void => {
     localStorage.removeItem(LOAN_DOCUMENTS_STORAGE_KEY);
+  },
+
+  // Deduplicate documents for a specific loan
+  deduplicateLoanDocuments: (loanId: string): LoanDocument[] => {
+    try {
+      console.log(`Deduplicating documents for loan ${loanId}`);
+      
+      // Get all documents
+      const allDocs = loanDocumentService.getAllDocuments();
+      
+      // Split into current loan docs and other loan docs
+      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
+      const otherDocs = allDocs.filter(doc => doc.loanId !== loanId);
+      
+      // Deduplicate the loan documents
+      const dedupedLoanDocs = deduplicateDocuments(loanDocs);
+      
+      // Combine and save back to storage
+      const allUpdatedDocs = [...otherDocs, ...dedupedLoanDocs];
+      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allUpdatedDocs));
+      
+      console.log(`Deduplication complete. Removed ${loanDocs.length - dedupedLoanDocs.length} duplicate documents.`);
+      return dedupedLoanDocs;
+    } catch (error) {
+      console.error('Error deduplicating loan documents:', error);
+      return [];
+    }
   }
 }; 
+
+// Run deduplication on all loans when this module loads
+if (typeof window !== 'undefined') {
+  // Set a timeout to allow the app to load first
+  setTimeout(() => {
+    try {
+      // Get unique loan IDs from documents
+      const allDocs = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+      if (allDocs) {
+        const documents = JSON.parse(allDocs);
+        const loanIds = new Set(documents.map((doc: LoanDocument) => doc.loanId));
+        
+        console.log(`Running initial deduplication for ${loanIds.size} loans...`);
+        
+        // Deduplicate each loan's documents
+        loanIds.forEach((loanId: string) => {
+          loanDocumentService.deduplicateLoanDocuments(loanId);
+        });
+      }
+    } catch (error) {
+      console.error('Error during initial document deduplication:', error);
+    }
+  }, 2000);
+} 

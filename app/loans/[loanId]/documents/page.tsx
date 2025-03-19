@@ -134,6 +134,10 @@ export default function LoanDocumentsPage() {
   // Load documents
   useEffect(() => {
     if (loanId) {
+      // Deduplicate documents for this loan before loading them
+      loanDocumentService.deduplicateLoanDocuments(loanId);
+      
+      // Now get the deduplicated documents
       const docs = loanDocumentService.getDocumentsForLoan(loanId);
       setDocuments(docs);
       
@@ -312,7 +316,12 @@ export default function LoanDocumentsPage() {
                     try {
                       const fakeDocuments = await loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
                       if (fakeDocuments.length > 0) {
-                        setDocuments([...documents, ...fakeDocuments]);
+                        // Deduplicate documents after generation
+                        loanDocumentService.deduplicateLoanDocuments(loanId);
+                        
+                        // Load the deduplicated documents
+                        const dedupedDocs = loanDocumentService.getDocumentsForLoan(loanId);
+                        setDocuments(dedupedDocs);
                         
                         // Update completion status
                         if (loan?.loanType) {
@@ -334,6 +343,13 @@ export default function LoanDocumentsPage() {
                   onClick={async () => {
                     try {
                       const totalGenerated = await loanDocumentService.generateFakeDocumentsForAllLoans();
+                      
+                      // Get all loans and deduplicate their documents
+                      const loans = loanDatabase.getLoans();
+                      for (const loan of loans) {
+                        loanDocumentService.deduplicateLoanDocuments(loan.id);
+                      }
+                      
                       alert(`Generated ${totalGenerated} sample documents across all loans.`);
                       
                       // Refresh documents for current loan
