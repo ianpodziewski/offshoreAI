@@ -36,6 +36,14 @@ interface DiagnosticInfo {
       loanCount?: number;
     };
     error?: string;
+    syncStatus?: {
+      localCount: number;
+      serverCount: number;
+      inSyncPercentage: number;
+      syncNeeded: boolean;
+      missingOnServer?: number;
+      extraOnServer?: number; 
+    };
   };
   pinecone?: {
     connection: string;
@@ -204,6 +212,17 @@ export async function GET(req: NextRequest) {
       }
     }
     
+    // Add a new action for syncing documents to server storage
+    if (action === 'sync-documents' && loanId) {
+      const syncResult = await simpleDocumentService.syncDocumentsToServer(loanId);
+      
+      return NextResponse.json({
+        message: `Synced ${syncResult.syncedCount} documents for loan ${loanId} to server storage`,
+        syncResult,
+        diagnostics
+      });
+    }
+    
     // For diagnose action or any other action, just collect diagnostic information
     
     // Get document counts
@@ -230,6 +249,52 @@ export async function GET(req: NextRequest) {
       
       if (loanId) {
         diagnostics.documents.simpleDocs.loanCount = simpleDocumentService.getDocumentsForLoan(loanId).length;
+        
+        // Add document sync status between localStorage and server storage
+        try {
+          // Get documents from both sources
+          const localDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+          const serverDocs = await storageService.getDocumentsForLoan(loanId);
+          
+          // Create sets of document IDs for comparison
+          const localIds = new Set(localDocs.map(doc => doc.id));
+          const serverIds = new Set(serverDocs.map(doc => doc.id));
+          
+          // Count documents missing from server
+          let missingOnServer = 0;
+          Array.from(localIds).forEach(id => {
+            if (!serverIds.has(id)) {
+              missingOnServer++;
+            }
+          });
+          
+          // Count extra documents on server
+          let extraOnServer = 0;
+          Array.from(serverIds).forEach(id => {
+            if (!localIds.has(id)) {
+              extraOnServer++;
+            }
+          });
+          
+          // Calculate sync percentage
+          const totalUniqueIds = new Set([...Array.from(localIds), ...Array.from(serverIds)]);
+          const inSyncCount = totalUniqueIds.size - missingOnServer - extraOnServer;
+          const inSyncPercentage = totalUniqueIds.size > 0 
+            ? Math.round((inSyncCount / totalUniqueIds.size) * 100) 
+            : 100; // If no documents at all, consider it 100% in sync
+          
+          // Add sync status to diagnostics
+          diagnostics.documents.syncStatus = {
+            localCount: localIds.size,
+            serverCount: serverIds.size,
+            inSyncPercentage,
+            syncNeeded: inSyncPercentage < 100,
+            missingOnServer,
+            extraOnServer
+          };
+        } catch (syncStatusError) {
+          console.error("Error getting document sync status:", syncStatusError);
+        }
       }
     } catch (error) {
       diagnostics.documents.error = `Error getting document counts: ${error instanceof Error ? error.message : 'Unknown error'}`;

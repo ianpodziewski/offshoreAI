@@ -1,5 +1,7 @@
 // utilities/simplifiedDocumentService.ts
 import { v4 as uuidv4 } from 'uuid';
+import storageService from '@/services/storageService';
+import { isVercelKVConfigured, KV_CONFIG } from '@/configuration/storageConfig';
 
 export interface SimpleDocument {
   id: string;
@@ -496,8 +498,72 @@ export const simpleDocumentService = {
     }
   },
   
-  // Add a document directly (without file upload)
-  // This is used for pre-generated documents
+  // Sync documents with server storage
+  syncDocumentsToServer: async (loanId?: string): Promise<{success: boolean, syncedCount: number, errors: string[]}> => {
+    try {
+      console.log(`🔄 Syncing documents to server storage${loanId ? ` for loan ID: ${loanId}` : ''}`);
+      
+      // Get documents to sync (either for specific loan or all)
+      const docsToSync = loanId 
+        ? simpleDocumentService.getDocumentsForLoan(loanId)
+        : simpleDocumentService.getAllDocuments();
+      
+      if (docsToSync.length === 0) {
+        console.log('No documents to sync');
+        return { success: true, syncedCount: 0, errors: [] };
+      }
+      
+      console.log(`Syncing ${docsToSync.length} documents to server storage`);
+      
+      // Track results
+      let syncedCount = 0;
+      const errors: string[] = [];
+      
+      // Sync each document
+      for (const doc of docsToSync) {
+        try {
+          // For each document in localStorage, try to get the full content from IndexedDB
+          let fullDoc = { ...doc };
+          
+          // Try to get full content from IndexedDB
+          try {
+            const content = await getContentFromIndexedDB(doc.id);
+            if (content) {
+              fullDoc.content = content;
+            }
+          } catch (indexedDBError) {
+            console.warn(`Could not retrieve content from IndexedDB for document ${doc.id}:`, indexedDBError);
+            // Continue with the content we have
+          }
+          
+          // Save to server storage
+          await storageService.saveDocument(fullDoc);
+          syncedCount++;
+          console.log(`✅ Synced document ${doc.id} to server storage`);
+        } catch (docError) {
+          console.error(`Error syncing document ${doc.id}:`, docError);
+          errors.push(`Failed to sync document ${doc.id}: ${docError instanceof Error ? docError.message : 'Unknown error'}`);
+        }
+      }
+      
+      console.log(`🔄 Sync complete. Synced ${syncedCount}/${docsToSync.length} documents to server storage.`);
+      
+      return {
+        success: syncedCount > 0,
+        syncedCount,
+        errors
+      };
+    } catch (error) {
+      console.error('Error syncing documents to server:', error);
+      return { 
+        success: false, 
+        syncedCount: 0, 
+        errors: [`Global sync error: ${error instanceof Error ? error.message : 'Unknown error'}`] 
+      };
+    }
+  },
+  
+  // Modified addDocumentDirectly to automatically sync with server
   addDocumentDirectly: async (document: SimpleDocument): Promise<SimpleDocument> => {
     try {
       // Get existing documents from storage
@@ -575,6 +641,24 @@ export const simpleDocumentService = {
         }
       }
       
+      // After saving to localStorage, sync with server storage if configured
+      try {
+        if (isVercelKVConfigured() && !KV_CONFIG.USE_FALLBACK) {
+          // Save directly to server storage - this includes the full content
+          await storageService.saveDocument({
+            ...document,
+            id: docId,
+            content: document.content // Use the full content for server storage
+          });
+          console.log(`🔄 Auto-synced document ${docId} to server storage`);
+        } else {
+          console.log(`⚠️ Server storage not configured, document ${docId} saved only to localStorage`);
+        }
+      } catch (syncError) {
+        console.error(`❌ Error syncing document ${docId} to server storage:`, syncError);
+        // Continue anyway, as the document is already in localStorage
+      }
+      
       // Return the original document with full content but update the ID to match what we stored
       return {
         ...document,
@@ -588,7 +672,7 @@ export const simpleDocumentService = {
     }
   },
   
-  // Add a new document
+  // Modified addDocument to automatically sync with server
   addDocument: async (file: File, loanId: string, classification?: { 
     docType: string; 
     category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit' | 'insurance';
@@ -685,6 +769,24 @@ export const simpleDocumentService = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dedupedDocs));
       
       console.log(`Document added successfully: ${newDoc.filename} (ID: ${newDoc.id}, Category: ${newDoc.category})`);
+      
+      // After saving to localStorage, sync with server storage if configured
+      try {
+        if (isVercelKVConfigured() && !KV_CONFIG.USE_FALLBACK) {
+          // Save directly to server storage - this includes the full content
+          await storageService.saveDocument({
+            ...newDoc,
+            content: formattedContent // Use the full content for server storage
+          });
+          console.log(`🔄 Auto-synced document ${newDoc.id} to server storage`);
+        } else {
+          console.log(`⚠️ Server storage not configured, document ${newDoc.id} saved only to localStorage`);
+        }
+      } catch (syncError) {
+        console.error(`❌ Error syncing document ${newDoc.id} to server storage:`, syncError);
+        // Continue anyway, as the document is already in localStorage
+      }
+      
       return {
         ...newDoc,
         content: formattedContent

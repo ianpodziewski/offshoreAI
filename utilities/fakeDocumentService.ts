@@ -386,6 +386,20 @@ export const fakeDocumentService = {
     }
 
     console.log(`Successfully generated ${generatedDocuments.length} sample documents`);
+    
+    // Sync all generated documents to the server storage
+    try {
+      console.log(`Starting synchronization of ${generatedDocuments.length} documents to server storage`);
+      const syncResult = await simpleDocumentService.syncDocumentsToServer(loan.id);
+      console.log(`Sync result: ${syncResult.success ? 'Success' : 'Failed'}, synced ${syncResult.syncedCount} documents`);
+      
+      if (syncResult.errors.length > 0) {
+        console.warn('Sync errors:', syncResult.errors);
+      }
+    } catch (syncError) {
+      console.error('Error synchronizing documents to server:', syncError);
+    }
+    
     return generatedDocuments;
   },
 

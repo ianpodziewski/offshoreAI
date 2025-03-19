@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, RefreshCw, Info, Wrench } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, Info, Wrench, Upload, AlertTriangle } from 'lucide-react';
 
 interface LoanDocumentDebugToolsProps {
   loanId: string;
@@ -101,6 +101,37 @@ export default function LoanDocumentDebugTools({ loanId }: LoanDocumentDebugTool
     }
   };
   
+  const syncDocuments = async () => {
+    setLoading(true);
+    setMessage(null);
+    try {
+      const response = await fetch(`/api/loan-documents/sync?loanId=${loanId}`);
+      const data = await response.json();
+      
+      if (data.error) {
+        setMessage({
+          text: data.error,
+          type: 'error'
+        });
+      } else {
+        setMessage({
+          text: `Successfully synced ${data.syncedCount} documents to server storage`,
+          type: 'success'
+        });
+        
+        // Refresh diagnostics to show updated document counts
+        await runDiagnostics();
+      }
+    } catch (error) {
+      setMessage({
+        text: `Error syncing documents: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        type: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   // Run diagnostics on mount
   useEffect(() => {
     if (loanId) {
@@ -147,6 +178,10 @@ export default function LoanDocumentDebugTools({ loanId }: LoanDocumentDebugTool
               {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
               Check Pinecone
             </Button>
+            <Button onClick={syncDocuments} disabled={loading} variant="outline" className="col-span-2">
+              {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Upload className="h-4 w-4 mr-2" />}
+              Sync Documents to Server
+            </Button>
           </div>
           
           {diagnostics && (
@@ -182,6 +217,41 @@ export default function LoanDocumentDebugTools({ loanId }: LoanDocumentDebugTool
                 </div>
               </div>
               
+              {/* Display document sync status */}
+              {diagnostics.documents.syncStatus && (
+                <div>
+                  <h3 className="text-sm font-medium mb-2">Document Sync Status</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-xs">In Sync</h4>
+                      <Badge variant={diagnostics.documents.syncStatus.inSyncPercentage === 100 ? 'default' : 'outline'}>
+                        {diagnostics.documents.syncStatus.inSyncPercentage}%
+                      </Badge>
+                    </div>
+                    <div>
+                      <h4 className="text-xs">Local Documents</h4>
+                      <Badge>{diagnostics.documents.syncStatus.localCount}</Badge>
+                    </div>
+                    <div>
+                      <h4 className="text-xs">Server Documents</h4>
+                      <Badge>{diagnostics.documents.syncStatus.serverCount}</Badge>
+                    </div>
+                    {diagnostics.documents.syncStatus.missingOnServer > 0 && (
+                      <div>
+                        <h4 className="text-xs">Missing on Server</h4>
+                        <Badge variant="destructive">{diagnostics.documents.syncStatus.missingOnServer}</Badge>
+                      </div>
+                    )}
+                    {diagnostics.documents.syncStatus.extraOnServer > 0 && (
+                      <div>
+                        <h4 className="text-xs">Extra on Server</h4>
+                        <Badge variant="outline">{diagnostics.documents.syncStatus.extraOnServer}</Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               {diagnostics.pinecone && (
                 <div>
                   <h3 className="text-sm font-medium mb-2">Pinecone</h3>
@@ -206,6 +276,19 @@ export default function LoanDocumentDebugTools({ loanId }: LoanDocumentDebugTool
                     )}
                   </div>
                 </div>
+              )}
+              
+              {diagnostics.documents.syncStatus && diagnostics.documents.syncStatus.syncNeeded && (
+                <Alert className="bg-yellow-50">
+                  <AlertTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    Document Sync Required
+                  </AlertTitle>
+                  <AlertDescription>
+                    Documents in localStorage and server storage are not in sync.
+                    Use the "Sync Documents to Server" button to synchronize them.
+                  </AlertDescription>
+                </Alert>
               )}
               
               {diagnostics.documents.unassociatedCount > 0 && (

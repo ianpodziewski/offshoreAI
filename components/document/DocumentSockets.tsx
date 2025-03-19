@@ -305,14 +305,33 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         // Trigger a refresh of our documents
         await fetchAndDeduplicateDocuments();
         
+        // Sync the single document to server storage
+        setSuccessMessage(`Generated ${docType} document. Syncing to server...`);
+        
+        try {
+          // Call the sync API endpoint for this specific document
+          const syncResponse = await fetch(`/api/loan-documents/sync?loanId=${loanId}`);
+          const syncData = await syncResponse.json();
+          
+          if (syncData.error) {
+            console.warn('Document sync warning:', syncData.error);
+            setSuccessMessage(`Generated ${docType} document. Note: ${syncData.error}`);
+          } else {
+            console.log('Document synced to server:', syncData);
+            setSuccessMessage(`Generated ${docType} document and synced to server`);
+          }
+        } catch (syncError) {
+          console.warn('Error syncing document:', syncError);
+          setSuccessMessage(`Generated ${docType} document. Server sync failed (document still available locally)`);
+        }
+        
         // Force an additional refresh after a delay to ensure UI is updated
         setTimeout(async () => {
           await fetchAndDeduplicateDocuments();
         }, 500);
         
-        // Show success message
-        setSuccessMessage(`Generated ${docType} document successfully`);
-        setTimeout(() => setSuccessMessage(null), 3000);
+        // Clear success message after a delay
+        setTimeout(() => setSuccessMessage(null), 5000);
       }
     } catch (error: any) {
       console.error("Error generating sample document:", error);
@@ -351,15 +370,34 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       // Refresh loan context to ensure documents are persisted
       refreshLoanDocuments();
       
+      // Sync documents to server storage
+      setSuccessMessage(`Generated ${generatedDocuments.length} documents. Syncing to server...`);
+      
+      try {
+        // Call the sync API endpoint
+        const syncResponse = await fetch(`/api/loan-documents/sync?loanId=${loanId}`);
+        const syncData = await syncResponse.json();
+        
+        if (syncData.error) {
+          console.warn('Document sync warning:', syncData.error);
+          setSuccessMessage(`Generated ${generatedDocuments.length} documents. Note: ${syncData.error}`);
+        } else {
+          console.log('Documents synced to server:', syncData);
+          setSuccessMessage(`Generated ${generatedDocuments.length} documents and synced to server`);
+        }
+      } catch (syncError) {
+        console.warn('Error syncing documents:', syncError);
+        setSuccessMessage(`Generated ${generatedDocuments.length} documents. Server sync failed (documents still available locally)`);
+      }
+      
       // Force an additional refresh after a delay to ensure UI is updated
       setTimeout(async () => {
         await fetchAndDeduplicateDocuments();
         setDocumentGenerated(false);
       }, 1000);
       
-      // Show success message
-      setSuccessMessage(`Generated ${generatedDocuments.length} sample documents successfully`);
-      setTimeout(() => setSuccessMessage(null), 3000);
+      // Clear success message after delay
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error: any) {
       console.error("Error generating all sample documents:", error);
       setErrorMessage(`Failed to generate all documents: ${error?.message || "Unknown error"}`);
