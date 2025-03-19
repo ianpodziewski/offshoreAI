@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
-import { KV_CONFIG, localStorageFallback, isVercelKVConfigured } from '@/configuration/storageConfig';
+import { KV_CONFIG, localStorageFallback, isVercelKVConfigured, STORAGE_KEYS } from '@/configuration/storageConfig';
 
 // Prefixes for different data types
 const DOCUMENT_PREFIX = KV_CONFIG.DOCUMENT_PREFIX;
@@ -190,21 +190,86 @@ export const storageService = {
       
       if (useFallback) {
         // Fallback: Use localStorage
+        console.log(`Using localStorage fallback mode for loan ${loanId}`);
+        
+        // First check direct localStorage contents for debugging
+        try {
+          const rawData = localStorage.getItem(STORAGE_KEYS.DOCUMENTS);
+          console.log(`Raw localStorage data exists: ${!!rawData}`);
+          if (rawData) {
+            try {
+              const parsedData = JSON.parse(rawData);
+              console.log(`Total localStorage documents: ${parsedData.length}`);
+              console.log(`Unique loan IDs in storage: ${Array.from(new Set(parsedData.map((d: any) => d.loanId))).join(', ')}`);
+            } catch (parseError) {
+              console.error(`Error parsing localStorage data:`, parseError);
+            }
+          }
+        } catch (lsError) {
+          console.error(`Error directly accessing localStorage:`, lsError);
+        }
+        
         const allDocs = localStorageFallback.getAllDocuments();
+        console.log(`Retrieved ${allDocs.length} documents from localStorage via helper`);
+        
         const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
         
         console.log(`📋 Found ${loanDocs.length} documents for loan ${loanId} (localStorage)`);
+        
+        // If no documents found, but we have documents, log more info
+        if (loanDocs.length === 0 && allDocs.length > 0) {
+          // List all unique loan IDs in localStorage
+          const allLoanIds = Array.from(new Set(allDocs.map(doc => doc.loanId)));
+          console.log(`Available loan IDs in localStorage: ${allLoanIds.join(', ')}`);
+          
+          // Check for documents with no loanId that might need fixing
+          const unassociatedDocs = allDocs.filter(doc => !doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null');
+          if (unassociatedDocs.length > 0) {
+            console.log(`Found ${unassociatedDocs.length} documents with no loanId that could be fixed`);
+          }
+        }
+        
         return loanDocs;
       }
       
       // Use Vercel KV
+      console.log(`Using Vercel KV mode for loan ${loanId}`);
+      
+      // Debug Vercel KV configuration
+      console.log(`Vercel KV URL configured: ${!!process.env.VERCEL_KV_URL}`);
+      console.log(`Vercel KV REST API URL configured: ${!!process.env.VERCEL_KV_REST_API_URL}`);
+      console.log(`Vercel KV REST API Token configured: ${!!process.env.VERCEL_KV_REST_API_TOKEN}`);
+      
       const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${loanId}`;
+      console.log(`Looking up loan documents with key: ${loanDocListKey}`);
       
       // Get all document IDs for this loan
       const docIds = await kv.smembers(loanDocListKey) as string[];
       console.log(`📋 Found ${docIds.length} document IDs for loan ${loanId}`);
       
       if (docIds.length === 0) {
+        // If no documents found, check if we can list any other loan keys to debug
+        try {
+          const allLoanKeys = await kv.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
+          console.log(`Available loan document lists: ${allLoanKeys.join(', ')}`);
+          
+          // Check for unassociated documents that might need fixing
+          const allDocKeys = await kv.keys(`${DOCUMENT_PREFIX}*`);
+          console.log(`Total document keys in KV: ${allDocKeys.length}`);
+          
+          if (allDocKeys.length > 0) {
+            // Sample a few documents to check loanId
+            const sampleSize = Math.min(5, allDocKeys.length);
+            for (let i = 0; i < sampleSize; i++) {
+              const docKey = allDocKeys[i];
+              const doc = await kv.get(docKey);
+              console.log(`Sample document ${i+1}: loanId=${typeof doc === 'object' && doc !== null && 'loanId' in doc ? doc.loanId : 'none'}, id=${typeof doc === 'object' && doc !== null && 'id' in doc ? doc.id : 'none'}`);
+            }
+          }
+        } catch (listError) {
+          console.error(`Error listing KV keys:`, listError);
+        }
+        
         return [];
       }
       
@@ -215,6 +280,8 @@ export const storageService = {
         const doc = await kv.get<SimpleDocument>(docKey);
         if (doc) {
           documents.push(doc);
+        } else {
+          console.warn(`Document with ID ${docId} referenced in loan ${loanId} list but not found in KV store`);
         }
       }
       

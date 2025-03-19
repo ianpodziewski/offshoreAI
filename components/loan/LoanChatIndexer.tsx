@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench, Trash2, Link, HardDrive } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench, Trash2, Link, HardDrive, AlertCircle, ArrowRight } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import storageService from '@/services/storageService';
 import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import LoanDocumentDebugTools from './LoanDocumentDebugTools';
 
 interface LoanChatIndexerProps {
   loanId: string;
@@ -40,11 +42,38 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     }
   }, []);
 
+  useEffect(() => {
+    // Check if documents are already indexed
+    const checkIndexStatus = async () => {
+      try {
+        const response = await fetch(`/api/loan-documents/index?loanId=${loanId}`, {
+          method: 'GET',
+        });
+        
+        const data = await response.json();
+        
+        if (data.documentCount && data.documentCount > 0) {
+          setTotalDocs(data.documentCount);
+          setMessage(`Found ${data.documentCount} documents for loan ${loanId}`);
+        } else if (data.error) {
+          setMessage(data.error);
+        }
+      } catch (error) {
+        console.error('Error checking index status:', error);
+      }
+    };
+    
+    if (loanId) {
+      checkIndexStatus();
+    }
+  }, [loanId]);
+
   const startIndexing = async () => {
     try {
       setIndexingStatus('indexing');
       setProgress(10);
       setMessage('Starting document indexing...');
+      setErrorDetails(null);
       
       // Call the indexing API
       const response = await fetch('/api/loan-documents/index', {
@@ -59,10 +88,6 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
       
       setProgress(50);
       
-      if (!response.ok) {
-        throw new Error(`Failed to index documents: ${response.statusText}`);
-      }
-      
       const data = await response.json();
       
       setProgress(100);
@@ -70,6 +95,7 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
       if (data.error) {
         setIndexingStatus('error');
         setMessage(data.error);
+        setErrorDetails(JSON.stringify(data, null, 2));
       } else {
         setIndexingStatus('success');
         setMessage(data.message);
@@ -79,6 +105,7 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     } catch (error) {
       setIndexingStatus('error');
       setMessage(`Error indexing documents: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setErrorDetails(error instanceof Error ? error.stack || error.message : 'Unknown error');
       setProgress(100);
     }
   };
@@ -255,307 +282,84 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     }
   };
 
-  return (
-    <div className="border border-gray-800 rounded-lg p-4 bg-gray-900 mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="font-medium text-white flex items-center gap-2">
-          {renderStatusIcon()}
-          Document Indexing
-          <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-800 text-gray-400">
-            {storageMode === 'vercelKV' ? 'Vercel KV' : 'localStorage'}
-          </span>
-        </h3>
-        
-        <div className="flex gap-2">
-          <Button 
-            size="sm"
-            variant="outline"
-            onClick={runDiagnostics}
-            disabled={isDiagnosticLoading}
-            className="flex items-center gap-1"
-          >
-            {isDiagnosticLoading ? <RefreshCw size={14} className="animate-spin mr-1" /> : <Wrench size={14} />}
-            Diagnostics
-          </Button>
-          
-          <Button 
-            size="sm"
-            variant="outline"
-            onClick={fixDocumentAssociations}
-            disabled={fixingAssociations || indexingStatus === 'indexing'}
-            className="flex items-center gap-1"
-          >
-            <Link size={14} />
-            Fix Associations
-          </Button>
-          
-          {/* Add Migration Button when in Vercel KV mode */}
-          {storageMode === 'vercelKV' && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowMigrationDialog(true)}
-              disabled={isMigrating || indexingStatus === 'indexing'}
-              className="flex items-center gap-1"
-            >
-              <HardDrive size={14} />
-              Migrate Data
-            </Button>
-          )}
-          
-          <Button 
-            size="sm"
-            variant="outline"
-            onClick={checkIndexStatus}
-            disabled={indexingStatus === 'indexing'}
-          >
-            Check Status
-          </Button>
-          
-          <Button 
-            size="sm"
-            variant={indexingStatus === 'success' ? "outline" : "default"}
-            onClick={startIndexing}
-            disabled={indexingStatus === 'indexing'}
-          >
-            {indexingStatus === 'success' ? 'Reindex Documents' : 'Index Documents'}
-          </Button>
-        </div>
-      </div>
-      
-      {indexingStatus !== 'idle' && (
-        <div className="mt-4 space-y-2">
-          {/* Progress indicator */}
-          <Progress value={progress} className="h-2" />
-          
-          {/* Status message */}
-          <div className="text-sm">
-            {indexingStatus === 'indexing' && (
-              <p className="text-blue-400">
-                <RefreshCw size={14} className="inline mr-2 animate-spin" />
-                {message}
-              </p>
-            )}
-            
-            {indexingStatus === 'success' && (
-              <div>
-                <p className="text-green-400 flex items-center">
-                  <CheckCircle size={14} className="inline mr-2" />
-                  {message}
-                </p>
-                {indexedDocs > 0 && (
-                  <p className="text-gray-400 mt-1 text-xs">
-                    Indexed {indexedDocs} of {totalDocs} documents
-                  </p>
-                )}
-              </div>
-            )}
-            
-            {indexingStatus === 'error' && (
-              <p className="text-red-400 flex items-start">
-                <AlertTriangle size={14} className="inline mr-2 mt-1 flex-shrink-0" />
-                <span>{message}</span>
-              </p>
-            )}
-          </div>
-          
-          {/* Storage quota warning */}
-          {showStorageWarning && (
-            <div className="bg-amber-900/30 border border-amber-800 rounded p-3 mt-2">
-              <h4 className="text-amber-200 font-medium flex items-center">
-                <AlertTriangle size={14} className="mr-2" />
-                Storage Quota Exceeded
-              </h4>
-              <p className="text-amber-100 text-sm mt-1">
-                Your browser's storage limit has been reached. This can happen when you have many or large documents.
-              </p>
-              <div className="mt-3">
-                <Button 
-                  size="sm"
-                  variant="destructive"
-                  onClick={clearDocumentStorage}
-                  className="flex items-center gap-1"
-                >
-                  <Trash2 size={14} />
-                  Clear Document Storage
-                </Button>
-              </div>
-              <p className="text-amber-200/70 text-xs mt-2">
-                Note: This will remove all cached documents, but won't affect your actual loan data.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
-      
-      <div className="mt-4">
-        <p className="text-gray-500 text-xs">
-          Indexing makes loan documents searchable and allows the chatbot to provide specific answers based on document contents.
-        </p>
-      </div>
+  const [showDebugTools, setShowDebugTools] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
-      {/* Diagnostics Dialog */}
-      <Dialog open={showDiagnostics} onOpenChange={setShowDiagnostics}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-gray-900 text-white border-gray-800">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">API Diagnostics</DialogTitle>
-          </DialogHeader>
-          
-          {diagnosticData ? (
-            <div className="space-y-4">
-              <div className="border border-gray-800 rounded p-3">
-                <h3 className="font-medium mb-2">Environment</h3>
-                <p>Node Environment: {diagnosticData.environment}</p>
-                <p>Timestamp: {diagnosticData.timestamp}</p>
-                <p>Storage Mode: {storageMode}</p>
-              </div>
-              
-              <div className="border border-gray-800 rounded p-3">
-                <h3 className="font-medium mb-2">API Keys</h3>
-                
-                <div className="mb-3">
-                  <div className="flex items-center mb-1">
-                    <div className={`w-3 h-3 rounded-full mr-2 ${diagnosticData.api_keys?.openai?.valid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                    <h4>OpenAI API Key</h4>
-                  </div>
-                  <p className="text-sm ml-5">{diagnosticData.api_keys?.openai?.message}</p>
-                </div>
-                
-                <div>
-                  <div className="flex items-center mb-1">
-                    <div className={`w-3 h-3 rounded-full mr-2 ${diagnosticData.api_keys?.pinecone?.valid ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                    <h4>Pinecone API Key</h4>
-                  </div>
-                  <p className="text-sm ml-5">{diagnosticData.api_keys?.pinecone?.message}</p>
-                </div>
-                
-                <div className="mt-3">
-                  <div className="flex items-center mb-1">
-                    <div className={`w-3 h-3 rounded-full mr-2 ${storageMode === 'vercelKV' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
-                    <h4>Vercel KV</h4>
-                  </div>
-                  <p className="text-sm ml-5">{storageMode === 'vercelKV' ? 'Connected to Vercel KV' : 'Using localStorage fallback'}</p>
-                </div>
-              </div>
-              
-              <div className="border border-gray-800 rounded p-3">
-                <h3 className="font-medium mb-2">Pinecone</h3>
-                <p>Index Name: {diagnosticData.pinecone?.index_name}</p>
-                {diagnosticData.pinecone?.connection === "success" ? (
-                  <>
-                    <div className="flex items-center my-1">
-                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                      <p>Connection: Success</p>
-                    </div>
-                    <p>Vector Count: {diagnosticData.pinecone?.vector_count}</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center my-1">
-                      <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                      <p>Connection: Failed</p>
-                    </div>
-                    {diagnosticData.pinecone?.error_message && (
-                      <p className="text-red-400 text-sm">Error: {diagnosticData.pinecone.error_message}</p>
-                    )}
-                  </>
-                )}
-              </div>
-              
-              <div className="border border-gray-800 rounded p-3">
-                <h3 className="font-medium mb-2">OpenAI</h3>
-                {diagnosticData.openai?.connection === "success" ? (
-                  <>
-                    <div className="flex items-center my-1">
-                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                      <p>Connection: Success</p>
-                    </div>
-                    <p>Available Models: {diagnosticData.openai?.available_models}</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center my-1">
-                      <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                      <p>Connection: Failed</p>
-                    </div>
-                    {diagnosticData.openai?.error_message && (
-                      <p className="text-red-400 text-sm">Error: {diagnosticData.openai.error_message}</p>
-                    )}
-                  </>
-                )}
-              </div>
-              
-              <div className="text-sm text-gray-400 mt-4">
-                <p>If you're seeing API key errors, ensure your .env file has the correct keys:</p>
-                <pre className="bg-gray-800 p-2 mt-1 rounded overflow-x-auto">
-                  OPENAI_API_KEY=sk-...your-key-here<br/>
-                  PINECONE_API_KEY=your-key-here<br/>
-                  {storageMode !== 'vercelKV' && (
-                    <>
-                    <span className="text-yellow-400"># For Vercel KV storage:</span><br/>
-                    VERCEL_KV_URL=your-kv-url-here<br/>
-                    VERCEL_KV_REST_API_TOKEN=your-token-here<br/>
-                    VERCEL_KV_REST_API_URL=your-api-url-here
-                    </>
-                  )}
-                </pre>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-40">
-              <RefreshCw size={24} className="animate-spin text-blue-400" />
-              <span className="ml-2">Loading diagnostics...</span>
-            </div>
-          )}
-          
-          <div className="flex justify-end mt-4">
-            <Button onClick={() => setShowDiagnostics(false)}>Close</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Migration Dialog */}
-      <Dialog open={showMigrationDialog} onOpenChange={setShowMigrationDialog}>
-        <DialogContent className="max-w-md bg-gray-900 text-white border-gray-800">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold">Migrate Document Storage</DialogTitle>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <p className="text-gray-300 mb-4">
-              This will migrate all documents from localStorage to Vercel KV storage, creating a more robust and scalable solution.
+  const toggleDebugTools = () => {
+    setShowDebugTools(!showDebugTools);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-4 p-4 bg-gray-50 border rounded-lg">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold mb-1">Loan Document Indexing</h3>
+            <p className="text-sm text-gray-600">
+              {indexingStatus === 'idle' 
+                ? `Index your loan documents to enable AI search and chat features` 
+                : message}
             </p>
-            
-            {migrationStats && (
-              <div className={`p-3 rounded mb-4 ${
-                migrationStats.errors > 0 ? 'bg-red-900/30 border border-red-800' : 'bg-green-900/30 border border-green-800'
-              }`}>
-                <h4 className="font-medium">Migration Results</h4>
-                <p>Documents migrated: {migrationStats.migrated}</p>
-                <p>Errors: {migrationStats.errors}</p>
-              </div>
+            {indexingStatus === 'success' && (
+              <p className="text-sm text-green-600 font-medium mt-1">
+                Successfully indexed {indexedDocs} of {totalDocs} documents
+              </p>
             )}
-            
-            <div className="flex justify-end gap-2 mt-6">
-              <Button variant="outline" onClick={() => setShowMigrationDialog(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={migrateToVercelKV} 
-                disabled={isMigrating || storageMode !== 'vercelKV'}
-                className="flex items-center gap-1"
-              >
-                {isMigrating ? (
-                  <RefreshCw size={14} className="animate-spin mr-1" />
-                ) : (
-                  <HardDrive size={14} className="mr-1" />
-                )}
-                {isMigrating ? 'Migrating...' : 'Start Migration'}
-              </Button>
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          <div className="flex gap-2">
+            <Button 
+              onClick={startIndexing} 
+              disabled={indexingStatus === 'indexing'}
+              variant={indexingStatus === 'success' ? 'outline' : 'default'}
+            >
+              {indexingStatus === 'indexing' ? 'Indexing...' : 
+               indexingStatus === 'success' ? 'Reindex Documents' : 'Index Documents'}
+              {indexingStatus !== 'indexing' && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+            <Button 
+              onClick={toggleDebugTools} 
+              variant="ghost"
+              size="sm"
+            >
+              {showDebugTools ? 'Hide Debug Tools' : 'Debug Tools'}
+            </Button>
+          </div>
+        </div>
+        
+        {indexingStatus === 'indexing' && (
+          <Progress value={progress} className="w-full h-2" />
+        )}
+        
+        {indexingStatus === 'error' && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>
+              {message}
+              {errorDetails && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-sm">Show details</summary>
+                  <pre className="mt-2 text-xs bg-gray-900 text-white p-4 rounded-md overflow-auto max-h-[200px]">
+                    {errorDetails}
+                  </pre>
+                </details>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {indexingStatus === 'success' && (
+          <Alert className="bg-green-50 border-green-200">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertTitle className="text-green-800">Success</AlertTitle>
+            <AlertDescription className="text-green-700">
+              {message}
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
+      
+      {showDebugTools && <LoanDocumentDebugTools loanId={loanId} />}
     </div>
   );
 } 
