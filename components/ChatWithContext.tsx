@@ -75,57 +75,59 @@ export default function ChatWithContext() {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full overflow-hidden">
-      {/* Main Chat (3 columns) */}
-      <div className="lg:col-span-3 flex flex-col h-[calc(100vh-140px)] bg-gray-900 rounded-lg border border-gray-800 shadow-lg overflow-hidden">
-        {/* Chat header */}
-        <ChatHeader clearMessages={clearMessages} />
-        
-        {/* Messages container */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <ChatMessages messages={messages} indicatorState={indicatorState} />
-        </div>
-        
-        {/* Chat input */}
-        <div className="p-4 border-t border-gray-800">
-          <ChatInput
-            input={input}
-            handleInputChange={handleInputChange}
-            handleSubmit={handleSubmit}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
-      
-      {/* Sidebar (1 column) */}
-      <div className="lg:col-span-1 flex flex-col h-[calc(100vh-140px)] space-y-4">
-        {/* Document section */}
-        <Card className="flex-1 bg-gray-900 border-gray-800 shadow-lg overflow-hidden">
-          <div className="flex justify-between items-center p-4 border-b border-gray-800">
-            <h3 className="text-lg font-semibold">Documents</h3>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchRelevantDocuments}
-              className="text-xs"
-            >
-              <Icons.refresh className="h-3 w-3 mr-1" />
-              Refresh
-            </Button>
+    <LayoutWrapper>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full overflow-hidden max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Main Chat (3 columns) */}
+        <div className="lg:col-span-3 flex flex-col h-[calc(100vh-180px)] bg-gray-900 rounded-lg border border-gray-800 shadow-lg overflow-hidden">
+          {/* Chat header */}
+          <ChatHeader clearMessages={clearMessages} />
+          
+          {/* Messages container */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <ChatMessages messages={messages} indicatorState={indicatorState} />
           </div>
-          <CardContent className="p-3 overflow-y-auto max-h-[calc(100vh-240px)]">
-            {chatDocuments.length > 0 ? (
-              <DocumentList documents={chatDocuments} />
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Icons.document className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No documents yet</p>
-                <p className="text-xs mt-1">Click refresh to load documents</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          
+          {/* Chat input */}
+          <div className="p-4 border-t border-gray-800">
+            <ChatInput
+              input={input}
+              handleInputChange={handleInputChange}
+              handleSubmit={handleSubmit}
+              isLoading={isLoading}
+            />
+          </div>
+        </div>
+        
+        {/* Sidebar (1 column) */}
+        <div className="lg:col-span-1 flex flex-col h-[calc(100vh-180px)] space-y-4">
+          {/* Document section */}
+          <Card className="flex-1 bg-gray-900 border-gray-800 shadow-lg overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-gray-800">
+              <h3 className="text-lg font-semibold">Documents</h3>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchRelevantDocuments}
+                className="text-xs"
+              >
+                <Icons.refresh className="h-3 w-3 mr-1" />
+                Refresh
+              </Button>
+            </div>
+            <CardContent className="p-3 overflow-y-auto max-h-[calc(100vh-280px)]">
+              {chatDocuments.length > 0 ? (
+                <DocumentList documents={chatDocuments} />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Icons.document className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No documents yet</p>
+                  <p className="text-xs mt-1">Click refresh to load documents</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </LayoutWrapper>
   );
 }
