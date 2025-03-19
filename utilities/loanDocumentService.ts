@@ -412,8 +412,8 @@ export const loanDocumentService = {
       
       // Process each document type
       for (const docType of requiredDocTypes) {
-        // Generate random document attributes
-        const fileType = ['.pdf', '.docx', '.html'][Math.floor(Math.random() * 3)];
+        // Always use HTML file type for consistent handling
+        const fileType = '.html';
         const fileSize = Math.floor(Math.random() * 1000000) + 100000; // Random size between 100KB and 1.1MB
         const uploadDate = new Date().toISOString();
         

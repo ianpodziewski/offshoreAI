@@ -8,7 +8,6 @@ import Link from 'next/link';
 import { simpleDocumentService, SimpleDocument } from '@/utilities/simplifiedDocumentService';
 import SimpleDocumentUploader from '@/components/document/SimpleDocumentUploader';
 import SimpleDocumentList from '@/components/document/SimpleDocumentList';
-import SimpleDocumentViewer from '@/components/document/SimpleDocumentViewer';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import SimpleDocumentAnalytics from '@/components/document/SimpleDocumentAnalytics';
 
@@ -24,7 +23,6 @@ function LoadingState() {
 
 // Main content component
 function ManageDocumentsContent({ loanId }: { loanId: string }) {
-  const [selectedDocument, setSelectedDocument] = useState<SimpleDocument | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [loanDetails, setLoanDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -64,16 +62,65 @@ function ManageDocumentsContent({ loanId }: { loanId: string }) {
     setRefreshCounter(prev => prev + 1);
   };
   
-  // Handle document status change
-  const handleDocumentStatusChange = () => {
-    setSelectedDocument(null);
-    setRefreshCounter(prev => prev + 1);
-  };
-  
-  // Handle document deletion
-  const handleDocumentDelete = () => {
-    setSelectedDocument(null);
-    setRefreshCounter(prev => prev + 1);
+  // Handle opening document in new tab
+  const handleViewDocument = (document: SimpleDocument) => {
+    const newWindow = window.open('', '_blank');
+    if (newWindow) {
+      // If the document has HTML content or any content at all
+      if (document.content) {
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>${document.filename}</title>
+              <style>
+                body { 
+                  font-family: Arial, sans-serif;
+                  line-height: 1.6;
+                  padding: 20px;
+                  max-width: 800px;
+                  margin: 0 auto;
+                }
+                .document-header {
+                  text-align: center;
+                  margin-bottom: 30px;
+                  border-bottom: 2px solid #1e5a9a;
+                  padding-bottom: 20px;
+                }
+                .document-content {
+                  padding: 20px;
+                  background-color: white;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="document-header">
+                <h1>${document.filename}</h1>
+              </div>
+              <div class="document-content">
+                ${document.content}
+              </div>
+            </body>
+          </html>
+        `);
+        newWindow.document.close(); // Important for some browsers
+      } else {
+        // If no content, show placeholder
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>${document.filename}</title>
+            </head>
+            <body>
+              <div style="text-align: center; margin-top: 50px;">
+                <h1>${document.filename}</h1>
+                <p>This document could not be previewed.</p>
+              </div>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      }
+    }
   };
   
   if (loading) {
@@ -133,23 +180,13 @@ function ManageDocumentsContent({ loanId }: { loanId: string }) {
             <div className="p-4">
               <SimpleDocumentList 
                 loanId={loanId} 
-                onViewDocument={setSelectedDocument}
+                onViewDocument={handleViewDocument}
                 refreshTrigger={refreshCounter}
               />
             </div>
           </div>
         </div>
       </div>
-      
-      {/* Document Viewer Modal */}
-      {selectedDocument && (
-        <SimpleDocumentViewer 
-          document={selectedDocument} 
-          onClose={() => setSelectedDocument(null)}
-          onStatusChange={handleDocumentStatusChange}
-          onDelete={handleDocumentDelete}
-        />
-      )}
     </div>
   );
 }

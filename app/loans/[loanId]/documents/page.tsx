@@ -119,7 +119,6 @@ export default function LoanDocumentsPage() {
     section?: string;
     docType?: string;
   }>({});
-  const [selectedDocument, setSelectedDocument] = useState<LoanDocument | null>(null);
   
   // Load loan data
   useEffect(() => {
@@ -189,14 +188,6 @@ export default function LoanDocumentsPage() {
           setCompletionStatus(status);
         }
       }
-      
-      return;
-    }
-    
-    // Regular view document action
-    const document = documents.find(doc => doc.id === documentId);
-    if (document) {
-      setSelectedDocument(document);
     }
   };
   
@@ -536,113 +527,6 @@ export default function LoanDocumentsPage() {
             onClose={() => setIsUploaderOpen(false)}
             onUpload={handleDocumentUploaded}
           />
-        )}
-        
-        {/* Document Viewer Modal */}
-        {selectedDocument && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-              {/* Header */}
-              <div className="p-4 border-b flex justify-between items-center">
-                <div className="relative">
-                  <h2 className="text-xl font-semibold">{selectedDocument.docType.replace(/_/g, ' ')}</h2>
-                </div>
-                <button 
-                  onClick={() => setSelectedDocument(null)}
-                  className="p-1 rounded-full hover:bg-gray-200 text-gray-600"
-                  aria-label="Close"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              
-              {/* File Info Section */}
-              <div className="px-4 py-3 bg-gray-50 border-b">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <a 
-                      href="#" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        // Open in new tab logic - only open in new tab, don't do anything else
-                        const newWindow = window.open('', '_blank');
-                        if (newWindow) {
-                          newWindow.document.write(`
-                            <html>
-                              <head>
-                                <title>${selectedDocument.filename}</title>
-                                <style>${documentViewerStyles}</style>
-                              </head>
-                              <body class="document-content">
-                                ${selectedDocument.content || `
-                                  <div style="text-align: center; padding: 50px;">
-                                    <h1>${selectedDocument.filename}</h1>
-                                    <p>Document preview</p>
-                                  </div>
-                                `}
-                              </body>
-                            </html>
-                          `);
-                        }
-                      }}
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      {selectedDocument.filename}
-                    </a>
-                  </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <span>{new Date(selectedDocument.dateUploaded).toLocaleDateString()}</span>
-                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                      {selectedDocument.status}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Document Content */}
-              <div className="flex-grow overflow-auto p-2 bg-gray-100 relative">
-                {selectedDocument.filename.startsWith('SAMPLE_') && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                    <div className="border-4 border-red-500 text-red-500 text-6xl font-bold px-10 py-5 rotate-[-30deg] opacity-20 rounded-lg">
-                      SAMPLE
-                    </div>
-                  </div>
-                )}
-                <div className="h-full bg-white shadow-md rounded p-5">
-                  {selectedDocument.content ? (
-                    <div 
-                      className="document-content h-full overflow-auto"
-                      style={{ maxHeight: 'calc(80vh - 140px)' }}
-                      dangerouslySetInnerHTML={{ __html: selectedDocument.content }}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <div className="text-center">
-                        <FileText size={64} className="mx-auto mb-4 text-gray-300" />
-                        <h3 className="text-lg font-medium mb-2">Document Preview</h3>
-                        <p className="text-gray-500 mb-4">
-                          This is a sample document for demonstration purposes.
-                        </p>
-                        <p className="text-sm text-gray-400">
-                          Filename: {selectedDocument.filename}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Footer */}
-              <div className="p-4 border-t">
-                <Button 
-                  onClick={() => setSelectedDocument(null)}
-                  className="w-full"
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </LayoutWrapper>

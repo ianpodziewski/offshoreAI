@@ -176,124 +176,10 @@ export function LoanDocumentStructure({
   // Open document in new tab
   const openDocumentInNewTab = (document: any) => {
     if (document) {
-      // For HTML files
-      if (document.filename.toLowerCase().endsWith('.html')) {
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          // If the document has HTML content
-          if (document.content) {
-            newWindow.document.write(`
-              <html>
-                <head>
-                  <title>${document.filename}</title>
-                  <style>
-                    body { 
-                      font-family: Arial, sans-serif;
-                      line-height: 1.6;
-                      padding: 20px;
-                      max-width: 800px;
-                      margin: 0 auto;
-                    }
-                    .document-header {
-                      text-align: center;
-                      margin-bottom: 30px;
-                      border-bottom: 2px solid #1e5a9a;
-                      padding-bottom: 20px;
-                    }
-                    .document-content {
-                      padding: 20px;
-                      background-color: white;
-                    }
-                  </style>
-                </head>
-                <body>
-                  <div class="document-header">
-                    <h1>${document.filename}</h1>
-                  </div>
-                  <div class="document-content">
-                    ${document.content}
-                  </div>
-                </body>
-              </html>
-            `);
-            newWindow.document.close(); // Important for some browsers
-          } else {
-            // If no content, show placeholder
-            newWindow.document.write(`
-              <html>
-                <head>
-                  <title>${document.filename}</title>
-                </head>
-                <body>
-                  <div style="text-align: center; margin-top: 50px;">
-                    <h1>${document.filename}</h1>
-                    <p>This document could not be previewed.</p>
-                  </div>
-                </body>
-              </html>
-            `);
-            newWindow.document.close();
-          }
-        }
-        return;
-      }
-      
-      // Check if this is a PDF or similar file type with base64 content
-      if (document.fileType && (document.fileType.includes('pdf') || document.fileType.includes('application/'))) {
-        // For PDF files, create an object URL and open it directly
-        try {
-          // The content is likely a base64 string, remove the data URI prefix if present
-          let base64Content = document.content;
-          if (base64Content && base64Content.includes('base64,')) {
-            base64Content = base64Content.split('base64,')[1];
-          }
-          
-          // Convert base64 to blob
-          const byteCharacters = atob(base64Content);
-          const byteArrays = [];
-          
-          for (let i = 0; i < byteCharacters.length; i += 512) {
-            const slice = byteCharacters.slice(i, i + 512);
-            
-            const byteNumbers = new Array(slice.length);
-            for (let j = 0; j < slice.length; j++) {
-              byteNumbers[j] = slice.charCodeAt(j);
-            }
-            
-            const byteArray = new Uint8Array(byteNumbers);
-            byteArrays.push(byteArray);
-          }
-          
-          const blob = new Blob(byteArrays, { type: document.fileType });
-          const url = URL.createObjectURL(blob);
-          
-          // Open in a new tab
-          window.open(url, '_blank');
-        } catch (error) {
-          console.error('Error displaying PDF:', error);
-          // Fallback to a simple message if there's an error
-          const newWindow = window.open('', '_blank');
-          if (newWindow) {
-            newWindow.document.write(`
-              <html>
-                <head>
-                  <title>${document.filename}</title>
-                </head>
-                <body>
-                  <div style="text-align: center; margin-top: 50px;">
-                    <h1>Unable to display PDF</h1>
-                    <p>The PDF file could not be displayed. Please download the file instead.</p>
-                  </div>
-                </body>
-              </html>
-            `);
-            newWindow.document.close();
-          }
-        }
-      } else if (document.content) {
-        // For other content, display as HTML
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        // If the document has HTML content or any content at all
+        if (document.content) {
           newWindow.document.write(`
             <html>
               <head>
@@ -328,12 +214,9 @@ export function LoanDocumentStructure({
               </body>
             </html>
           `);
-          newWindow.document.close();
-        }
-      } else {
-        // If document has no content or is of an unknown type
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
+          newWindow.document.close(); // Important for some browsers
+        } else {
+          // If no content, show placeholder
           newWindow.document.write(`
             <html>
               <head>
@@ -465,13 +348,8 @@ export function LoanDocumentStructure({
                       href="#" 
                       onClick={(e) => {
                         e.preventDefault();
-                        // If it's an HTML file, open directly in a new tab
-                        if (doc.filename.toLowerCase().endsWith('.html')) {
-                          openDocumentInNewTab(doc);
-                        } else if (onViewDocument) {
-                          // Otherwise use the document viewer
-                          onViewDocument(doc.id);
-                        }
+                        // Open all document types in a new tab
+                        openDocumentInNewTab(doc);
                       }}
                       className="text-blue-500 hover:underline font-medium"
                     >
