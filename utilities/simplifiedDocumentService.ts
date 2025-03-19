@@ -559,11 +559,20 @@ export const simpleDocumentService = {
       // Get all existing documents
       const allDocs = simpleDocumentService.getAllDocuments();
       
-      // Check if a document with the same docType already exists for this loan
-      const existingDoc = allDocs.find(doc => 
+      // First check if a document with the same filename already exists for this loan
+      // This prevents filename duplicates
+      let existingDoc = allDocs.find(doc => 
         doc.loanId === loanId && 
-        doc.docType === docType
+        doc.filename === file.name
       );
+      
+      // If no filename match found, then check for docType match
+      if (!existingDoc) {
+        existingDoc = allDocs.find(doc => 
+          doc.loanId === loanId && 
+          doc.docType === docType
+        );
+      }
       
       // Create document ID
       const docId = existingDoc ? existingDoc.id : uuidv4();
@@ -831,8 +840,30 @@ export const simpleDocumentService = {
       console.log('Starting migration of document contents to IndexedDB...');
       const allDocs = simpleDocumentService.getAllDocuments();
       
+      // Deduplicate documents by loanId and docType - keep the most recent version
+      const deduplicatedDocs: SimpleDocument[] = [];
+      const seenKeys = new Set<string>();
+      
+      // First sort documents by dateUploaded (newest first)
+      const sortedDocs = [...allDocs].sort((a, b) => {
+        return new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime();
+      });
+      
+      // Then keep only the first occurrence of each loanId+docType combination
+      for (const doc of sortedDocs) {
+        const key = `${doc.loanId}|${doc.docType}`;
+        if (!seenKeys.has(key)) {
+          deduplicatedDocs.push(doc);
+          seenKeys.add(key);
+        } else {
+          console.log(`Skipping duplicate document: ${doc.filename} (ID: ${doc.id})`);
+        }
+      }
+      
+      console.log(`Removed ${allDocs.length - deduplicatedDocs.length} duplicate documents`);
+      
       // Only migrate documents that have actual content (not placeholders)
-      const docsToMigrate = allDocs.filter(doc => 
+      const docsToMigrate = deduplicatedDocs.filter(doc => 
         doc.content && 
         !doc.content.includes('[Content stored in IndexedDB]')
       );
@@ -840,12 +871,12 @@ export const simpleDocumentService = {
       console.log(`Found ${docsToMigrate.length} documents to migrate to IndexedDB`);
       
       // Create metadata-only versions for localStorage
-      const metadataDocs = allDocs.map(doc => ({
+      const metadataDocs = deduplicatedDocs.map(doc => ({
         ...doc,
         content: compressContent(doc.content)
       }));
       
-      // Store metadata in localStorage
+      // Store deduplicated metadata in localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(metadataDocs));
       
       // Migrate content to IndexedDB

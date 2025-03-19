@@ -50,6 +50,60 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     return acc;
   }, {} as Record<string, string>));
   
+  // Clear any duplicate documents for better display
+  const clearDuplicateDocuments = useCallback(async () => {
+    try {
+      // Get all documents from the current loan
+      const allDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+      
+      // If we have duplicates, we should clean them up
+      const uniqueDocs: Record<string, SimpleDocument> = {};
+      
+      // Keep track of which documents we'll keep
+      const docsToKeep: SimpleDocument[] = [];
+      const docsToRemove: SimpleDocument[] = [];
+      
+      // Group by docType and keep the most recent for each type
+      allDocs.forEach(doc => {
+        const key = doc.docType;
+        
+        if (!uniqueDocs[key] || new Date(doc.dateUploaded) > new Date(uniqueDocs[key].dateUploaded)) {
+          // If we already had a document for this type, mark it for removal
+          if (uniqueDocs[key]) {
+            docsToRemove.push(uniqueDocs[key]);
+          }
+          
+          // Keep the most recent one
+          uniqueDocs[key] = doc;
+          docsToKeep.push(doc);
+        } else {
+          // This is an older duplicate, so mark it for removal
+          docsToRemove.push(doc);
+        }
+      });
+      
+      // If we found duplicates to remove
+      if (docsToRemove.length > 0) {
+        console.log(`Found ${docsToRemove.length} duplicate documents to clean up`);
+        
+        // Delete each duplicate
+        for (const doc of docsToRemove) {
+          await simpleDocumentService.deleteDocument(doc.id);
+          console.log(`Removed duplicate document: ${doc.filename} (ID: ${doc.id})`);
+        }
+        
+        // Update our local state with the cleaned list
+        setDocuments(docsToKeep);
+        
+        // Show a message if we cleaned up duplicates
+        setSuccessMessage(`Cleaned up ${docsToRemove.length} duplicate documents`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch (error) {
+      console.error("Error cleaning up duplicate documents:", error);
+    }
+  }, [loanId]);
+  
   // Fetch documents when component mounts or refreshTrigger changes
   useEffect(() => {
     const fetchDocuments = () => {
@@ -95,6 +149,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   useEffect(() => {
     refreshLoanDocuments();
     
+    // Clean up duplicate documents when the component first loads
+    clearDuplicateDocuments();
+    
     // Store a marker in sessionStorage that we've loaded this loan's documents
     // This helps with persistence between page navigations
     const storageKey = `doc_loaded_${loanId}`;
@@ -110,11 +167,23 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         }
       }, 1000);
     }
-  }, [refreshLoanDocuments, loanId, documents.length]);
+  }, [refreshLoanDocuments, loanId, documents.length, clearDuplicateDocuments]);
 
   // Get document for a specific docType if it exists
   const getDocumentForType = (docType: string): SimpleDocument | undefined => {
-    return documents.find(doc => doc.docType === docType);
+    // Get all documents matching this docType
+    const matchingDocs = documents.filter(doc => doc.docType === docType);
+    
+    // If none found, return undefined
+    if (matchingDocs.length === 0) return undefined;
+    
+    // If only one found, return it
+    if (matchingDocs.length === 1) return matchingDocs[0];
+    
+    // If multiple, return the most recent one (by dateUploaded)
+    return matchingDocs.sort((a, b) => 
+      new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
+    )[0];
   };
 
   // Generate a sample document for a specific type
@@ -142,6 +211,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         // Trigger an immediate refresh
         const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
         setDocuments(updatedDocs);
+        
+        // Clean up any duplicate documents
+        await clearDuplicateDocuments();
         
         // Show success message
         setSuccessMessage(`Generated ${docType} document successfully`);
@@ -180,6 +252,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       // Trigger an immediate refresh
       const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
       setDocuments(updatedDocs);
+      
+      // Clean up any duplicate documents
+      await clearDuplicateDocuments();
       
       // Refresh loan context to ensure documents are persisted
       refreshLoanDocuments();
@@ -417,6 +492,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         }
       }
       
+      // Clean up any duplicate documents after uploads
+      await clearDuplicateDocuments();
+      
       setTimeout(() => {
         setSuccessMessage(null);
         setErrorMessage(null);
@@ -431,7 +509,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       // Reset the input value
       if (event.target.value) event.target.value = '';
     }
-  }, [loanId]);
+  }, [loanId, clearDuplicateDocuments]);
 
   if (loading) {
     return (
