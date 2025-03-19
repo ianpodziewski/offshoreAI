@@ -3,11 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
-import DocumentSplitter from '@/components/document/DocumentSplitter';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, FileText, SplitSquareVertical } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { ToastProvider } from '@/components/ui/toast';
 
@@ -71,95 +70,68 @@ export default function DocumentPage() {
     };
   }, [documentId, refreshKey]);
 
-  const handleSplitComplete = (result: any) => {
-    if (result.success) {
-      // Refresh the document view
-      setRefreshKey(prev => prev + 1);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full"></div>
-        <span className="ml-2">Loading document...</span>
+      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+        <div className="animate-pulse">Loading document...</div>
       </div>
     );
   }
 
   if (!document) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="text-xl mb-4">Document not found</div>
-        <Link href="/documents">
-          <Button>
-            <ArrowLeft className="mr-2 h-4 w-4" />
+      <div className="p-6">
+        <div className="mb-4">
+          <Link href="/documents" className="inline-flex items-center hover:text-primary transition-colors">
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Documents
-          </Button>
-        </Link>
+          </Link>
+        </div>
+        <div className="border rounded-lg p-8 text-center bg-gray-50">
+          <h2 className="text-xl font-semibold mb-2">Document Not Found</h2>
+          <p className="text-muted-foreground">The document you're looking for doesn't exist or has been moved.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <ToastProvider>
-      <div className="container mx-auto py-6 px-4">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <Link href="/documents" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-2">
-              <ArrowLeft className="mr-1 h-4 w-4" />
-              Back to Documents
-            </Link>
-            <h1 className="text-2xl font-bold">{document.filename}</h1>
-            <div className="flex gap-2 mt-1">
-              <span className="text-sm px-2 py-1 bg-gray-100 rounded-full">{document.docType}</span>
-              <span className="text-sm px-2 py-1 bg-gray-100 rounded-full">{document.category}</span>
-            </div>
+      <div className="p-6">
+        <div className="mb-4">
+          <Link href="/documents" className="inline-flex items-center hover:text-primary transition-colors">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Documents
+          </Link>
+        </div>
+
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold">{document.filename}</h1>
+          <div className="text-sm text-muted-foreground mt-1">
+            Uploaded on {new Date(document.dateUploaded).toLocaleDateString()}
           </div>
         </div>
 
-        <Tabs defaultValue="view">
-          <TabsList className="mb-4">
-            <TabsTrigger value="view">
-              <FileText className="h-4 w-4 mr-2" />
-              View Document
-            </TabsTrigger>
-            <TabsTrigger value="split">
-              <SplitSquareVertical className="h-4 w-4 mr-2" />
-              Split Document
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="view">
-            <Card>
-              <CardHeader>
-                <CardTitle>Document Viewer</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {pdfUrl ? (
-                  <div className="w-full h-[700px] border rounded overflow-hidden">
-                    <iframe 
-                      src={pdfUrl}
-                      className="w-full h-full border-0"
-                      title={document.filename}
-                    />
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-[700px] text-gray-500">
-                    Unable to display document
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="split">
-            <DocumentSplitter 
-              document={document}
-              onSplitComplete={handleSplitComplete}
-            />
-          </TabsContent>
-        </Tabs>
+        <Card>
+          <CardHeader>
+            <CardTitle>Document Viewer</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {pdfUrl ? (
+              <div className="w-full h-[700px] border rounded overflow-hidden">
+                <iframe 
+                  src={pdfUrl}
+                  className="w-full h-full border-0"
+                  title={document.filename}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[700px] text-gray-500">
+                Unable to display document
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </ToastProvider>
   );

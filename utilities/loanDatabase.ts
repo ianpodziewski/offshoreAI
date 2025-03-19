@@ -1,6 +1,6 @@
 // utilities/loanDatabase.ts
 import { LoanData, generateLoan, generateLoans } from './loanGenerator';
-import { documentService } from './documentService';
+import { loanDocumentService } from './loanDocumentService';
 
 const STORAGE_KEY = 'simulated_loans_db';
 const DEFAULT_LOAN_COUNT = 9;
@@ -15,7 +15,7 @@ export const loanDatabase = {
       
       // Don't generate documents automatically during initialization
       // initialLoans.forEach(loan => {
-      //   documentService.generateDocumentsForLoan(loan);
+      //   loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
       // });
       
       console.log(`Initialized loan database with ${DEFAULT_LOAN_COUNT} loans`);
@@ -42,7 +42,7 @@ export const loanDatabase = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
 
     // Don't generate documents automatically for new loans
-    // documentService.generateDocumentsForLoan(newLoan);
+    // loanDocumentService.generateFakeDocuments(newLoan.id, newLoan.loanType);
 
     return newLoan;
   },
@@ -82,9 +82,9 @@ export const loanDatabase = {
     if (typeof localStorage !== 'undefined') {
       const clearPromises = [];
       
-      // Clear document database using the documentService
+      // Clear document database using the loanDocumentService
       try {
-        documentService.clearAllDocuments();
+        loanDocumentService.clearAllDocuments();
         console.log('Cleared document service storage');
       } catch (error) {
         console.warn('Error clearing document service:', error);
@@ -108,17 +108,6 @@ export const loanDatabase = {
         }
       } catch (error) {
         console.warn('Could not clear simplified document service:', error);
-      }
-      
-      // Clear document database
-      try {
-        const docDatabase = require('./documentDatabase').default;
-        if (docDatabase && typeof docDatabase.clearAllData === 'function') {
-          docDatabase.clearAllData();
-          console.log('Cleared document database');
-        }
-      } catch (error) {
-        console.warn('Could not clear document database:', error);
       }
       
       // Ensure all document-related localStorage keys are removed
@@ -150,7 +139,7 @@ export const loanDatabase = {
     
     // Don't generate documents automatically during reset
     // initialLoans.forEach(loan => {
-    //   documentService.generateDocumentsForLoan(loan);
+    //   loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
     // });
     
     console.log('Database reset complete');
