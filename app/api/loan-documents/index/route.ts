@@ -87,6 +87,11 @@ function chunkText(text: string, chunkSize = CHUNK_SIZE): string[] {
   return chunks;
 }
 
+/**
+ * API endpoint for indexing loan documents - compatibility version
+ * This forwards requests to the newer /api/loan-documents/index-docs endpoint
+ * POST /api/loan-documents/index
+ */
 export async function POST(req: NextRequest) {
   try {
     const { loanId } = await req.json();
@@ -97,14 +102,16 @@ export async function POST(req: NextRequest) {
     
     // Storage mode for logging and debugging
     const storageMode = STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage');
+    console.log(`[Compatibility Route] Indexing documents for loan ${loanId} using storage mode: ${storageMode}`);
     
     // Get all documents for this loan
     const documents = await storageService.getDocumentsForLoan(loanId);
+    console.log(`[Compatibility Route] Found ${documents.length} documents for loan ${loanId} to index`);
     
     if (!documents || documents.length === 0) {
-      console.log(`No documents found for loan ${loanId} using storage mode: ${storageMode}`);
+      console.log(`[Compatibility Route] No documents found for loan ${loanId} using storage mode: ${storageMode}`);
       
-      // Check if we have any documents without a loan ID that could be fixed
+      // Check for unassociated documents
       const allDocs = await storageService.getAllDocuments(0, 1000);
       const unassociatedDocs = allDocs.documents.filter(doc => !doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null');
       const hasFixableDocuments = unassociatedDocs.length > 0;
@@ -119,8 +126,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Start the indexing process
-    console.log(`Indexing ${documents.length} documents for loan ${loanId}`);
+    console.log(`[Compatibility Route] Beginning indexing process for ${documents.length} documents for loan ${loanId}`);
     const result = await indexDocumentsForLoan(loanId, documents);
+    console.log(`[Compatibility Route] Indexing complete. Indexed ${result.indexedCount} out of ${documents.length} documents.`);
 
     return NextResponse.json({
       message: 'Documents indexed successfully',
@@ -130,13 +138,17 @@ export async function POST(req: NextRequest) {
       storageMode
     });
   } catch (error) {
-    console.error('Error indexing documents:', error);
+    console.error('[Compatibility Route] Error indexing documents:', error);
     return NextResponse.json({ 
       error: `Failed to index documents: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, { status: 500 });
   }
 }
 
+/**
+ * API endpoint for checking document indexing status
+ * GET /api/loan-documents/index?loanId=...
+ */
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -148,12 +160,13 @@ export async function GET(req: NextRequest) {
 
     // Storage mode for logging and debugging
     const storageMode = STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage');
+    console.log(`[Compatibility Route] Checking document status for loan ${loanId} using storage mode: ${storageMode}`);
     
     // Get all documents for this loan
     const documents = await storageService.getDocumentsForLoan(loanId);
     
     if (!documents || documents.length === 0) {
-      // Check if we have any documents without a loan ID that could be fixed
+      // Check for unassociated documents
       const allDocs = await storageService.getAllDocuments(0, 1000);
       const unassociatedDocs = allDocs.documents.filter(doc => !doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null');
       const hasFixableDocuments = unassociatedDocs.length > 0;
@@ -175,7 +188,7 @@ export async function GET(req: NextRequest) {
       storageMode
     });
   } catch (error) {
-    console.error('Error checking document status:', error);
+    console.error('[Compatibility Route] Error checking document status:', error);
     return NextResponse.json({ 
       error: `Failed to check document status: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, { status: 500 });

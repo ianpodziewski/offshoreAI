@@ -142,9 +142,35 @@ const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
 // Check if Redis is available for server-side operations
 const isRedisAvailable = () => {
   // Check if we're in a server-side context
-  if (typeof window !== 'undefined') return false;
+  const isBrowser = typeof window !== 'undefined';
   
-  // Check if Redis is configured
+  if (isBrowser) {
+    // In browser context, we can't directly check Redis
+    // So we'll check if the Redis API endpoint is available
+    console.log("Browser environment detected, can't directly check Redis");
+    
+    // Make a request to check Redis status
+    // This is async but we'll handle this separately
+    fetch('/api/redis-status')
+      .then(response => {
+        if (response.ok) {
+          return response.json();
+        }
+        throw new Error('Redis status check failed');
+      })
+      .then(data => {
+        console.log('Redis status check:', data);
+        // This is just for logging - the actual call will still use the API
+      })
+      .catch(err => {
+        console.warn('Error checking Redis status:', err);
+      });
+      
+    // In the browser, we'll use the API endpoint for Redis operations
+    return true; // Return true to allow the API call
+  }
+  
+  // Server-side check
   return isRedisConfigured();
 };
 
@@ -155,6 +181,8 @@ const saveDocumentToRedis = async (document: LoanDocument): Promise<boolean> => 
       console.log('Redis not available for document storage');
       return false;
     }
+    
+    console.log(`Attempting to save document ${document.id} to Redis for loan ${document.loanId}`);
     
     // Convert document to SimpleDocument format
     const simpleDoc = {
@@ -174,10 +202,50 @@ const saveDocumentToRedis = async (document: LoanDocument): Promise<boolean> => 
       notes: document.notes || ''
     };
     
-    // Save to Redis using storageService
-    await storageService.saveDocument(simpleDoc);
-    console.log(`Successfully saved document to Redis: ${document.id}`);
-    return true;
+    // Save to Redis directly using serverRedisUtil when in server environment
+    if (typeof window === 'undefined') {
+      // Server-side Redis saving
+      try {
+        // 1. Store the document
+        await serverRedisUtil.set(`doc:${document.id}`, JSON.stringify(simpleDoc));
+        
+        // 2. Add the document ID to the loan's document set
+        await serverRedisUtil.sadd(`docs_by_loan:${document.loanId}`, document.id);
+        
+        // 3. Add to the global document list
+        await serverRedisUtil.sadd('document_list', document.id);
+        
+        console.log(`Successfully saved document to Redis: ${document.id} for loan ${document.loanId}`);
+        return true;
+      } catch (serverRedisError) {
+        console.error('Error using serverRedisUtil to save document:', serverRedisError);
+        return false;
+      }
+    } else {
+      // Client-side Redis saving via storageService
+      try {
+        await storageService.saveDocument(simpleDoc);
+        console.log(`Successfully saved document to Redis via storageService: ${document.id} for loan ${document.loanId}`);
+        
+        // Call the API to ensure the document is indexed for the chatbot
+        try {
+          await fetch('/api/loan-documents/index-docs', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ loanId: document.loanId }),
+          });
+        } catch (apiError) {
+          console.warn('Non-critical error calling indexing API:', apiError);
+        }
+        
+        return true;
+      } catch (storageError) {
+        console.error('Error saving document via storageService:', storageError);
+        return false;
+      }
+    }
   } catch (error) {
     console.error('Error saving document to Redis:', error);
     return false;
