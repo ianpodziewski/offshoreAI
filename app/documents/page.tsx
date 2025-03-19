@@ -8,9 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Eye, SplitSquareVertical, Search, FileText, Filter } from 'lucide-react';
+import { Eye, SplitSquareVertical, Search, FileText, Filter, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { ToastProvider } from '@/components/ui/toast';
+import { StorageMigration } from '@/components/utility/StorageMigration';
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<SimpleDocument[]>([]);
@@ -19,6 +20,7 @@ export default function DocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showMigrationTool, setShowMigrationTool] = useState(false);
 
   useEffect(() => {
     // Load all documents using the client service
@@ -59,6 +61,11 @@ export default function DocumentsPage() {
   // Get unique categories for filtering
   const categories = Array.from(new Set(documents.map(doc => doc.category)));
 
+  const handleRefresh = () => {
+    setLoading(true);
+    setRefreshKey(prev => prev + 1);
+  };
+
   if (loading) {
     return (
       <LayoutWrapper>
@@ -81,7 +88,27 @@ export default function DocumentsPage() {
                 View, manage, and split your loan documents
               </p>
             </div>
+            <div className="flex gap-2 mt-4 md:mt-0">
+              <Button onClick={handleRefresh} variant="outline" size="sm">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button 
+                onClick={() => setShowMigrationTool(!showMigrationTool)} 
+                variant="outline" 
+                size="sm"
+              >
+                {showMigrationTool ? 'Hide Migration Tool' : 'Show Migration Tool'}
+              </Button>
+            </div>
           </div>
+
+          {/* Migration Tool */}
+          {showMigrationTool && (
+            <div className="mb-6 bg-muted p-4 rounded-md">
+              <StorageMigration />
+            </div>
+          )}
 
           {/* Search and Filter */}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -125,6 +152,10 @@ export default function DocumentsPage() {
                 {searchTerm || selectedCategory
                   ? "Try adjusting your search or filters"
                   : "Upload some documents to get started"}
+              </p>
+              <p className="text-gray-500 mt-4">
+                If you recently switched to Redis storage, 
+                use the migration tool to transfer your documents from localStorage.
               </p>
             </div>
           ) : (

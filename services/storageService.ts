@@ -8,8 +8,10 @@ const LOAN_PREFIX = STORAGE_CONFIG.LOAN_PREFIX;
 const DOCUMENT_LIST_KEY = STORAGE_CONFIG.DOCUMENT_LIST_KEY;
 const DOCUMENT_BY_LOAN_PREFIX = STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX;
 
-// Check if we should use the fallback mechanism
-const useFallback = !isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK;
+// Add a check to make sure we avoid localStorage operations on the server-side
+// Update the "useFallback" check
+const isBrowser = typeof window !== 'undefined';
+const useFallback = (!isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK) && isBrowser;
 
 // Log the storage mode
 console.log(`Storage Mode: ${useFallback ? 'localStorage Fallback' : 'Redis'}`);
@@ -193,7 +195,7 @@ export const storageService = {
     try {
       console.log(`🔍 Getting documents for loan ID: ${loanId}`);
       
-      if (useFallback) {
+      if (useFallback && isBrowser) {
         // Fallback: Use localStorage
         console.log(`Using localStorage fallback mode for loan ${loanId}`);
         
@@ -553,8 +555,16 @@ export const storageService = {
    * Use this to transition from the old storage to the new one
    */
   migrateFromLocalStorage: async (): Promise<{migrated: number, errors: number}> => {
+    // Check if we're in a browser environment
+    const isBrowser = typeof window !== 'undefined';
+    if (!isBrowser) {
+      console.error('Migration can only be performed in browser environment');
+      return { migrated: 0, errors: 1 };
+    }
+    
+    // Check if Redis is available
     if (useFallback) {
-      console.log('Cannot migrate when in fallback mode');
+      console.log('Cannot migrate when in fallback mode or Redis is not configured');
       return { migrated: 0, errors: 0 };
     }
     
@@ -563,14 +573,34 @@ export const storageService = {
       const oldDocs = localStorageFallback.getAllDocuments();
       console.log(`Found ${oldDocs.length} documents to migrate from localStorage`);
       
+      if (oldDocs.length === 0) {
+        console.log('No documents found in localStorage to migrate');
+        return { migrated: 0, errors: 0 };
+      }
+      
       let migrated = 0;
       let errors = 0;
       
       // Migrate each document
       for (const doc of oldDocs) {
         try {
-          await storageService.saveDocument(doc);
+          // Use the Redis service directly to save the document
+          const docKey = `${DOCUMENT_PREFIX}${doc.id}`;
+          
+          // Store the document in Redis
+          await serverRedisUtil.set(docKey, JSON.stringify(doc));
+          
+          // Add to the document list
+          await serverRedisUtil.sadd(DOCUMENT_LIST_KEY, doc.id);
+          
+          // Add to the loan's document list
+          if (doc.loanId) {
+            const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${doc.loanId}`;
+            await serverRedisUtil.sadd(loanDocListKey, doc.id);
+          }
+          
           migrated++;
+          console.log(`Migrated document ${doc.id} for loan ${doc.loanId || 'N/A'}`);
         } catch (error) {
           console.error(`Error migrating document ${doc.id}:`, error);
           errors++;
