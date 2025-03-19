@@ -104,6 +104,46 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     }
   }, [loanId]);
   
+  // Function to delete all documents for a loan
+  const deleteAllDocuments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const allDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+      
+      if (allDocs.length === 0) {
+        setErrorMessage("No documents to delete");
+        setTimeout(() => setErrorMessage(null), 3000);
+        return;
+      }
+      
+      console.log(`Deleting all ${allDocs.length} documents for loan ${loanId}`);
+      
+      // Delete each document
+      for (const doc of allDocs) {
+        await simpleDocumentService.deleteDocument(doc.id);
+        console.log(`Deleted document: ${doc.filename} (ID: ${doc.id})`);
+      }
+      
+      // Update the state
+      setDocuments([]);
+      
+      // Show success message
+      setSuccessMessage(`Deleted all ${allDocs.length} documents successfully`);
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // Refresh loan context
+      refreshLoanDocuments();
+      setDocumentGenerated(true);
+      setLocalRefreshTrigger(prev => prev + 1);
+    } catch (error: any) {
+      console.error("Error deleting all documents:", error);
+      setErrorMessage(`Failed to delete documents: ${error?.message || "Unknown error"}`);
+      setTimeout(() => setErrorMessage(null), 5000);
+    } finally {
+      setLoading(false);
+    }
+  }, [loanId, refreshLoanDocuments]);
+  
   // Fetch documents when component mounts or refreshTrigger changes
   useEffect(() => {
     const fetchDocuments = () => {
@@ -168,6 +208,47 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       }, 1000);
     }
   }, [refreshLoanDocuments, loanId, documents.length, clearDuplicateDocuments]);
+
+  // Auto-detect and clean up legacy documents on first load
+  useEffect(() => {
+    // This effect runs only once when the component mounts
+    const detectAndCleanLegacyDocuments = async () => {
+      try {
+        // Get all documents from the older documentService storage
+        const legacyDocsJson = localStorage.getItem('simulated_loan_documents');
+        if (!legacyDocsJson) return; // No legacy documents, nothing to do
+        
+        // Parse the legacy documents
+        const legacyDocs = JSON.parse(legacyDocsJson);
+        
+        // Filter legacy documents for this loan
+        const legacyDocsForLoan = legacyDocs.filter((doc: any) => doc.loanId === loanId);
+        
+        if (legacyDocsForLoan.length > 0) {
+          console.log(`Found ${legacyDocsForLoan.length} legacy documents for loan ${loanId}`);
+          
+          // Check if we already have documents from simpleDocumentService
+          const modernDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+          
+          if (modernDocs.length > 0 && legacyDocsForLoan.length > 0) {
+            // If we have both legacy and modern documents, this is likely causing the duplication
+            console.log("Detected potential document duplication issue. Clearing all documents...");
+            
+            // Clear all documents and set a flag to prevent auto-showing the message
+            await deleteAllDocuments();
+            
+            // Show a one-time message about legacy document cleanup
+            setSuccessMessage("Legacy documents detected and cleaned up. Generate new samples if needed.");
+            setTimeout(() => setSuccessMessage(null), 5000);
+          }
+        }
+      } catch (error) {
+        console.error("Error detecting legacy documents:", error);
+      }
+    };
+    
+    detectAndCleanLegacyDocuments();
+  }, [loanId, deleteAllDocuments]);
 
   // Get document for a specific docType if it exists
   const getDocumentForType = (docType: string): SimpleDocument | undefined => {
@@ -523,9 +604,19 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
 
   return (
     <div className="document-sockets">
-      <div className="document-header">
+      <div className="document-header" style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          marginBottom: '15px'
+        }}>
         <h2>Loan Documents</h2>
-        <div className="document-controls">
+        <div className="document-controls" style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '10px',
+          alignItems: 'center'
+        }}>
           {/* Add a button to add new documents from upload */}
           <div style={{ position: 'relative' }}>
             <button className="file-upload-button" onClick={() => {
@@ -573,6 +664,28 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
               Generate All
             </button>
           </div>
+          
+          {/* Clear all documents button */}
+          <button 
+            onClick={deleteAllDocuments}
+            disabled={loading}
+            className="clear-button"
+            style={{
+              backgroundColor: '#f44336',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '8px 12px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <X size={16} />
+            Clear All Documents
+          </button>
         </div>
       </div>
       

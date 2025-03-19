@@ -139,6 +139,12 @@ const DOCUMENTS_STORAGE_KEY = 'simulated_loan_documents';
 export const documentService = {
   // Initialize documents for a loan
   generateDocumentsForLoan: (loan: LoanData): LoanDocument[] => {
+    // Don't auto-generate documents on initialization anymore
+    // Just return an empty array to prevent duplicate documents
+    console.log(`Skipping auto-document generation for loan ${loan.id}`);
+    return [];
+    
+    /* Original implementation:
     const documents = generateLoanDocuments(loan);
     
     // Get existing documents
@@ -151,6 +157,7 @@ export const documentService = {
     localStorage.setItem(DOCUMENTS_STORAGE_KEY, JSON.stringify([...otherDocs, ...documents]));
     
     return documents;
+    */
   },
   
   getAllDocuments: (): LoanDocument[] => {
