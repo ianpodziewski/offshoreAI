@@ -55,7 +55,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     const fetchDocuments = () => {
       setLoading(true);
       // First get documents from localStorage (metadata only)
-      let loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
+      const loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
       setDocuments(loanDocuments);
       setLoading(false);
       
