@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "check-redis": "node scripts/check-redis.js",
+    "fix-redis": "node scripts/check-redis.js --fix"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.66",

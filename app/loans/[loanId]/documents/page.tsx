@@ -330,13 +330,17 @@ export default function LoanDocumentsPage() {
                           setCompletionStatus(status);
                         }
                         
-                        // Show success message
-                        alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored both in localStorage and Redis for chatbot access.`);
+                        // Show success message (modified to be more accurate about storage depending on Redis availability)
+                        const storageMode = typeof window !== 'undefined' && 
+                                           (!process.env.REDIS_URL || window.localStorage.getItem('USE_FALLBACK') === 'true') ? 
+                                           'localStorage only' : 'localStorage and Redis';
+                        
+                        alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored in ${storageMode}. The chatbot will access them when properly configured.`);
                         
                         // Trigger indexing for chatbot
                         try {
                           // Make an API call to index the documents in Redis
-                          const response = await fetch('/api/loan-documents/index', {
+                          const response = await fetch('/api/loan-documents/index-docs', {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
@@ -346,11 +350,14 @@ export default function LoanDocumentsPage() {
                           
                           if (response.ok) {
                             console.log('Successfully indexed documents for chatbot');
+                          } else if (response.status === 404) {
+                            console.warn('Document indexing API not available (404) - documents saved but not indexed');
                           } else {
-                            console.error('Error indexing documents:', await response.text());
+                            console.warn(`Document indexing API responded with status ${response.status}`, await response.text());
                           }
                         } catch (indexError) {
-                          console.error('Error triggering document indexing:', indexError);
+                          console.warn('Non-critical error triggering document indexing:', indexError);
+                          // This is a non-critical error, so we won't show it to the user
                         }
                       }
                     } catch (error) {
@@ -393,7 +400,7 @@ export default function LoanDocumentsPage() {
                       for (const loan of loans) {
                         try {
                           // Make an API call to index the documents for each loan
-                          const response = await fetch('/api/loan-documents/index', {
+                          const response = await fetch('/api/loan-documents/index-docs', {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
