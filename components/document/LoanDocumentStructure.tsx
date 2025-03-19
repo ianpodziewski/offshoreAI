@@ -32,8 +32,9 @@ import {
   Trash2,
   Plus
 } from 'lucide-react';
-import { DOCUMENT_STRUCTURE, DocumentCategory } from '@/utilities/loanDocumentStructure';
+import { DOCUMENT_STRUCTURE, DocumentCategory, DocumentStatus } from '@/utilities/loanDocumentStructure';
 import { formatFileSize } from '@/utilities/loanDocumentService';
+import { StoplightChecklist } from './StoplightChecklist';
 
 interface LoanDocumentStructureProps {
   loanId: string;
@@ -42,6 +43,7 @@ interface LoanDocumentStructureProps {
   onUploadDocument?: (category: string, section: string, docType: string) => void;
   onViewDocument?: (documentId: string) => void;
   category?: DocumentCategory;
+  onStatusChange?: (documentId: string, newStatus: DocumentStatus) => void;
 }
 
 export function LoanDocumentStructure({
@@ -50,7 +52,8 @@ export function LoanDocumentStructure({
   uploadedDocuments = [],
   onUploadDocument,
   onViewDocument,
-  category = 'borrower'
+  category = 'borrower',
+  onStatusChange
 }: LoanDocumentStructureProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const [draggingDocType, setDraggingDocType] = useState<string | null>(null);
@@ -71,13 +74,13 @@ export function LoanDocumentStructure({
   };
   
   // Get document status if uploaded
-  const getDocumentStatus = (docType: string) => {
+  const getDocumentStatus = (docType: string): DocumentStatus => {
     // Get the most recent document of this type
     const docs = uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required');
     if (docs.length > 0) {
       // Sort by date uploaded (most recent first)
       docs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
-      return docs[0].status;
+      return docs[0].status as DocumentStatus;
     }
     return 'required';
   };
@@ -276,6 +279,14 @@ export function LoanDocumentStructure({
     }
   };
   
+  // Handle status change from stoplight
+  const handleStoplightStatusChange = (docType: string, newStatus: DocumentStatus) => {
+    const document = getDocument(docType);
+    if (document && onStatusChange) {
+      onStatusChange(document.id, newStatus);
+    }
+  };
+  
   // Render status badge
   const renderStatusBadge = (docType: string, isRequired: boolean) => {
     const status = getDocumentStatus(docType);
@@ -304,6 +315,7 @@ export function LoanDocumentStructure({
     const document = getDocument(docType);
     const allDocuments = getAllDocumentsOfType(docType);
     const isDragging = draggingDocType === docType;
+    const status = getDocumentStatus(docType);
     
     const handleHeaderClick = () => {
       // Always trigger file upload when clicking the header, regardless of whether a document exists
@@ -331,11 +343,20 @@ export function LoanDocumentStructure({
                 </span>
               )}
             </div>
-            <Plus size={18} className="text-blue-500" />
+            <div className="flex items-center space-x-2">
+              {isUploaded && (
+                <StoplightChecklist 
+                  docType={docType} 
+                  status={status} 
+                  onStatusChange={(newStatus) => handleStoplightStatusChange(docType, newStatus)}
+                />
+              )}
+              <Plus size={18} className="text-blue-500" />
+            </div>
           </div>
         </div>
         
-        {/* Document content - only shown if documents exist - now attached directly to the header */}
+        {/* Document content - only shown if documents exist */}
         {isUploaded && (
           <div className="border border-t-0 border-gray-800 rounded-b-lg overflow-hidden">
             {allDocuments.map((doc, index) => (
@@ -350,7 +371,9 @@ export function LoanDocumentStructure({
                       href="#" 
                       onClick={(e) => {
                         e.preventDefault();
-                        openDocumentInNewTab(doc);
+                        if (onViewDocument) {
+                          onViewDocument(doc.id);
+                        }
                       }}
                       className="text-blue-500 hover:underline font-medium"
                     >

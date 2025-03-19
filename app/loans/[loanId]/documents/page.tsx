@@ -25,7 +25,7 @@ import {
 import { LoanDocumentStructure } from '@/components/document/LoanDocumentStructure';
 import { DocumentUploader } from '@/components/document/DocumentUploader';
 import { loanDocumentService } from '@/utilities/loanDocumentService';
-import { DocumentCategory, LoanDocument } from '@/utilities/loanDocumentStructure';
+import { DocumentCategory, LoanDocument, DocumentStatus } from '@/utilities/loanDocumentStructure';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import LayoutWrapper from '@/app/layout-wrapper';
 import LoanSidebar from '@/components/loan/LoanSidebar';
@@ -231,6 +231,29 @@ export default function LoanDocumentsPage() {
     }
   };
   
+  // Handle document status change from stoplight
+  const handleDocumentStatusChange = (documentId: string, newStatus: string) => {
+    // Find the document in the documents array
+    const updatedDocuments = documents.map(doc => {
+      if (doc.id === documentId) {
+        return { ...doc, status: newStatus as DocumentStatus };
+      }
+      return doc;
+    });
+    
+    // Update state
+    setDocuments(updatedDocuments as LoanDocument[]);
+    
+    // Update document in the database
+    loanDocumentService.updateDocumentStatus(documentId, newStatus as DocumentStatus);
+    
+    // Update completion status
+    if (loan?.loanType) {
+      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+      setCompletionStatus(status);
+    }
+  };
+  
   // Filter documents by category
   const getFilteredDocuments = (category: DocumentCategory) => {
     return documents.filter(doc => doc.category === category);
@@ -407,6 +430,7 @@ export default function LoanDocumentsPage() {
                   uploadedDocuments={documents}
                   onUploadDocument={handleUploadDocument}
                   onViewDocument={handleViewDocument}
+                  onStatusChange={handleDocumentStatusChange}
                   category="borrower"
                 />
               </TabsContent>
@@ -418,6 +442,7 @@ export default function LoanDocumentsPage() {
                   uploadedDocuments={documents}
                   onUploadDocument={handleUploadDocument}
                   onViewDocument={handleViewDocument}
+                  onStatusChange={handleDocumentStatusChange}
                   category="property"
                 />
               </TabsContent>
@@ -429,6 +454,7 @@ export default function LoanDocumentsPage() {
                   uploadedDocuments={documents}
                   onUploadDocument={handleUploadDocument}
                   onViewDocument={handleViewDocument}
+                  onStatusChange={handleDocumentStatusChange}
                   category="closing"
                 />
               </TabsContent>
@@ -440,6 +466,7 @@ export default function LoanDocumentsPage() {
                   uploadedDocuments={documents}
                   onUploadDocument={handleUploadDocument}
                   onViewDocument={handleViewDocument}
+                  onStatusChange={handleDocumentStatusChange}
                   category="servicing"
                 />
               </TabsContent>
