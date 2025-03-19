@@ -20,39 +20,48 @@ export default function DocumentPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (documentId) {
-      const doc = simpleDocumentService.getDocumentById(documentId);
-      if (doc) {
-        setDocument(doc);
-        
-        // Process PDF data to create a blob URL
+    async function fetchDocument() {
+      if (documentId) {
         try {
-          if (doc.content) {
-            let dataUrl = doc.content;
+          const doc = await simpleDocumentService.getDocumentById(documentId);
+          if (doc) {
+            setDocument(doc);
             
-            // If it's not a complete data URL, add the prefix
-            if (!dataUrl.startsWith('data:application/pdf')) {
-              dataUrl = `data:application/pdf;base64,${dataUrl.replace(/^data:.*?;base64,/, '')}`;
+            // Process PDF data to create a blob URL
+            try {
+              if (doc.content) {
+                let dataUrl = doc.content;
+                
+                // If it's not a complete data URL, add the prefix
+                if (!dataUrl.startsWith('data:application/pdf')) {
+                  dataUrl = `data:application/pdf;base64,${dataUrl.replace(/^data:.*?;base64,/, '')}`;
+                }
+                
+                // Convert Data URL to Blob
+                fetch(dataUrl)
+                  .then(res => res.blob())
+                  .then(blob => {
+                    // Create a blob URL from the blob
+                    const url = URL.createObjectURL(blob);
+                    setPdfUrl(url);
+                  })
+                  .catch(err => {
+                    console.error("Error creating blob URL:", err);
+                  });
+              }
+            } catch (error) {
+              console.error('Error processing PDF data:', error);
             }
-            
-            // Convert Data URL to Blob
-            fetch(dataUrl)
-              .then(res => res.blob())
-              .then(blob => {
-                // Create a blob URL from the blob
-                const url = URL.createObjectURL(blob);
-                setPdfUrl(url);
-              })
-              .catch(err => {
-                console.error("Error creating blob URL:", err);
-              });
           }
         } catch (error) {
-          console.error('Error processing PDF data:', error);
+          console.error('Error fetching document:', error);
+        } finally {
+          setLoading(false);
         }
       }
-      setLoading(false);
     }
+    
+    fetchDocument();
     
     // Clean up blob URL on component unmount
     return () => {
