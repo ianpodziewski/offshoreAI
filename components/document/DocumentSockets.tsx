@@ -45,6 +45,8 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   // Add states for document type selection
   const [selectedDocType, setSelectedDocType] = useState('');
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(refreshTrigger);
+  const [documentIdsHash, setDocumentIdsHash] = useState(''); // Track unique set of documents
+  
   const documentTypes = Object.keys(REQUIRED_DOCUMENT_TYPES.reduce((acc, doc) => {
     acc[doc.docType] = doc.label;
     return acc;
@@ -53,54 +55,75 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   // Clear any duplicate documents for better display
   const clearDuplicateDocuments = useCallback(async () => {
     try {
+      setLoading(true);
+      console.log("Checking for and cleaning up duplicate documents...");
+      
       // Get all documents from the current loan
       const allDocs = simpleDocumentService.getDocumentsForLoan(loanId);
       
-      // If we have duplicates, we should clean them up
-      const uniqueDocs: Record<string, SimpleDocument> = {};
+      // Group documents by docType
+      const docsByType: Record<string, SimpleDocument[]> = {};
       
-      // Keep track of which documents we'll keep
-      const docsToKeep: SimpleDocument[] = [];
-      const docsToRemove: SimpleDocument[] = [];
-      
-      // Group by docType and keep the most recent for each type
+      // Organize documents by type
       allDocs.forEach(doc => {
-        const key = doc.docType;
-        
-        if (!uniqueDocs[key] || new Date(doc.dateUploaded) > new Date(uniqueDocs[key].dateUploaded)) {
-          // If we already had a document for this type, mark it for removal
-          if (uniqueDocs[key]) {
-            docsToRemove.push(uniqueDocs[key]);
-          }
-          
-          // Keep the most recent one
-          uniqueDocs[key] = doc;
-          docsToKeep.push(doc);
-        } else {
-          // This is an older duplicate, so mark it for removal
-          docsToRemove.push(doc);
+        if (!docsByType[doc.docType]) {
+          docsByType[doc.docType] = [];
         }
+        docsByType[doc.docType].push(doc);
       });
       
-      // If we found duplicates to remove
-      if (docsToRemove.length > 0) {
-        console.log(`Found ${docsToRemove.length} duplicate documents to clean up`);
+      let dupsRemoved = 0;
+      const docsToKeep: SimpleDocument[] = [];
+      
+      // For each document type
+      for (const docType in docsByType) {
+        const docsOfThisType = docsByType[docType];
         
-        // Delete each duplicate
-        for (const doc of docsToRemove) {
-          await simpleDocumentService.deleteDocument(doc.id);
-          console.log(`Removed duplicate document: ${doc.filename} (ID: ${doc.id})`);
+        // If we have more than one document of this type
+        if (docsOfThisType.length > 1) {
+          // Sort by date uploaded (newest first)
+          docsOfThisType.sort((a, b) => 
+            new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
+          );
+          
+          // Keep the newest one
+          const newestDoc = docsOfThisType[0];
+          docsToKeep.push(newestDoc);
+          
+          // Delete all others
+          for (let i = 1; i < docsOfThisType.length; i++) {
+            const docToRemove = docsOfThisType[i];
+            console.log(`Removing duplicate ${docType} document: ${docToRemove.id}`);
+            await simpleDocumentService.deleteDocument(docToRemove.id);
+            dupsRemoved++;
+          }
+        } else {
+          // Just one document of this type, keep it
+          docsToKeep.push(docsOfThisType[0]);
         }
+      }
+      
+      // Update our state with the deduplicated list
+      if (dupsRemoved > 0) {
+        console.log(`Cleaned up ${dupsRemoved} duplicate documents`);
         
-        // Update our local state with the cleaned list
+        // Update state with clean list
         setDocuments(docsToKeep);
         
-        // Show a message if we cleaned up duplicates
-        setSuccessMessage(`Cleaned up ${docsToRemove.length} duplicate documents`);
+        // Generate a hash of the document IDs to track changes
+        const docIdsHash = docsToKeep.map(d => d.id).sort().join('|');
+        setDocumentIdsHash(docIdsHash);
+        
+        // Show success message if we cleaned up duplicates
+        setSuccessMessage(`Cleaned up ${dupsRemoved} duplicate documents`);
         setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        console.log("No duplicate documents found");
       }
     } catch (error) {
       console.error("Error cleaning up duplicate documents:", error);
+    } finally {
+      setLoading(false);
     }
   }, [loanId]);
   
@@ -115,6 +138,11 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       
       // Update the state by removing the deleted document
       setDocuments(prevDocs => prevDocs.filter(doc => doc.id !== docId));
+      
+      // Generate a new hash of document IDs
+      const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+      const newDocIdsHash = updatedDocs.map(d => d.id).sort().join('|');
+      setDocumentIdsHash(newDocIdsHash);
       
       // Show success message
       setSuccessMessage(`Document deleted successfully`);
@@ -131,74 +159,101 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [refreshLoanDocuments]);
+  }, [loanId, refreshLoanDocuments]);
+  
+  // Fetch documents with de-duplication built in
+  const fetchAndDeduplicateDocuments = useCallback(async () => {
+    setLoading(true);
+    try {
+      // First get all documents from localStorage
+      const loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
+      
+      // Generate a hash of document IDs to detect changes
+      const newDocIdsHash = loanDocuments.map(d => d.id).sort().join('|');
+      
+      // Check if document set has changed - only update if changed
+      if (newDocIdsHash !== documentIdsHash) {
+        console.log("Document set has changed, updating component state");
+        
+        // Group documents by type and keep only the most recent of each type
+        const latestByType: Record<string, SimpleDocument> = {};
+        
+        loanDocuments.forEach(doc => {
+          if (!latestByType[doc.docType] || 
+              new Date(doc.dateUploaded) > new Date(latestByType[doc.docType].dateUploaded)) {
+            latestByType[doc.docType] = doc;
+          }
+        });
+        
+        // Convert to array and update state
+        const dedupedDocs = Object.values(latestByType);
+        setDocuments(dedupedDocs);
+        setDocumentIdsHash(newDocIdsHash);
+      }
+    } catch (error) {
+      console.error("Error fetching and deduplicating documents:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loanId, documentIdsHash]);
   
   // Fetch documents when component mounts or refreshTrigger changes
   useEffect(() => {
-    const fetchDocuments = () => {
-      setLoading(true);
-      // First get documents from localStorage (metadata only)
-      const loanDocuments = simpleDocumentService.getDocumentsForLoan(loanId);
-      setDocuments(loanDocuments);
-      setLoading(false);
-      
-      // Then also refresh the loan context to ensure it has the latest data
-      if (documentGenerated) {
-        refreshLoanDocuments();
-        
-        // Double-check after a short delay to make sure documents are persisted
-        setTimeout(() => {
-          const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-          if (refreshedDocs.length !== loanDocuments.length) {
-            console.log(`Document count changed from ${loanDocuments.length} to ${refreshedDocs.length}`);
-            setDocuments(refreshedDocs);
-          }
-          setDocumentGenerated(false);
-        }, 500);
-      }
-    };
-
-    fetchDocuments();
+    // On mount or refresh trigger change, fetch documents and clean up duplicates
+    fetchAndDeduplicateDocuments();
+    
+    // Then also refresh the loan context to ensure it has the latest data
+    if (documentGenerated) {
+      refreshLoanDocuments();
+      setDocumentGenerated(false);
+    }
     
     // Also set up a refresh interval to check for documents
     const intervalId = setInterval(() => {
       if (!loading) {
-        const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-        if (refreshedDocs.length !== documents.length) {
-          console.log(`Document count changed from ${documents.length} to ${refreshedDocs.length}`);
-          setDocuments(refreshedDocs);
-        }
+        fetchAndDeduplicateDocuments();
       }
     }, 5000); // Check every 5 seconds
     
     return () => clearInterval(intervalId);
-  }, [loanId, localRefreshTrigger, documentGenerated, refreshLoanDocuments, loading, documents.length]);
+  }, [loanId, localRefreshTrigger, documentGenerated, refreshLoanDocuments, loading, fetchAndDeduplicateDocuments]);
   
   // Also refresh documents from context when component mounts
   useEffect(() => {
     refreshLoanDocuments();
     
-    // Clean up duplicate documents when the component first loads
-    clearDuplicateDocuments();
+    // When the component first mounts, perform a thorough duplicate cleanup
+    const cleanupDuplicates = async () => {
+      console.log("Component mounted - performing thorough duplicate cleanup");
+      try {
+        setLoading(true);
+        
+        // First, use our dedicated deduplication function
+        await simpleDocumentService.deduplicateLoanDocuments(loanId);
+        
+        // Then do our component-level cleanup
+        await clearDuplicateDocuments();
+        
+        // Refresh the documents display with deduplicated documents
+        await fetchAndDeduplicateDocuments();
+      } catch (error) {
+        console.error("Error during thorough document cleanup:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    cleanupDuplicates();
     
     // Store a marker in sessionStorage that we've loaded this loan's documents
     // This helps with persistence between page navigations
     const storageKey = `doc_loaded_${loanId}`;
     if (!sessionStorage.getItem(storageKey)) {
       sessionStorage.setItem(storageKey, 'true');
-      
-      // Check for documents after a delay to ensure they're properly loaded
-      setTimeout(() => {
-        const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-        if (refreshedDocs.length > 0 && refreshedDocs.length !== documents.length) {
-          console.log(`Initial document retrieval found ${refreshedDocs.length} documents`);
-          setDocuments(refreshedDocs);
-        }
-      }, 1000);
     }
-  }, [refreshLoanDocuments, loanId, documents.length, clearDuplicateDocuments]);
+  }, [loanId, refreshLoanDocuments, clearDuplicateDocuments, fetchAndDeduplicateDocuments]);
 
-  // Get document for a specific docType if it exists
+  // Get document for a specific docType if it exists - always get the most recent
   const getDocumentForType = (docType: string): SimpleDocument | undefined => {
     // Get all documents matching this docType
     const matchingDocs = documents.filter(doc => doc.docType === docType);
@@ -230,11 +285,12 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
 
       // First check if a document of this type already exists and remove it
       const existingDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-      const existingDoc = existingDocs.find(doc => doc.docType === docType);
+      const existingDocs_ThisType = existingDocs.filter(doc => doc.docType === docType);
       
-      if (existingDoc) {
-        console.log(`Removing existing document of type ${docType} before generating new one`);
-        await simpleDocumentService.deleteDocument(existingDoc.id);
+      // Remove ALL existing documents of this type
+      for (const docToRemove of existingDocs_ThisType) {
+        console.log(`Removing existing document of type ${docType} before generating new one: ${docToRemove.id}`);
+        await simpleDocumentService.deleteDocument(docToRemove.id);
       }
 
       // Use our fake document service to generate a realistic document
@@ -246,18 +302,12 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         // Set a flag that documents were generated to trigger refresh
         setDocumentGenerated(true);
         
-        // Trigger an immediate refresh
-        const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-        setDocuments(updatedDocs);
+        // Trigger a refresh of our documents
+        await fetchAndDeduplicateDocuments();
         
         // Force an additional refresh after a delay to ensure UI is updated
-        setTimeout(() => {
-          const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-          if (refreshedDocs.length !== updatedDocs.length) {
-            console.log(`Document count changed from ${updatedDocs.length} to ${refreshedDocs.length}`);
-            setDocuments(refreshedDocs);
-          }
-          setDocumentGenerated(false);
+        setTimeout(async () => {
+          await fetchAndDeduplicateDocuments();
         }, 500);
         
         // Show success message
@@ -295,20 +345,15 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       // Set a flag that documents were generated to trigger refresh
       setDocumentGenerated(true);
       
-      // Trigger an immediate refresh
-      const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-      setDocuments(updatedDocs);
+      // Trigger a complete refresh to get the latest documents
+      await fetchAndDeduplicateDocuments();
       
       // Refresh loan context to ensure documents are persisted
       refreshLoanDocuments();
       
       // Force an additional refresh after a delay to ensure UI is updated
-      setTimeout(() => {
-        const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-        if (refreshedDocs.length !== updatedDocs.length) {
-          console.log(`Document count changed from ${updatedDocs.length} to ${refreshedDocs.length}`);
-          setDocuments(refreshedDocs);
-        }
+      setTimeout(async () => {
+        await fetchAndDeduplicateDocuments();
         setDocumentGenerated(false);
       }, 1000);
       
@@ -405,6 +450,16 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       }, 200);
       
       try {
+        // First, remove any existing documents of this type to avoid duplicates
+        const existingDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+        const existingDocsOfType = existingDocs.filter(doc => doc.docType === docType);
+        
+        // Remove all existing documents of this type
+        for (const docToRemove of existingDocsOfType) {
+          console.log(`Removing existing document of type ${docType} before uploading new one: ${docToRemove.id}`);
+          await simpleDocumentService.deleteDocument(docToRemove.id);
+        }
+      
         // If this is the executed package, handle it differently
         if (docType === 'executed_package') {
           // First upload the package itself
@@ -415,7 +470,8 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
           );
 
           if (uploadedDoc) {
-            setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), uploadedDoc]);
+            // Refresh document list after upload
+            await fetchAndDeduplicateDocuments();
             
             // Then trigger the split process
             const response = await fetch('/api/split-document', {
@@ -433,12 +489,10 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
             
             if (result.success && result.splitDocuments) {
               // Update the documents list with the split documents
-              setDocuments(prev => {
-                const withoutSplitTypes = prev.filter(doc => 
-                  !result.splitDocuments.some((splitDoc: any) => splitDoc.docType === doc.docType)
-                );
-                return [...withoutSplitTypes, ...result.splitDocuments];
-              });
+              await fetchAndDeduplicateDocuments();
+              
+              // Clean up any potential duplicates
+              await clearDuplicateDocuments();
             }
           }
         } else {
@@ -450,7 +504,8 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
           );
           
           if (uploadedDoc) {
-            setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), uploadedDoc]);
+            // Refresh document list with deduplication
+            await fetchAndDeduplicateDocuments();
           }
         }
       } catch (error) {
@@ -461,7 +516,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         setUploading(null);
       }
     }
-  }, [loanId]);
+  }, [loanId, fetchAndDeduplicateDocuments, clearDuplicateDocuments]);
 
   const handleFilesAccepted = useCallback(async (files: File[]) => {
     try {
@@ -489,15 +544,29 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         }, 200);
         
         try {
+          // Generate a document type from file name
+          const docType = file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_').toLowerCase();
+          
+          // Check for and remove any existing documents with this name/type
+          const existingDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+          const existingDocsOfType = existingDocs.filter(doc => doc.docType === docType);
+          
+          // Remove all existing documents of this type
+          for (const docToRemove of existingDocsOfType) {
+            console.log(`Removing existing document with type ${docType} before uploading new one: ${docToRemove.id}`);
+            await simpleDocumentService.deleteDocument(docToRemove.id);
+          }
+        
           // Handle the upload
           const uploadedDoc = await simpleDocumentService.addDocument(
             file, 
             loanId,
-            { docType: file.name, category: 'misc' }
+            { docType: docType, category: 'misc' }
           );
           
           if (uploadedDoc) {
-            setDocuments(prev => [...prev.filter(doc => doc.docType !== file.name), uploadedDoc]);
+            // Refresh document list with deduplication
+            await fetchAndDeduplicateDocuments();
           }
         } catch (error) {
           console.error(`Error uploading file ${file.name}:`, error);
@@ -508,6 +577,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         }
       }
 
+      // Final cleanup of any duplicates that might have been created
+      await clearDuplicateDocuments();
+      
       setSuccessMessage(`${files.length} documents uploaded successfully`);
       setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
@@ -517,7 +589,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [loanId]);
+  }, [loanId, fetchAndDeduplicateDocuments, clearDuplicateDocuments]);
 
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
@@ -529,16 +601,29 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
 
       for (const file of files) {
         try {
+          // Create a docType from the filename (without extension)
+          const docType = file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_').toLowerCase();
+          
+          // Check for and remove any existing documents with this name/type
+          const existingDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+          const existingDocsOfType = existingDocs.filter(doc => doc.docType === docType);
+          
+          // Remove all existing documents of this type
+          for (const docToRemove of existingDocsOfType) {
+            console.log(`Removing existing document with type ${docType} before uploading new one: ${docToRemove.id}`);
+            await simpleDocumentService.deleteDocument(docToRemove.id);
+          }
+        
           const uploadedDoc = await simpleDocumentService.addDocument(
             file, 
             loanId,
-            { docType: file.name.replace(/\.[^/.]+$/, ""), category: 'misc' }
+            { docType: docType, category: 'misc' }
           );
           
           if (uploadedDoc) {
             setSuccessMessage(`Uploaded document: ${file.name}`);
             setDocumentGenerated(true);
-            setLocalRefreshTrigger(prev => prev + 1);
+            await fetchAndDeduplicateDocuments();
           }
         } catch (error: any) {
           console.error(`Error uploading file ${file.name}:`, error);
@@ -546,7 +631,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         }
       }
       
-      // Clean up any duplicate documents after uploads
+      // Final cleanup of any duplicates
       await clearDuplicateDocuments();
       
       setTimeout(() => {
@@ -563,7 +648,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       // Reset the input value
       if (event.target.value) event.target.value = '';
     }
-  }, [loanId, clearDuplicateDocuments]);
+  }, [loanId, fetchAndDeduplicateDocuments, clearDuplicateDocuments]);
 
   if (loading) {
     return (

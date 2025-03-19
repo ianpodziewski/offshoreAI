@@ -405,6 +405,78 @@ export const simpleDocumentService = {
     }
   },
   
+  // Add a dedicated method to clean up duplicate documents for a specific loan
+  deduplicateLoanDocuments: async (loanId: string): Promise<SimpleDocument[]> => {
+    try {
+      console.log(`Deduplicating documents for loan ${loanId}`);
+      
+      // Get all documents
+      const allDocs = simpleDocumentService.getAllDocuments();
+      
+      // Get documents for this loan
+      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
+      
+      // Group documents by docType
+      const docsByType: Record<string, SimpleDocument[]> = {};
+      
+      // Organize documents by type
+      loanDocs.forEach(doc => {
+        if (!docsByType[doc.docType]) {
+          docsByType[doc.docType] = [];
+        }
+        docsByType[doc.docType].push(doc);
+      });
+      
+      let dupsRemoved = 0;
+      const docsToKeep: SimpleDocument[] = [];
+      const docsToDelete: string[] = [];
+      
+      // For each document type
+      for (const docType in docsByType) {
+        const docsOfThisType = docsByType[docType];
+        
+        // If we have more than one document of this type
+        if (docsOfThisType.length > 1) {
+          // Sort by date uploaded (newest first)
+          docsOfThisType.sort((a, b) => 
+            new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
+          );
+          
+          // Keep the newest one
+          const newestDoc = docsOfThisType[0];
+          docsToKeep.push(newestDoc);
+          
+          // Mark all others for deletion
+          for (let i = 1; i < docsOfThisType.length; i++) {
+            docsToDelete.push(docsOfThisType[i].id);
+            dupsRemoved++;
+          }
+        } else {
+          // Just one document of this type, keep it
+          docsToKeep.push(docsOfThisType[0]);
+        }
+      }
+      
+      // Delete duplicate documents
+      for (const docId of docsToDelete) {
+        try {
+          await simpleDocumentService.deleteDocument(docId);
+          console.log(`Deleted duplicate document ${docId}`);
+        } catch (error) {
+          console.error(`Failed to delete duplicate document ${docId}:`, error);
+        }
+      }
+      
+      console.log(`Removed ${dupsRemoved} duplicate documents for loan ${loanId}`);
+      
+      // Return the deduplicated documents
+      return docsToKeep;
+    } catch (error) {
+      console.error('Error deduplicating loan documents:', error);
+      return [];
+    }
+  },
+  
   // Add a document directly (without file upload)
   // This is used for pre-generated documents
   addDocumentDirectly: async (document: SimpleDocument): Promise<SimpleDocument> => {
@@ -412,20 +484,26 @@ export const simpleDocumentService = {
       // Get existing documents from storage
       const existingDocs = simpleDocumentService.getAllDocuments();
       
-      // Check if a document with the same docType already exists for this loan
-      // We need to check both loanId AND docType to avoid duplicates
-      const existingDocIndex = existingDocs.findIndex(doc => 
+      // Find ALL documents with the same docType for this loan
+      const duplicates = existingDocs.filter(doc => 
         doc.loanId === document.loanId && 
         doc.docType === document.docType
       );
       
-      const existingDoc = existingDocIndex >= 0 ? existingDocs[existingDocIndex] : null;
+      // Create a unique ID for the document
+      const docId = document.id || uuidv4();
       
-      // Create a unique ID for the document if it doesn't have one
-      // If we found an existing document, we'll reuse its ID
-      const docId = existingDoc ? existingDoc.id : (document.id || uuidv4());
+      console.log(`${duplicates.length > 0 ? 'Replacing' : 'Creating new'} document for loanId=${document.loanId}, docType=${document.docType}, id=${docId}`);
       
-      console.log(`${existingDoc ? 'Updating' : 'Creating new'} document for loanId=${document.loanId}, docType=${document.docType}, id=${docId}`);
+      // Delete ALL duplicate documents first
+      for (const dup of duplicates) {
+        console.log(`Removing existing document ${dup.id} of type ${document.docType} before creating new one`);
+        try {
+          await deleteContentFromIndexedDB(dup.id);
+        } catch (error) {
+          console.warn(`Could not delete content from IndexedDB for document ${dup.id}:`, error);
+        }
+      }
       
       // Try to store full content in IndexedDB first
       let indexedDBSuccess = false;
@@ -441,33 +519,30 @@ export const simpleDocumentService = {
       // Create a storage-friendly version with placeholder content for localStorage
       const storageDoc = {
         ...document,
-        id: docId, // Use existing ID or the one we just created
+        id: docId, // Use the ID we just created
         content: indexedDBSuccess 
           ? `[Content stored in IndexedDB - ID: ${docId}]` 
           : compressContent(document.content)
       };
       
-      if (existingDoc) {
-        console.log(`Updating existing document ID ${existingDoc.id} (${document.docType}) for loan ${document.loanId}`);
-        
-        // Update the document in place
-        existingDocs[existingDocIndex] = storageDoc;
-      } else {
-        // Add as a new document
-        console.log(`Adding new document ID ${docId} (${document.docType}) for loan ${document.loanId}`);
-        existingDocs.push(storageDoc);
-      }
+      // Remove all duplicates from the docs array
+      const dedupedDocs = existingDocs.filter(doc => 
+        !(doc.loanId === document.loanId && doc.docType === document.docType)
+      );
+      
+      // Add the new document
+      dedupedDocs.push(storageDoc);
       
       // Save back to storage with robust error handling
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
-        console.log(`✅ ${existingDoc ? 'Updated' : 'Added new'} document to localStorage: ${document.filename} (ID: ${docId})`);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dedupedDocs));
+        console.log(`✅ Added document to localStorage: ${document.filename} (ID: ${docId})`);
       } catch (storageError) {
         console.error('❌ localStorage issue during add, implementing cleanup', storageError);
         
         try {
           // If localStorage is full, remove older documents to make space
-          const trimmedDocs = existingDocs.slice(Math.max(Math.floor(existingDocs.length / 3), existingDocs.length - 20));
+          const trimmedDocs = dedupedDocs.slice(Math.max(Math.floor(dedupedDocs.length / 3), dedupedDocs.length - 20));
           localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, storageDoc]));
           console.log(`Trimmed documents to ${trimmedDocs.length + 1} and saved`);
         } catch (finalError) {
@@ -538,23 +613,24 @@ export const simpleDocumentService = {
       // Get all existing documents
       const allDocs = simpleDocumentService.getAllDocuments();
       
-      // First check if a document with the same filename already exists for this loan
-      // This prevents filename duplicates
-      let existingDoc = allDocs.find(doc => 
+      // Find ALL matching documents of this type for the loan
+      const existingDocs = allDocs.filter(doc => 
         doc.loanId === loanId && 
-        doc.filename === file.name
+        (doc.docType === docType || doc.filename === file.name)
       );
       
-      // If no filename match found, then check for docType match
-      if (!existingDoc) {
-        existingDoc = allDocs.find(doc => 
-          doc.loanId === loanId && 
-          doc.docType === docType
-        );
-      }
-      
       // Create document ID
-      const docId = existingDoc ? existingDoc.id : uuidv4();
+      const docId = uuidv4();
+      
+      // Delete all existing matching documents
+      for (const existingDoc of existingDocs) {
+        console.log(`Removing existing document ${existingDoc.id} (${existingDoc.filename}) before adding new one`);
+        try {
+          await deleteContentFromIndexedDB(existingDoc.id);
+        } catch (error) {
+          console.warn(`Could not delete content from IndexedDB for document ${existingDoc.id}:`, error);
+        }
+      }
       
       // Store full content in IndexedDB
       try {
@@ -564,35 +640,7 @@ export const simpleDocumentService = {
         console.error('Failed to store content in IndexedDB, falling back to compressed content', indexedDBError);
       }
       
-      if (existingDoc) {
-        console.log(`Updating existing document: ${file.name} as ${docType}`);
-        
-        // Update existing document instead of creating new
-        const updatedDoc = {
-          ...existingDoc,
-          filename: file.name,
-          fileType: file.type || 'application/pdf',
-          fileSize: file.size,
-          dateUploaded: new Date().toISOString(),
-          content: compressContent(formattedContent), // Store placeholder in localStorage
-          section,
-          subsection
-        };
-        
-        // Replace in array
-        const index = allDocs.findIndex(doc => doc.id === existingDoc.id);
-        if (index >= 0) {
-          allDocs[index] = updatedDoc;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
-          console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
-          return {
-            ...updatedDoc,
-            content: formattedContent // Return original content
-          };
-        }
-      }
-      
-      // Create new document object if no existing document was found and updated
+      // Create new document object
       const newDoc: SimpleDocument = {
         id: docId,
         loanId,
@@ -608,9 +656,14 @@ export const simpleDocumentService = {
         subsection
       };
       
+      // Remove all duplicate documents from array
+      const dedupedDocs = allDocs.filter(doc => 
+        !(doc.loanId === loanId && (doc.docType === docType || doc.filename === file.name))
+      );
+      
       // Add the new document
-      allDocs.push(newDoc);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
+      dedupedDocs.push(newDoc);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dedupedDocs));
       
       console.log(`Document added successfully: ${newDoc.filename} (ID: ${newDoc.id}, Category: ${newDoc.category})`);
       return {
@@ -757,7 +810,7 @@ export const simpleDocumentService = {
     }
   },
   
-  // Clear only chat documents
+  // Clear all chat documents
   clearChatDocuments: (): void => {
     try {
       const allDocs = simpleDocumentService.getAllDocuments();
@@ -898,6 +951,51 @@ if (typeof window !== 'undefined') {
         });
     }, 3000);
   }
+  
+  // Deduplicate documents on application load
+  // This helps clean up any duplicates that might have been created
+  setTimeout(async () => {
+    try {
+      console.log("Starting automatic document deduplication on app load...");
+      
+      // Get all documents
+      const allDocs = simpleDocumentService.getAllDocuments();
+      
+      // Group documents by loanId
+      const docsByLoan: Record<string, SimpleDocument[]> = {};
+      
+      allDocs.forEach(doc => {
+        if (!docsByLoan[doc.loanId]) {
+          docsByLoan[doc.loanId] = [];
+        }
+        docsByLoan[doc.loanId].push(doc);
+      });
+      
+      // Deduplicate documents for each loan
+      let totalLoans = 0;
+      let totalDupsDeduplicated = 0;
+      
+      for (const loanId in docsByLoan) {
+        if (docsByLoan[loanId].length > 1) {
+          totalLoans++;
+          const dedupedDocs = await simpleDocumentService.deduplicateLoanDocuments(loanId);
+          const dupsRemoved = docsByLoan[loanId].length - dedupedDocs.length;
+          totalDupsDeduplicated += dupsRemoved;
+          
+          if (dupsRemoved > 0) {
+            console.log(`Removed ${dupsRemoved} duplicates from loan ${loanId}`);
+          }
+        }
+      }
+      
+      console.log(`Automatic deduplication complete. Processed ${totalLoans} loans and removed ${totalDupsDeduplicated} duplicate documents.`);
+      
+      // Mark that we've done initial deduplication
+      localStorage.setItem('docs_deduplicated', 'true');
+    } catch (error) {
+      console.error("Error during automatic document deduplication:", error);
+    }
+  }, 5000);
 }
 
 // Update document methods that need both storage types
