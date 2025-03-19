@@ -308,16 +308,20 @@ export default function LoanDocumentsPage() {
               </div>
               <div className="flex space-x-2">
                 <Button 
-                  onClick={() => {
-                    const fakeDocuments = loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
-                    if (fakeDocuments.length > 0) {
-                      setDocuments([...documents, ...fakeDocuments]);
-                      
-                      // Update completion status
-                      if (loan?.loanType) {
-                        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-                        setCompletionStatus(status);
+                  onClick={async () => {
+                    try {
+                      const fakeDocuments = await loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
+                      if (fakeDocuments.length > 0) {
+                        setDocuments([...documents, ...fakeDocuments]);
+                        
+                        // Update completion status
+                        if (loan?.loanType) {
+                          const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+                          setCompletionStatus(status);
+                        }
                       }
+                    } catch (error) {
+                      console.error('Error generating fake documents:', error);
                     }
                   }} 
                   className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"
@@ -327,18 +331,22 @@ export default function LoanDocumentsPage() {
                   Generate Sample Documents
                 </Button>
                 <Button 
-                  onClick={() => {
-                    const totalGenerated = loanDocumentService.generateFakeDocumentsForAllLoans();
-                    alert(`Generated ${totalGenerated} sample documents across all loans.`);
-                    
-                    // Refresh documents for current loan
-                    const docs = loanDocumentService.getDocumentsForLoan(loanId);
-                    setDocuments(docs);
-                    
-                    // Update completion status
-                    if (loan?.loanType) {
-                      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-                      setCompletionStatus(status);
+                  onClick={async () => {
+                    try {
+                      const totalGenerated = await loanDocumentService.generateFakeDocumentsForAllLoans();
+                      alert(`Generated ${totalGenerated} sample documents across all loans.`);
+                      
+                      // Refresh documents for current loan
+                      const docs = loanDocumentService.getDocumentsForLoan(loanId);
+                      setDocuments(docs);
+                      
+                      // Update completion status
+                      if (loan?.loanType) {
+                        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+                        setCompletionStatus(status);
+                      }
+                    } catch (error) {
+                      console.error('Error generating fake documents for all loans:', error);
                     }
                   }} 
                   className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"

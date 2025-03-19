@@ -469,8 +469,12 @@ export function generateLoan(overrides = {}): LoanData {
   const loan = { ...baseLoan, ...overrides };
   
   // Generate fake documents for the loan
-  setTimeout(() => {
-    loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
+  setTimeout(async () => {
+    try {
+      await loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
+    } catch (error) {
+      console.error('Error generating fake documents in timeout:', error);
+    }
   }, 100);
   
   return loan;

@@ -299,14 +299,14 @@ export const loanDocumentService = {
   },
   
   // Generate fake documents for a loan
-  generateFakeDocuments: (loanId: string, loanType: string): LoanDocument[] => {
+  generateFakeDocuments: async (loanId: string, loanType: string): Promise<LoanDocument[]> => {
     try {
       console.log(`Generating fake documents for loan ${loanId} (type: ${loanType})`);
       
       // Check if localStorage is getting full - if so, use simpleDocumentService instead
       if (isLocalStorageFull()) {
         console.log('localStorage is close to full, using simpleDocumentService instead');
-        return loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType);
+        return await loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType);
       }
       
       // Get all required document types for this loan type
@@ -417,7 +417,7 @@ export const loanDocumentService = {
             
             // If we hit storage limitations, switch to the simpleDocumentService 
             // and copy over what we've generated so far
-            return loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType, fakeDocuments);
+            return await loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType, fakeDocuments);
           }
         }
       }
@@ -430,7 +430,7 @@ export const loanDocumentService = {
   },
   
   // Generate fake documents using simpleDocumentService (which uses IndexedDB for content)
-  generateFakeDocumentsUsingSimpleService: (loanId: string, loanType: string, existingFakeDocs: LoanDocument[] = []): LoanDocument[] => {
+  generateFakeDocumentsUsingSimpleService: async (loanId: string, loanType: string, existingFakeDocs: LoanDocument[] = []): Promise<LoanDocument[]> => {
     try {
       console.log('Generating fake documents using simpleDocumentService with IndexedDB');
       
@@ -526,7 +526,7 @@ export const loanDocumentService = {
   },
   
   // Generate fake documents for all loans
-  generateFakeDocumentsForAllLoans: (): number => {
+  generateFakeDocumentsForAllLoans: async (): Promise<number> => {
     try {
       // Get all loans from the database
       const loans = loanDatabase.getLoans();
@@ -534,7 +534,7 @@ export const loanDocumentService = {
       
       // Generate fake documents for each loan
       for (const loan of loans) {
-        const fakeDocuments = loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
+        const fakeDocuments = await loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
         totalDocumentsGenerated += fakeDocuments.length;
       }
       
