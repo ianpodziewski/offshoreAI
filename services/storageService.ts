@@ -9,7 +9,7 @@ const DOCUMENT_LIST_KEY = STORAGE_CONFIG.DOCUMENT_LIST_KEY;
 const DOCUMENT_BY_LOAN_PREFIX = STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX;
 
 // Initialize Redis client (if available)
-let redis: Redis | null = null;
+let redis: typeof Redis | null = null;
 if (typeof process !== 'undefined' && process.env.REDIS_URL) {
   try {
     redis = new Redis(process.env.REDIS_URL);

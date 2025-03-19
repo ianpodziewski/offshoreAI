@@ -6,7 +6,7 @@ import OpenAI from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
 
 // Initialize Redis client (if available)
-let redis: Redis | null = null;
+let redis: typeof Redis | null = null;
 if (typeof process !== 'undefined' && process.env.REDIS_URL) {
   try {
     redis = new Redis(process.env.REDIS_URL);

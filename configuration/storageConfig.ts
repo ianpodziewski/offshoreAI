@@ -88,8 +88,16 @@ export const STORAGE_CONFIG = {
   // Use a fallback mechanism in development environment
   USE_FALLBACK: IS_DEVELOPMENT && !process.env.REDIS_URL,
   
+  // Redis URL (only used server-side)
+  REDIS_URL: process.env.REDIS_URL || '',
+  
   // Log level
   LOG_LEVEL: IS_PRODUCTION ? 'error' : 'debug',
+  
+  // Storage mode name for diagnostics/display
+  get MODE_NAME() {
+    return this.USE_FALLBACK ? 'localStorage' : 'Redis';
+  }
 };
 
 // For backward compatibility
