@@ -100,7 +100,7 @@ export const loanDatabase = {
               // Remove the migration flag to force a clean migration on next load
               localStorage.removeItem('indexeddb_migration_done');
             })
-            .catch(error => {
+            .catch((error: Error) => {
               console.warn('Error during simplified document service clearing:', error);
             });
           
