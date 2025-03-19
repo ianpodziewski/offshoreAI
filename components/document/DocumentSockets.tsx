@@ -228,6 +228,15 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         throw new Error(`Loan with ID ${loanId} not found`);
       }
 
+      // First check if a document of this type already exists and remove it
+      const existingDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+      const existingDoc = existingDocs.find(doc => doc.docType === docType);
+      
+      if (existingDoc) {
+        console.log(`Removing existing document of type ${docType} before generating new one`);
+        await simpleDocumentService.deleteDocument(existingDoc.id);
+      }
+
       // Use our fake document service to generate a realistic document
       const newDoc = await fakeDocumentService.generateFakeDocument(loan, docType);
 
@@ -240,6 +249,16 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         // Trigger an immediate refresh
         const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
         setDocuments(updatedDocs);
+        
+        // Force an additional refresh after a delay to ensure UI is updated
+        setTimeout(() => {
+          const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+          if (refreshedDocs.length !== updatedDocs.length) {
+            console.log(`Document count changed from ${updatedDocs.length} to ${refreshedDocs.length}`);
+            setDocuments(refreshedDocs);
+          }
+          setDocumentGenerated(false);
+        }, 500);
         
         // Show success message
         setSuccessMessage(`Generated ${docType} document successfully`);
@@ -258,6 +277,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
   const handleGenerateAllSamples = async () => {
     try {
       setLoading(true);
+      setGeneratingAll(true);
       console.log("Generating all sample documents");
 
       // Get the current loan
@@ -268,9 +288,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       }
 
       // Use our fake document service to generate all document types
-      await fakeDocumentService.generateAllFakeDocuments(loan);
+      const generatedDocuments = await fakeDocumentService.generateAllFakeDocuments(loan);
 
-      console.log("All documents generated");
+      console.log(`Generated ${generatedDocuments.length} documents successfully`);
       
       // Set a flag that documents were generated to trigger refresh
       setDocumentGenerated(true);
@@ -282,8 +302,18 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       // Refresh loan context to ensure documents are persisted
       refreshLoanDocuments();
       
+      // Force an additional refresh after a delay to ensure UI is updated
+      setTimeout(() => {
+        const refreshedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+        if (refreshedDocs.length !== updatedDocs.length) {
+          console.log(`Document count changed from ${updatedDocs.length} to ${refreshedDocs.length}`);
+          setDocuments(refreshedDocs);
+        }
+        setDocumentGenerated(false);
+      }, 1000);
+      
       // Show success message
-      setSuccessMessage("Generated all sample documents successfully");
+      setSuccessMessage(`Generated ${generatedDocuments.length} sample documents successfully`);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error: any) {
       console.error("Error generating all sample documents:", error);
@@ -291,6 +321,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setLoading(false);
+      setGeneratingAll(false);
     }
   };
 

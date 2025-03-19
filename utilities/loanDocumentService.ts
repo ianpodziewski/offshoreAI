@@ -367,9 +367,12 @@ export const loanDocumentService = {
       // Generate fake documents in batches to avoid memory issues
       console.log(`Need to generate ${requiredDocTypes.length} document types`);
       
+      // For explicit generation requests, don't filter by existing docs
+      // This ensures we generate ALL document types when requested
       // Filter out document types that already exist
-      const existingDocTypes = new Set(existingDocs.map(doc => doc.docType));
-      const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
+      //const existingDocTypes = new Set(existingDocs.map(doc => doc.docType));
+      //const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
+      const docTypesToGenerate = requiredDocTypes;
       
       console.log(`After filtering existing docs, need to generate ${docTypesToGenerate.length} document types`);
       
@@ -380,6 +383,13 @@ export const loanDocumentService = {
         
         // Process each doc type in this batch
         for (const docType of batch) {
+          // Check for existing document of this type and remove it
+          const existingDoc = existingDocs.find(doc => doc.docType === docType.docType);
+          if (existingDoc) {
+            console.log(`Removing existing document of type ${docType.docType} before generating new one`);
+            loanDocumentService.deleteDocument(existingDoc.id);
+          }
+        
           // Generate random document attributes
           const fileType = getRandomFileType();
           const fileSize = getRandomFileSize();
@@ -456,13 +466,22 @@ export const loanDocumentService = {
       
       // Get existing documents for this loan (from simpleDocumentService)
       const existingSimpleDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-      const existingDocTypes = new Set([
-        ...existingSimpleDocs.map(doc => doc.docType),
-        ...existingFakeDocs.map(doc => doc.docType)
-      ]);
       
-      // Filter out document types that already exist
-      const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
+      // Clear existing documents to ensure fresh generation
+      console.log(`Clearing ${existingSimpleDocs.length} existing documents before generating new ones`);
+      for (const doc of existingSimpleDocs) {
+        await simpleDocumentService.deleteDocument(doc.id);
+      }
+      
+      // Don't filter by existing docs - generate all document types
+      // const existingDocTypes = new Set([
+      //   ...existingSimpleDocs.map(doc => doc.docType),
+      //   ...existingFakeDocs.map(doc => doc.docType)
+      // ]);
+      
+      // Generate all document types
+      // const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
+      const docTypesToGenerate = requiredDocTypes;
       
       // Fetch loan data
       const loanData = loanDatabase.getLoanById(loanId);
@@ -492,7 +511,7 @@ export const loanDocumentService = {
           // Generate document content based on the document type
           const content = generateDocumentContent(docType.docType, loanData);
           
-          // Create a unique ID
+          // Create a unique ID with timestamp to ensure uniqueness
           const docId = uuidv4();
           
           // Create the document in simpleDocumentService

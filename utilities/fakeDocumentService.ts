@@ -309,7 +309,7 @@ export const fakeDocumentService = {
       doc.docType === docType || doc.docType === standardDocType
     );
 
-    // If an existing document is found, delete it to prevent duplicates
+    // Always delete existing document of this type to ensure we generate a fresh one
     if (existingDoc) {
       console.log(`Removing existing document of type ${docType} before generating a new one`);
       await simpleDocumentService.deleteDocument(existingDoc.id);
@@ -330,7 +330,7 @@ export const fakeDocumentService = {
     
     // Create a SimpleDocument object with the generated content
     const fakeDocument: SimpleDocument = {
-      id: `fake-${docType}-${loan.id}`, // Consistent ID based on docType and loanId
+      id: `fake-${docType}-${loan.id}-${Date.now()}`, // Add timestamp to ensure uniqueness
       loanId: loan.id,
       filename: `${docType.replace(/_/g, '-')}.html`,
       docType: docType, // Keep original docType for consistency with requests
@@ -354,8 +354,24 @@ export const fakeDocumentService = {
     
     const generatedDocuments: SimpleDocument[] = [];
 
+    // Get all available document generators
+    const allDocTypes = Object.keys(documentGenerators);
+    console.log(`Found ${allDocTypes.length} document types to generate`);
+
+    // First, clear any existing documents for this loan to start fresh
+    try {
+      const existingDocs = simpleDocumentService.getDocumentsForLoan(loan.id);
+      console.log(`Clearing ${existingDocs.length} existing documents before generating new ones`);
+      
+      for (const doc of existingDocs) {
+        await simpleDocumentService.deleteDocument(doc.id);
+      }
+    } catch (error) {
+      console.error("Error clearing existing documents:", error);
+    }
+
     // Generate each document type sequentially to avoid overwhelming the system
-    for (const docType of Object.keys(documentGenerators)) {
+    for (const docType of allDocTypes) {
       try {
         console.log(`Generating document type: ${docType}`);
         // The generateFakeDocument method now handles removing existing documents
