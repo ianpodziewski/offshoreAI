@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
 import storageService from '@/services/storageService';
 import { kv } from '@vercel/kv';
+import OpenAI from 'openai';
+import { Pinecone } from '@pinecone-database/pinecone';
 
 // Temporary types until we create proper utility files
 interface OpenAIVerificationResult {
@@ -51,14 +53,12 @@ export async function GET(req: NextRequest) {
       }
       
       try {
-        const { Configuration, OpenAIApi } = require('openai');
-        const configuration = new Configuration({
+        const openai = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
         });
-        const openai = new OpenAIApi(configuration);
         
         // A simple call to check if the API key is valid
-        await openai.listModels();
+        await openai.models.list();
         return { valid: true };
       } catch (error: any) {
         return { 
@@ -85,18 +85,16 @@ export async function GET(req: NextRequest) {
   };
   
   try {
-    const { Configuration, OpenAIApi } = require('openai');
-    const configuration = new Configuration({
+    const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
-    const openai = new OpenAIApi(configuration);
     
-    const response = await openai.listModels();
+    const response = await openai.models.list();
     
-    if (response.status === 200) {
+    if (response) {
       diagnostics.openai.connection = 'success';
       // Extract just the model IDs we're interested in
-      const allModels = response.data.data.map((model: any) => model.id);
+      const allModels = response.data.map((model) => model.id);
       // Filter for newer models
       const relevantModels = allModels.filter((model: string) => 
         model.includes('gpt-4') || 
@@ -109,7 +107,7 @@ export async function GET(req: NextRequest) {
         relevantModels.join(', ');
     } else {
       diagnostics.openai.connection = 'failed';
-      diagnostics.openai.error_message = `OpenAI API returned status ${response.status}`;
+      diagnostics.openai.error_message = `OpenAI API returned an invalid response`;
     }
   } catch (error: any) {
     diagnostics.openai.connection = 'failed';
@@ -133,10 +131,7 @@ export async function GET(req: NextRequest) {
       }
       
       try {
-        const { PineconeClient } = require('@pinecone-database/pinecone');
-        const pinecone = new PineconeClient();
-        await pinecone.init({
-          environment: process.env.PINECONE_ENVIRONMENT || 'us-east1-gcp',
+        const pinecone = new Pinecone({
           apiKey: process.env.PINECONE_API_KEY,
         });
         
@@ -160,17 +155,14 @@ export async function GET(req: NextRequest) {
       
       try {
         // Try to get vector count
-        const { PineconeClient } = require('@pinecone-database/pinecone');
-        const pinecone = new PineconeClient();
-        await pinecone.init({
-          environment: process.env.PINECONE_ENVIRONMENT || 'us-east1-gcp',
+        const pinecone = new Pinecone({
           apiKey: process.env.PINECONE_API_KEY as string,
         });
         
         const indexName = process.env.PINECONE_INDEX_NAME || 'offshoreai';
-        const index = pinecone.Index(indexName);
+        const index = pinecone.index(indexName);
         const statsResponse = await index.describeIndexStats();
-        diagnostics.pinecone.vector_count = statsResponse.totalVectorCount || 0;
+        diagnostics.pinecone.vector_count = statsResponse.totalRecordCount || 0;
       } catch (statsError) {
         diagnostics.pinecone.vector_count = 'Error getting count';
       }
