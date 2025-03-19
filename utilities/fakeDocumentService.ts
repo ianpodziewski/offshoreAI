@@ -280,7 +280,7 @@ export const fakeDocumentService = {
   /**
    * Generate a fake document for a specific loan and document type
    */
-  generateFakeDocument(loan: LoanData, docType: string): SimpleDocument | null {
+  async generateFakeDocument(loan: LoanData, docType: string): Promise<SimpleDocument | null> {
     // Convert potentially aliased document type to standard name
     const standardDocType = this.getStandardDocType(docType);
     
@@ -317,22 +317,26 @@ export const fakeDocumentService = {
     };
 
     // Store the document using the existing service
-    return simpleDocumentService.addDocumentDirectly(fakeDocument);
+    return await simpleDocumentService.addDocumentDirectly(fakeDocument);
   },
 
   /**
    * Generate all available fake documents for a loan
    */
-  generateAllFakeDocuments(loan: LoanData): SimpleDocument[] {
+  async generateAllFakeDocuments(loan: LoanData): Promise<SimpleDocument[]> {
     const generatedDocuments: SimpleDocument[] = [];
 
-    // Generate each document type
-    Object.keys(documentGenerators).forEach(docType => {
-      const document = this.generateFakeDocument(loan, docType);
-      if (document) {
-        generatedDocuments.push(document);
+    // Generate each document type sequentially to avoid overwhelming the system
+    for (const docType of Object.keys(documentGenerators)) {
+      try {
+        const document = await this.generateFakeDocument(loan, docType);
+        if (document) {
+          generatedDocuments.push(document);
+        }
+      } catch (error) {
+        console.error(`Error generating fake document for ${docType}:`, error);
       }
-    });
+    }
 
     return generatedDocuments;
   },

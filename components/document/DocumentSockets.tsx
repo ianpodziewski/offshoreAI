@@ -55,8 +55,8 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     return documents.find(doc => doc.docType === docType);
   };
 
-  // Generate a single sample document
-  const handleGenerateSample = (docType: string) => {
+  // Generate a sample document for a specific type
+  const handleGenerateSample = async (docType: string) => {
     const loan = loanDatabase.getLoanById(loanId);
     
     if (!loan) {
@@ -64,17 +64,21 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       return;
     }
     
-    // Generate the document
-    const document = fakeDocumentService.generateFakeDocument(loan, docType);
-    
-    if (document) {
-      // Update the documents list
-      setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), document]);
+    try {
+      // Generate the document
+      const document = await fakeDocumentService.generateFakeDocument(loan, docType);
+      
+      if (document) {
+        // Update the documents list
+        setDocuments(prev => [...prev.filter(doc => doc.docType !== docType), document]);
+      }
+    } catch (error) {
+      console.error(`Error generating sample document for ${docType}:`, error);
     }
   };
 
   // Generate all sample documents
-  const handleGenerateAllSamples = () => {
+  const handleGenerateAllSamples = async () => {
     setGeneratingAll(true);
     
     try {
@@ -86,7 +90,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       }
       
       // Generate all documents
-      const generatedDocs = fakeDocumentService.generateAllFakeDocuments(loan);
+      const generatedDocs = await fakeDocumentService.generateAllFakeDocuments(loan);
       
       // Update the state with new documents
       if (generatedDocs.length > 0) {
@@ -98,7 +102,7 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         });
       }
     } catch (error) {
-      console.error('Error generating sample documents:', error);
+      console.error('Error generating all sample documents:', error);
     } finally {
       setGeneratingAll(false);
     }
