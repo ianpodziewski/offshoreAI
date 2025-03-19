@@ -21,6 +21,18 @@ export interface SimpleDocument {
 // Constants for storage keys
 const STORAGE_KEY = 'simple_documents';
 
+// Add this utility function at the top of the file, right after the imports
+const compressContent = (content: string): string => {
+  // Only store first 2000 chars for localStorage to prevent quota issues
+  // The full content should be retrieved from the server when needed
+  if (typeof content === 'string' && content.length > 2000) {
+    // Store beginning and a bit of the end
+    return content.substring(0, 1800) + '...[content truncated for storage]...' + 
+           content.substring(content.length - 200);
+  }
+  return content;
+};
+
 // Helper function for document type classification
 function classifyDocument(filename: string): { 
   docType: string; 
@@ -250,11 +262,18 @@ export const simpleDocumentService = {
         doc.docType === document.docType
       );
       
+      // Create a storage-friendly version of the document
+      const storageDoc = {
+        ...document,
+        // Compress content to avoid localStorage quota issues
+        content: compressContent(document.content)
+      };
+      
       if (existingDoc) {
         // Update existing document instead of creating new
         const updatedDoc = {
           ...existingDoc,
-          ...document,
+          ...storageDoc,
           id: existingDoc.id // Keep the original ID
         };
         
@@ -262,20 +281,34 @@ export const simpleDocumentService = {
         const index = existingDocs.findIndex(doc => doc.id === existingDoc.id);
         if (index >= 0) {
           existingDocs[index] = updatedDoc;
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
-          console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
-          return updatedDoc;
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
+            console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
+          } catch (storageError) {
+            console.error('❌ localStorage quota exceeded, implementing storage cleanup');
+            // If localStorage is full, remove older documents to make space
+            const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 4));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, updatedDoc]));
+          }
+          return document; // Return original document with full content
         }
       }
       
       // Add the new document
-      existingDocs.push(document);
+      existingDocs.push(storageDoc);
       
       // Save back to storage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
+      } catch (storageError) {
+        console.error('❌ localStorage quota exceeded, implementing storage cleanup');
+        // If localStorage is full, remove older documents to make space
+        const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 3));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, storageDoc]));
+      }
       
       console.log(`✅ Document added directly: ${document.filename}`);
-      return document;
+      return document; // Return original document with full content
     } catch (error) {
       console.error('❌ Error adding document directly:', error);
       throw error;
@@ -348,13 +381,19 @@ export const simpleDocumentService = {
           subsection
         };
         
+        // Compress content for storage
+        updatedDoc.content = compressContent(formattedContent);
+        
         // Replace in array
         const index = allDocs.findIndex(doc => doc.id === existingDoc.id);
         if (index >= 0) {
           allDocs[index] = updatedDoc;
           localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
           console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
-          return updatedDoc;
+          return {
+            ...updatedDoc,
+            content: formattedContent // Return original content
+          };
         }
       }
       
@@ -369,7 +408,7 @@ export const simpleDocumentService = {
         category,
         docType,
         status: 'pending',
-        content: formattedContent,
+        content: compressContent(formattedContent), // Compress for storage
         section,
         subsection
       };
@@ -379,7 +418,10 @@ export const simpleDocumentService = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(allDocs));
       
       console.log(`Document added successfully: ${newDoc.filename} (ID: ${newDoc.id}, Category: ${newDoc.category})`);
-      return newDoc;
+      return {
+        ...newDoc,
+        content: formattedContent
+      };
     } catch (error) {
       console.error('Error adding document:', error);
       return null;

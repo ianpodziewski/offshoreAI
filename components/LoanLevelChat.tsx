@@ -83,25 +83,7 @@ export default function LoanLevelChat() {
     setIsLoading(true);
     
     try {
-      // First, get relevant context from Pinecone
-      const contextResponse = await fetch('/api/loan-documents/query', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          loanId: activeLoan.id,
-          query: userMessage
-        }),
-      });
-      
-      if (!contextResponse.ok) {
-        throw new Error(`Failed to retrieve document context: ${contextResponse.statusText}`);
-      }
-      
-      const contextData = await contextResponse.json();
-      
-      // Now build the prompt with the loan context and document context
+      // Build the loan info context
       const loanInfo = `
         Loan ID: ${activeLoan.id}
         Borrower: ${activeLoan.borrowerName}
@@ -112,52 +94,36 @@ export default function LoanLevelChat() {
         Loan Type: ${activeLoan.loanType}
       `;
       
-      // Check if we have any document context
-      const documentContext = contextData.contextString || "No relevant documents found for this query.";
-      const hasRelevantDocs = contextData.matchCount > 0;
-      setHasIndexedDocuments(hasRelevantDocs);
-      
-      // Call OpenAI API directly for simplicity
-      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Call our server-side API endpoint
+      const response = await fetch('/api/loan-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY || process.env.OPENAI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a loan-specific AI assistant that provides information about a specific loan based on the loan data and associated documents. 
-              Use the provided loan information and document context to answer the user's question accurately. 
-              If the information is not available in the context, state that you don't have that specific information.
-              
-              Loan Information:
-              ${loanInfo}
-              
-              Document Context:
-              ${documentContext}`
-            },
-            { role: 'user', content: userMessage }
-          ],
-          temperature: 0.7,
+          loanId: activeLoan.id,
+          userMessage,
+          loanInfo
         }),
       });
       
-      if (!openaiResponse.ok) {
-        throw new Error(`OpenAI API error: ${openaiResponse.statusText}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response from loan chat API');
       }
       
-      const openaiData = await openaiResponse.json();
-      const assistantReply = openaiData.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
+      const data = await response.json();
       
-      // Add assistant message to chat
+      // Track if we have indexed documents
+      setHasIndexedDocuments(data.hasDocumentContext);
+      
+      // Add assistant message to the chat
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: assistantReply,
+        content: data.response,
         timestamp: new Date()
       }]);
+      
     } catch (error) {
       console.error('Error generating response:', error);
       

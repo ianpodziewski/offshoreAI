@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface LoanChatIndexerProps {
   loanId: string;
@@ -13,6 +14,9 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
   const [message, setMessage] = useState('');
   const [indexedDocs, setIndexedDocs] = useState(0);
   const [totalDocs, setTotalDocs] = useState(0);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [diagnosticData, setDiagnosticData] = useState<any>(null);
+  const [isDiagnosticLoading, setIsDiagnosticLoading] = useState(false);
 
   const startIndexing = async () => {
     try {
@@ -90,6 +94,31 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     }
   };
   
+  // Function to run diagnostics
+  const runDiagnostics = async () => {
+    try {
+      setIsDiagnosticLoading(true);
+      
+      const response = await fetch('/api/diagnostics', {
+        method: 'GET',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get diagnostics: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      setDiagnosticData(data.diagnostics);
+      setShowDiagnostics(true);
+    } catch (error) {
+      console.error('Error running diagnostics:', error);
+      setDiagnosticData({ error: error instanceof Error ? error.message : 'Unknown error' });
+      setShowDiagnostics(true);
+    } finally {
+      setIsDiagnosticLoading(false);
+    }
+  };
+  
   // Render status icon based on indexing status
   const renderStatusIcon = () => {
     switch (indexingStatus) {
@@ -113,6 +142,17 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
         </h3>
         
         <div className="flex gap-2">
+          <Button 
+            size="sm"
+            variant="outline"
+            onClick={runDiagnostics}
+            disabled={isDiagnosticLoading}
+            className="flex items-center gap-1"
+          >
+            {isDiagnosticLoading ? <RefreshCw size={14} className="animate-spin mr-1" /> : <Wrench size={14} />}
+            Diagnostics
+          </Button>
+          
           <Button 
             size="sm"
             variant="outline"
@@ -176,6 +216,111 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
           Indexing makes loan documents searchable and allows the chatbot to provide specific answers based on document contents.
         </p>
       </div>
+
+      {/* Diagnostics Dialog */}
+      <Dialog open={showDiagnostics} onOpenChange={setShowDiagnostics}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-gray-900 text-white border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">API Diagnostics</DialogTitle>
+          </DialogHeader>
+          
+          {diagnosticData ? (
+            <div className="space-y-4">
+              <div className="border border-gray-800 rounded p-3">
+                <h3 className="font-medium mb-2">Environment</h3>
+                <p>Node Environment: {diagnosticData.environment}</p>
+                <p>Timestamp: {diagnosticData.timestamp}</p>
+              </div>
+              
+              <div className="border border-gray-800 rounded p-3">
+                <h3 className="font-medium mb-2">API Keys</h3>
+                
+                <div className="mb-3">
+                  <div className="flex items-center mb-1">
+                    <div className={`w-3 h-3 rounded-full mr-2 ${diagnosticData.api_keys?.openai?.valid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    <h4>OpenAI API Key</h4>
+                  </div>
+                  <p className="text-sm ml-5">{diagnosticData.api_keys?.openai?.message}</p>
+                  <p className="text-xs text-gray-400 ml-5">Key: {diagnosticData.openai_key_redacted}</p>
+                </div>
+                
+                <div>
+                  <div className="flex items-center mb-1">
+                    <div className={`w-3 h-3 rounded-full mr-2 ${diagnosticData.api_keys?.pinecone?.valid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    <h4>Pinecone API Key</h4>
+                  </div>
+                  <p className="text-sm ml-5">{diagnosticData.api_keys?.pinecone?.message}</p>
+                  <p className="text-xs text-gray-400 ml-5">Key: {diagnosticData.pinecone_key_redacted}</p>
+                </div>
+              </div>
+              
+              <div className="border border-gray-800 rounded p-3">
+                <h3 className="font-medium mb-2">Pinecone</h3>
+                <p>Index Name: {diagnosticData.pinecone?.index_name}</p>
+                {diagnosticData.pinecone?.connection === "success" ? (
+                  <>
+                    <div className="flex items-center my-1">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <p>Connection: Success</p>
+                    </div>
+                    <p>Vector Count: {diagnosticData.pinecone?.vector_count}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center my-1">
+                      <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                      <p>Connection: Failed</p>
+                    </div>
+                    {diagnosticData.pinecone?.error_message && (
+                      <p className="text-red-400 text-sm">Error: {diagnosticData.pinecone.error_message}</p>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              <div className="border border-gray-800 rounded p-3">
+                <h3 className="font-medium mb-2">OpenAI</h3>
+                {diagnosticData.openai?.connection === "success" ? (
+                  <>
+                    <div className="flex items-center my-1">
+                      <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                      <p>Connection: Success</p>
+                    </div>
+                    <p>Available Models: {diagnosticData.openai?.available_models}</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center my-1">
+                      <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                      <p>Connection: Failed</p>
+                    </div>
+                    {diagnosticData.openai?.error_message && (
+                      <p className="text-red-400 text-sm">Error: {diagnosticData.openai.error_message}</p>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              <div className="text-sm text-gray-400 mt-4">
+                <p>If you're seeing API key errors, ensure your .env file has the correct keys:</p>
+                <pre className="bg-gray-800 p-2 mt-1 rounded overflow-x-auto">
+                  OPENAI_API_KEY=sk-...your-key-here<br/>
+                  PINECONE_API_KEY=your-key-here
+                </pre>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-40">
+              <RefreshCw size={24} className="animate-spin text-blue-400" />
+              <span className="ml-2">Loading diagnostics...</span>
+            </div>
+          )}
+          
+          <div className="flex justify-end mt-4">
+            <Button onClick={() => setShowDiagnostics(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

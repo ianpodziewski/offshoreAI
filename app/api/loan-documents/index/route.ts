@@ -24,76 +24,61 @@ export const runtime = "nodejs";
 // Helper function to extract text from HTML content
 function extractTextFromHtml(htmlContent: string): string {
   try {
+    console.log(`Extracting text from HTML content of length: ${htmlContent.length}`);
+    // Check if we have valid HTML content
+    if (!htmlContent || typeof htmlContent !== 'string') {
+      console.error("Invalid HTML content:", typeof htmlContent);
+      return "";
+    }
+    
     // Simple regex-based extraction for HTML content
-    return htmlContent
+    const text = htmlContent
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
       .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
       .replace(/<[^>]*>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+    
+    console.log(`Extracted text length: ${text.length}`);
+    
+    // Return empty string if the extraction produced nothing substantial
+    if (text.length < 20) {
+      console.warn("Extracted text is too short, possibly invalid HTML");
+      return ""; 
+    }
+    
+    return text;
   } catch (error) {
     console.error("Error extracting text from HTML:", error);
-    return htmlContent;
+    return "";
   }
 }
 
-// Helper function to chunk text into smaller pieces
-function chunkText(text: string, maxChunkSize: number = CHUNK_SIZE): string[] {
+// Helper function to chunk text for embedding
+function chunkText(text: string, chunkSize = CHUNK_SIZE): string[] {
+  if (!text || text.length === 0) return [];
+  
+  console.log(`Chunking text of length: ${text.length}`);
+  
+  // Split text into sentences then recombine into chunks of approximately chunkSize
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
   const chunks: string[] = [];
+  let currentChunk = '';
   
-  // If text is short enough, return it as a single chunk
-  if (text.length <= maxChunkSize) {
-    return [text];
-  }
-  
-  // Split text into paragraphs
-  const paragraphs = text.split(/\n\s*\n/);
-  let currentChunk = "";
-  
-  for (const paragraph of paragraphs) {
-    // If adding this paragraph would exceed the chunk size
-    if (currentChunk.length + paragraph.length + 2 > maxChunkSize) {
-      // If current chunk is not empty, add it to chunks
-      if (currentChunk.length > 0) {
-        chunks.push(currentChunk.trim());
-        currentChunk = "";
-      }
-      
-      // If paragraph itself is longer than max chunk size, split it further
-      if (paragraph.length > maxChunkSize) {
-        const sentences = paragraph.split(/(?<=[.!?])\s+/);
-        let sentenceChunk = "";
-        
-        for (const sentence of sentences) {
-          if (sentenceChunk.length + sentence.length + 1 > maxChunkSize) {
-            chunks.push(sentenceChunk.trim());
-            sentenceChunk = sentence;
-          } else {
-            sentenceChunk += " " + sentence;
-          }
-        }
-        
-        if (sentenceChunk.length > 0) {
-          currentChunk = sentenceChunk.trim();
-        }
-      } else {
-        currentChunk = paragraph;
-      }
+  for (const sentence of sentences) {
+    if (currentChunk.length + sentence.length > chunkSize) {
+      chunks.push(currentChunk);
+      currentChunk = sentence;
     } else {
-      // Add paragraph to current chunk
-      if (currentChunk.length > 0) {
-        currentChunk += "\n\n" + paragraph;
-      } else {
-        currentChunk = paragraph;
-      }
+      currentChunk += ' ' + sentence;
     }
   }
   
-  // Add the last chunk if it's not empty
   if (currentChunk.length > 0) {
-    chunks.push(currentChunk.trim());
+    chunks.push(currentChunk);
   }
   
+  console.log(`Created ${chunks.length} chunks`);
   return chunks;
 }
 
@@ -114,13 +99,15 @@ export async function POST(req: NextRequest) {
     if (!documents || documents.length === 0) {
       return NextResponse.json({ 
         message: "No documents found for this loan",
-        indexed: 0
+        indexed: 0,
+        totalDocuments: 0
       }, { status: 200 });
     }
     
     console.log(`📚 Found ${documents.length} documents for loan ${loanId}`);
     
     let indexedDocuments = 0;
+    let totalDocuments = documents.length;
     const errors: any[] = [];
     
     // Process and index each document
@@ -132,26 +119,27 @@ export async function POST(req: NextRequest) {
           continue;
         }
         
-        console.log(`🔍 Processing document: ${doc.filename}`);
+        console.log(`🔍 Processing document: ${doc.filename}, Content type: ${doc.fileType || 'unknown'}, Content length: ${doc.content.length}`);
         
         // Extract text based on content type
         let textContent = "";
         
         if (doc.fileType === 'text/html' || doc.filename.endsWith('.html') || 
-            (typeof doc.content === 'string' && doc.content.trim().startsWith('<'))) {
+            (typeof doc.content === 'string' && (doc.content.trim().startsWith('<') || doc.content.includes('<html')))) {
           // HTML content - extract text
+          console.log(`Detected HTML content in ${doc.filename}`);
           textContent = extractTextFromHtml(doc.content);
         } else if (typeof doc.content === 'string') {
           // Plain text or other content type
           textContent = doc.content;
         } else {
-          console.log(`⚠️ Skipping document '${doc.filename}' - unsupported content type`);
+          console.log(`⚠️ Skipping document '${doc.filename}' - unsupported content type: ${typeof doc.content}`);
           continue;
         }
         
         // Skip if no meaningful text was extracted
         if (!textContent || textContent.length < 50) {
-          console.log(`⚠️ Skipping document '${doc.filename}' - insufficient text content`);
+          console.log(`⚠️ Skipping document '${doc.filename}' - insufficient text content (${textContent.length} chars)`);
           continue;
         }
         
@@ -163,35 +151,48 @@ export async function POST(req: NextRequest) {
         for (let i = 0; i < chunks.length; i++) {
           const chunk = chunks[i];
           
-          // Generate embedding
-          const embeddingResponse = await openaiClient.embeddings.create({
-            model: "text-embedding-ada-002",
-            input: chunk.substring(0, MAX_EMBEDDING_CHARS),
-          });
+          console.log(`Generating embedding for chunk ${i+1}/${chunks.length} (${chunk.length} chars)`);
           
-          const embedding = embeddingResponse.data[0].embedding;
-          
-          // Create a unique ID for this chunk with the loan prefix to separate from other content
-          const chunkId = `${LOAN_DOCUMENTS_PREFIX}-${loanId}-doc-${doc.id}-chunk-${i}`;
-          
-          // Index to Pinecone - we'll use ID prefixing and metadata to separate loan documents
-          await pineconeIndex.upsert([{
-            id: chunkId,
-            values: embedding,
-            metadata: {
-              loanId: loanId,
-              documentId: doc.id,
-              documentName: doc.filename,
-              documentType: doc.docType || 'unknown',
+          try {
+            // Generate embedding
+            const embeddingResponse = await openaiClient.embeddings.create({
+              model: "text-embedding-ada-002",
+              input: chunk.substring(0, MAX_EMBEDDING_CHARS),
+            });
+            
+            const embedding = embeddingResponse.data[0].embedding;
+            console.log(`✅ Generated embedding of length: ${embedding.length}`);
+            
+            // Create a unique ID for this chunk with the loan prefix to separate from other content
+            const chunkId = `${LOAN_DOCUMENTS_PREFIX}-${loanId}-doc-${doc.id}-chunk-${i}`;
+            
+            // Index to Pinecone - we'll use ID prefixing and metadata to separate loan documents
+            await pineconeIndex.upsert([{
+              id: chunkId,
+              values: embedding,
+              metadata: {
+                loanId: loanId,
+                documentId: doc.id,
+                documentName: doc.filename,
+                documentType: doc.docType || 'unknown',
+                chunkIndex: i,
+                totalChunks: chunks.length,
+                text: chunk,
+                source: 'loan-document',
+                type: 'loan-document' // Additional type field for filtering
+              }
+            }]);
+            
+            console.log(`✅ Indexed chunk ${i+1}/${chunks.length} of document '${doc.filename}' with ID: ${chunkId}`);
+          } catch (embeddingError: any) {
+            console.error(`❌ Error generating embedding for chunk ${i+1}: ${embeddingError.message}`, embeddingError);
+            errors.push({
+              filename: doc.filename,
+              id: doc.id,
               chunkIndex: i,
-              totalChunks: chunks.length,
-              text: chunk,
-              source: 'loan-document',
-              type: 'loan-document' // Additional type field for filtering
-            }
-          }]);
-          
-          console.log(`✅ Indexed chunk ${i+1}/${chunks.length} of document '${doc.filename}' with ID: ${chunkId}`);
+              error: embeddingError.message || 'Unknown embedding error'
+            });
+          }
         }
         
         indexedDocuments++;
@@ -205,14 +206,17 @@ export async function POST(req: NextRequest) {
       }
     }
     
-    return NextResponse.json({
-      message: `Successfully processed ${indexedDocuments} documents for loan ${loanId}`,
-      totalDocuments: documents.length,
+    console.log(`✅ Indexing complete. Successfully indexed ${indexedDocuments} out of ${totalDocuments} documents.`);
+    
+    return NextResponse.json({ 
+      message: `Successfully indexed ${indexedDocuments} out of ${totalDocuments} documents.`,
       indexedDocuments,
+      totalDocuments,
       errors: errors.length > 0 ? errors : undefined
     }, { status: 200 });
+    
   } catch (error: any) {
-    console.error("❌ Error indexing loan documents:", error);
+    console.error("❌ Error indexing documents:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
