@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench, Trash2, Link } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench, Trash2, Link, HardDrive } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
+import storageService from '@/services/storageService';
+import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
 
 interface LoanChatIndexerProps {
   loanId: string;
@@ -21,6 +23,22 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
   const [showStorageWarning, setShowStorageWarning] = useState(false);
   const [fixingAssociations, setFixingAssociations] = useState(false);
   const [fixedCount, setFixedCount] = useState(0);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationStats, setMigrationStats] = useState<{migrated: number, errors: number} | null>(null);
+  
+  // Storage configuration status
+  const [storageMode, setStorageMode] = useState<'localStorage' | 'vercelKV' | 'unknown'>('unknown');
+  
+  // Check which storage mode we're using
+  useEffect(() => {
+    // Check Vercel KV configuration
+    if (isVercelKVConfigured() && !KV_CONFIG.USE_FALLBACK) {
+      setStorageMode('vercelKV');
+    } else {
+      setStorageMode('localStorage');
+    }
+  }, []);
 
   const startIndexing = async () => {
     try {
@@ -130,65 +148,8 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
       setProgress(20);
       setMessage('Clearing document storage...');
       
-      // Call a special endpoint to clear the storage
-      const response = await fetch('/api/loan-documents/clear-storage', {
-        method: 'POST',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to clear storage: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      // Handle client-side storage clearing based on response
-      if (data.clientAction === "clearStorage") {
-        setProgress(50);
-        setMessage('Clearing browser storage...');
-        
-        // Clear localStorage items
-        if (data.clearInstructions?.storageKeys) {
-          data.clearInstructions.storageKeys.forEach((key: string) => {
-            try {
-              localStorage.removeItem(key);
-              console.log(`Cleared localStorage item: ${key}`);
-            } catch (err) {
-              console.error(`Error clearing localStorage key ${key}:`, err);
-            }
-          });
-        }
-        
-        // Clear IndexedDB if specified
-        if (data.clearInstructions?.dbName) {
-          try {
-            const dbName = data.clearInstructions.dbName;
-            const request = indexedDB.deleteDatabase(dbName);
-            
-            request.onsuccess = () => {
-              console.log(`Successfully deleted IndexedDB database: ${dbName}`);
-              setProgress(90);
-              setMessage('Storage cleared successfully, finalizing...');
-            };
-            
-            request.onerror = () => {
-              console.error(`Error deleting IndexedDB database: ${dbName}`);
-              // Continue anyway
-              setProgress(90);
-              setMessage('Partial storage clear completed, finalizing...');
-            };
-            
-            // Wait for the operation to complete
-            request.onblocked = () => {
-              console.warn(`IndexedDB deletion was blocked. Close any other open tabs of this site and try again.`);
-              setProgress(90);
-              setMessage('Storage partially cleared, please close other tabs and try again.');
-            };
-          } catch (dbError) {
-            console.error('Error accessing IndexedDB:', dbError);
-            // Continue anyway
-          }
-        }
-      }
+      // Use the storageService directly to clear all documents
+      await storageService.clearAllDocuments();
       
       // Set a short timeout to let browser finish operations
       setTimeout(() => {
@@ -205,7 +166,7 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     }
   };
 
-  // New function to fix document associations
+  // Function to fix document associations
   const fixDocumentAssociations = async () => {
     try {
       setFixingAssociations(true);
@@ -213,8 +174,8 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
       setProgress(30);
       setMessage('Fixing document associations...');
       
-      // Call our utility function to fix document associations
-      const fixedDocs = simpleDocumentService.fixDocumentAssociations(loanId);
+      // Call the storage service method to fix unassociated documents
+      const fixedDocs = await storageService.fixUnassociatedDocuments(loanId);
       
       setFixedCount(fixedDocs.length);
       setProgress(100);
@@ -232,6 +193,40 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
       setProgress(100);
     } finally {
       setFixingAssociations(false);
+    }
+  };
+  
+  // Function to migrate data from localStorage to Vercel KV
+  const migrateToVercelKV = async () => {
+    if (storageMode !== 'vercelKV') {
+      setMessage('Cannot migrate to Vercel KV. Not configured.');
+      return;
+    }
+    
+    try {
+      setIsMigrating(true);
+      setIndexingStatus('indexing');
+      setProgress(10);
+      setMessage('Starting migration of documents from localStorage to Vercel KV...');
+      
+      // Call migration function
+      const stats = await storageService.migrateFromLocalStorage();
+      setMigrationStats(stats);
+      
+      setProgress(100);
+      
+      if (stats.errors === 0) {
+        setIndexingStatus('success');
+        setMessage(`Successfully migrated ${stats.migrated} documents to Vercel KV.`);
+      } else {
+        setIndexingStatus('error');
+        setMessage(`Migration completed with ${stats.errors} errors. ${stats.migrated} documents migrated successfully.`);
+      }
+    } catch (error) {
+      setIndexingStatus('error');
+      setMessage(`Error during migration: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -266,6 +261,9 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
         <h3 className="font-medium text-white flex items-center gap-2">
           {renderStatusIcon()}
           Document Indexing
+          <span className="ml-2 text-xs px-2 py-1 rounded bg-gray-800 text-gray-400">
+            {storageMode === 'vercelKV' ? 'Vercel KV' : 'localStorage'}
+          </span>
         </h3>
         
         <div className="flex gap-2">
@@ -290,6 +288,20 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
             <Link size={14} />
             Fix Associations
           </Button>
+          
+          {/* Add Migration Button when in Vercel KV mode */}
+          {storageMode === 'vercelKV' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowMigrationDialog(true)}
+              disabled={isMigrating || indexingStatus === 'indexing'}
+              className="flex items-center gap-1"
+            >
+              <HardDrive size={14} />
+              Migrate Data
+            </Button>
+          )}
           
           <Button 
             size="sm"
@@ -395,6 +407,7 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
                 <h3 className="font-medium mb-2">Environment</h3>
                 <p>Node Environment: {diagnosticData.environment}</p>
                 <p>Timestamp: {diagnosticData.timestamp}</p>
+                <p>Storage Mode: {storageMode}</p>
               </div>
               
               <div className="border border-gray-800 rounded p-3">
@@ -414,6 +427,14 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
                     <h4>Pinecone API Key</h4>
                   </div>
                   <p className="text-sm ml-5">{diagnosticData.api_keys?.pinecone?.message}</p>
+                </div>
+                
+                <div className="mt-3">
+                  <div className="flex items-center mb-1">
+                    <div className={`w-3 h-3 rounded-full mr-2 ${storageMode === 'vercelKV' ? 'bg-green-500' : 'bg-yellow-500'}`}></div>
+                    <h4>Vercel KV</h4>
+                  </div>
+                  <p className="text-sm ml-5">{storageMode === 'vercelKV' ? 'Connected to Vercel KV' : 'Using localStorage fallback'}</p>
                 </div>
               </div>
               
@@ -468,7 +489,15 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
                 <p>If you're seeing API key errors, ensure your .env file has the correct keys:</p>
                 <pre className="bg-gray-800 p-2 mt-1 rounded overflow-x-auto">
                   OPENAI_API_KEY=sk-...your-key-here<br/>
-                  PINECONE_API_KEY=your-key-here
+                  PINECONE_API_KEY=your-key-here<br/>
+                  {storageMode !== 'vercelKV' && (
+                    <>
+                    <span className="text-yellow-400"># For Vercel KV storage:</span><br/>
+                    VERCEL_KV_URL=your-kv-url-here<br/>
+                    VERCEL_KV_REST_API_TOKEN=your-token-here<br/>
+                    VERCEL_KV_REST_API_URL=your-api-url-here
+                    </>
+                  )}
                 </pre>
               </div>
             </div>
@@ -481,6 +510,49 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
           
           <div className="flex justify-end mt-4">
             <Button onClick={() => setShowDiagnostics(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Migration Dialog */}
+      <Dialog open={showMigrationDialog} onOpenChange={setShowMigrationDialog}>
+        <DialogContent className="max-w-md bg-gray-900 text-white border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Migrate Document Storage</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <p className="text-gray-300 mb-4">
+              This will migrate all documents from localStorage to Vercel KV storage, creating a more robust and scalable solution.
+            </p>
+            
+            {migrationStats && (
+              <div className={`p-3 rounded mb-4 ${
+                migrationStats.errors > 0 ? 'bg-red-900/30 border border-red-800' : 'bg-green-900/30 border border-green-800'
+              }`}>
+                <h4 className="font-medium">Migration Results</h4>
+                <p>Documents migrated: {migrationStats.migrated}</p>
+                <p>Errors: {migrationStats.errors}</p>
+              </div>
+            )}
+            
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setShowMigrationDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={migrateToVercelKV} 
+                disabled={isMigrating || storageMode !== 'vercelKV'}
+                className="flex items-center gap-1"
+              >
+                {isMigrating ? (
+                  <RefreshCw size={14} className="animate-spin mr-1" />
+                ) : (
+                  <HardDrive size={14} className="mr-1" />
+                )}
+                {isMigrating ? 'Migrating...' : 'Start Migration'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

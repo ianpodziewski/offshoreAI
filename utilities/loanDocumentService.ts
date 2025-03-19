@@ -13,6 +13,8 @@ import { loanDatabase } from './loanDatabase';
 import { LoanData } from './loanGenerator';
 import { getDocumentTemplate } from './templates/documentTemplateStrings';
 import { simpleDocumentService } from './simplifiedDocumentService';
+import { OpenAI } from 'openai';
+import { Pinecone } from '@pinecone-database/pinecone';
 
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
@@ -22,6 +24,16 @@ const FAKE_DOCUMENT_STATUSES: DocumentStatus[] = ['pending', 'approved', 'receiv
 
 // Document file types - Changed to only use HTML to avoid creating PDFs
 const FILE_TYPES = ['.html'];
+
+// Maximum characters that can be safely sent to the embeddings API
+const MAX_EMBEDDING_CHARS = 8000;
+
+// Prefix for loan document embeddings to group them separately
+const LOAN_DOCUMENTS_PREFIX = 'loan-docs';
+
+// Chunk size (characters) for splitting large documents
+const CHUNK_SIZE = 3500;
+const CHUNK_OVERLAP = 500;
 
 // Function to generate a random file size between 100KB and 10MB
 const getRandomFileSize = (): number => {
@@ -694,4 +706,225 @@ if (typeof window !== 'undefined') {
       console.error('Error during initial document deduplication:', error);
     }
   }, 2000);
+} 
+
+/**
+ * Extracts plain text from HTML content
+ */
+function extractTextFromHtml(htmlContent: string): string {
+  try {
+    // Simple HTML tag removal - for more complex HTML, consider using a proper HTML parser
+    let text = htmlContent
+      .replace(/<style.*?<\/style>/gs, '') // Remove style tags and content
+      .replace(/<script.*?<\/script>/gs, '') // Remove script tags and content
+      .replace(/<[^>]*>/g, ' ') // Replace HTML tags with spaces
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
+      
+    // Decode HTML entities
+    text = text.replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'");
+      
+    return text;
+  } catch (error) {
+    console.error('Error extracting text from HTML:', error);
+    return htmlContent; // Return original content if extraction fails
+  }
+}
+
+/**
+ * Splits text into chunks for processing
+ */
+function chunkText(text: string): string[] {
+  const chunks: string[] = [];
+  
+  if (text.length <= CHUNK_SIZE) {
+    chunks.push(text);
+    return chunks;
+  }
+  
+  let startIndex = 0;
+  
+  while (startIndex < text.length) {
+    // Find a good breaking point near the chunk size
+    let endIndex = Math.min(startIndex + CHUNK_SIZE, text.length);
+    
+    // If we're not at the end, try to find a natural break point
+    if (endIndex < text.length) {
+      // Look for paragraph, sentence, or word breaks
+      const paragraphBreak = text.lastIndexOf('\n\n', endIndex);
+      const sentenceBreak = text.lastIndexOf('. ', endIndex);
+      const wordBreak = text.lastIndexOf(' ', endIndex);
+      
+      // Use the closest break that's not too far back
+      if (paragraphBreak > startIndex && paragraphBreak > endIndex - 200) {
+        endIndex = paragraphBreak + 2; // Include the paragraph break
+      } else if (sentenceBreak > startIndex && sentenceBreak > endIndex - 100) {
+        endIndex = sentenceBreak + 2; // Include the period and space
+      } else if (wordBreak > startIndex) {
+        endIndex = wordBreak + 1; // Include the space
+      }
+    }
+    
+    // Add this chunk
+    chunks.push(text.substring(startIndex, endIndex).trim());
+    
+    // Move to next chunk with overlap
+    startIndex = endIndex - CHUNK_OVERLAP;
+    
+    // Ensure we're making progress
+    if (startIndex >= text.length || startIndex <= 0) {
+      break;
+    }
+  }
+  
+  return chunks;
+}
+
+/**
+ * Result of the indexing process
+ */
+export interface IndexingResult {
+  indexedCount: number;
+  totalCount: number;
+  errors: any[];
+}
+
+/**
+ * Indexes documents for a specific loan
+ */
+export async function indexDocumentsForLoan(loanId: string, documents: SimpleDocument[]): Promise<IndexingResult> {
+  if (!documents || documents.length === 0) {
+    return { indexedCount: 0, totalCount: 0, errors: [] };
+  }
+  
+  // Initialize clients
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+  const pineconeApiKey = process.env.PINECONE_API_KEY;
+  const pineconeEnvironment = process.env.PINECONE_ENVIRONMENT || 'us-east1-gcp';
+  const pineconeIndexName = process.env.PINECONE_INDEX_NAME || 'offshoreai';
+  
+  if (!openaiApiKey || !pineconeApiKey) {
+    throw new Error('OpenAI or Pinecone API keys are missing');
+  }
+  
+  const openaiClient = new OpenAI({ 
+    apiKey: openaiApiKey,
+    timeout: 60000 // 60 second timeout
+  });
+  
+  const pinecone = new Pinecone({ 
+    apiKey: pineconeApiKey
+  });
+  
+  const pineconeIndex = pinecone.Index(pineconeIndexName);
+  
+  // Results tracking
+  let indexedCount = 0;
+  const errors: any[] = [];
+  
+  // Process each document
+  for (const document of documents) {
+    try {
+      console.log(`Processing document: ${document.filename}`);
+      
+      // Skip documents without content
+      if (!document.content) {
+        console.log(`Skipping document '${document.filename}' - no content`);
+        continue;
+      }
+      
+      // Extract text based on content type
+      let textContent = "";
+      
+      if (document.fileType === 'text/html' || document.filename.endsWith('.html') || 
+          (typeof document.content === 'string' && (document.content.trim().startsWith('<') || document.content.includes('<html')))) {
+        // HTML content - extract text
+        console.log(`Detected HTML content in ${document.filename}`);
+        textContent = extractTextFromHtml(document.content);
+      } else if (typeof document.content === 'string') {
+        // Plain text or other content type
+        textContent = document.content;
+      } else {
+        console.log(`Skipping document '${document.filename}' - unsupported content type`);
+        continue;
+      }
+      
+      // Skip if no meaningful text was extracted
+      if (!textContent || textContent.length < 50) {
+        console.log(`Skipping document '${document.filename}' - insufficient text content (${textContent.length} chars)`);
+        continue;
+      }
+      
+      // Split document into chunks
+      const chunks = chunkText(textContent);
+      console.log(`Document '${document.filename}' split into ${chunks.length} chunks`);
+      
+      // Process each chunk
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        
+        try {
+          // Generate embedding
+          const embeddingResponse = await openaiClient.embeddings.create({
+            model: "text-embedding-ada-002",
+            input: chunk.substring(0, MAX_EMBEDDING_CHARS),
+          });
+          
+          const embedding = embeddingResponse.data[0].embedding;
+          
+          // Create a unique ID for this chunk
+          const chunkId = `${LOAN_DOCUMENTS_PREFIX}-${loanId}-doc-${document.id}-chunk-${i}`;
+          
+          // Index to Pinecone
+          await pineconeIndex.upsert([{
+            id: chunkId,
+            values: embedding,
+            metadata: {
+              loanId: loanId,
+              documentId: document.id,
+              documentName: document.filename,
+              documentType: document.docType || 'unknown',
+              chunkIndex: i,
+              totalChunks: chunks.length,
+              text: chunk,
+              source: 'loan-document',
+              type: 'loan-document'
+            }
+          }]);
+          
+          console.log(`Indexed chunk ${i+1}/${chunks.length} of document '${document.filename}'`);
+        } catch (chunkError: any) {
+          console.error(`Error indexing chunk ${i+1}: ${chunkError.message}`);
+          errors.push({
+            filename: document.filename,
+            id: document.id,
+            chunkIndex: i,
+            error: chunkError.message || 'Unknown chunk error'
+          });
+        }
+      }
+      
+      indexedCount++;
+    } catch (docError: any) {
+      console.error(`Error processing document '${document.filename}':`, docError);
+      errors.push({
+        filename: document.filename,
+        id: document.id,
+        error: docError.message || 'Unknown document error'
+      });
+    }
+  }
+  
+  console.log(`Indexing complete. Indexed ${indexedCount} out of ${documents.length} documents.`);
+  
+  return {
+    indexedCount,
+    totalCount: documents.length,
+    errors
+  };
 } 

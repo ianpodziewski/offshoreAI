@@ -42,3 +42,4 @@ public/uploads/*
 data/*.pdf
 /temp/
 /public/uploads/split/
+.vercel

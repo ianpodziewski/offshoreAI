@@ -3,6 +3,9 @@ import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 import { simpleDocumentService, SimpleDocument } from "@/utilities/simplifiedDocumentService";
+import { indexDocumentsForLoan } from '@/utilities/loanDocumentService';
+import storageService from '@/services/storageService';
+import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
 
 // Maximum characters that can be safely sent to the embeddings API
 const MAX_EMBEDDING_CHARS = 8000;
@@ -86,217 +89,95 @@ function chunkText(text: string, chunkSize = CHUNK_SIZE): string[] {
 
 export async function POST(req: NextRequest) {
   try {
-    // Parse the request body
     const { loanId } = await req.json();
     
     if (!loanId) {
-      return NextResponse.json({ error: "Loan ID is required" }, { status: 400 });
+      return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
     }
     
-    console.log(`📝 Indexing documents for loan: ${loanId}`);
+    // Get the storage mode for debug information
+    const storageMode = KV_CONFIG.USE_FALLBACK ? 'localStorage' : (isVercelKVConfigured() ? 'vercelKV' : 'localStorage');
     
-    // Initialize OpenAI client inside the request handler for better error handling
-    const openaiClient = new OpenAI({ 
-      apiKey: openaiApiKey,
-      // Add a default timeout to prevent hanging requests
-      timeout: 60000 
-    });
+    // Get all documents for this loan
+    const documents = await storageService.getDocumentsForLoan(loanId);
     
-    // Get loan documents from the simple document service
-    const documentsMetadata = simpleDocumentService.getDocumentsForLoan(loanId);
-    
-    // Log document metadata to help with debugging
-    console.log(`📊 Document metadata for loanId ${loanId}:`, JSON.stringify(documentsMetadata.map(d => ({
-      id: d.id,
-      loanId: d.loanId,
-      filename: d.filename,
-      docType: d.docType,
-      hasContent: !!d.content,
-      contentLength: d.content ? d.content.length : 0
-    })), null, 2));
-    
-    if (!documentsMetadata || documentsMetadata.length === 0) {
-      console.warn(`⚠️ No documents found for loan ${loanId} in storage`);
+    if (!documents || documents.length === 0) {
+      console.log(`No documents found for loan ${loanId} using storage mode: ${storageMode}`);
       
-      // Check if there are any documents at all in storage
-      const allDocs = simpleDocumentService.getAllDocuments();
-      console.log(`📚 Total documents in storage: ${allDocs.length}`);
-      
-      // Log a sample of document loanIds to help diagnose association issues
-      if (allDocs.length > 0) {
-        const loanIdSamples = Array.from(new Set(allDocs.slice(0, 5).map(d => d.loanId)));
-        console.log(`🔍 Sample loan IDs in storage: ${loanIdSamples.join(', ')}`);
-      }
+      // Check if we have any documents without a loan ID that could be fixed
+      const allDocs = await storageService.getAllDocuments(0, 1000);
+      const unassociatedDocs = allDocs.documents.filter(doc => !doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null');
+      const hasFixableDocuments = unassociatedDocs.length > 0;
       
       return NextResponse.json({ 
-        message: "No documents found for this loan",
-        indexed: 0,
-        totalDocuments: 0
-      }, { status: 200 });
+        error: 'No documents found for this loan', 
+        loanId, 
+        unassociatedDocuments: unassociatedDocs.length,
+        hasFixableDocuments,
+        storageMode
+      }, { status: 404 });
     }
-    
-    console.log(`📚 Found ${documentsMetadata.length} documents for loan ${loanId}`);
-    
-    let indexedDocuments = 0;
-    const totalDocuments = documentsMetadata.length;
-    const errors: any[] = [];
-    
-    // Process and index each document
-    for (const docMeta of documentsMetadata) {
-      try {
-        console.log(`🔍 Processing document: ${docMeta.filename}, Content type: ${docMeta.fileType || 'unknown'}`);
-        
-        // Get the full document content from IndexedDB if needed
-        let fullDocument: SimpleDocument | null;
-        
-        if (docMeta.content && !docMeta.content.includes('[Content stored in IndexedDB]')) {
-          // Content is already available in localStorage
-          fullDocument = docMeta;
-          console.log(`Document content available directly: ${docMeta.id}`);
-        } else {
-          // Retrieve full content from IndexedDB
-          console.log(`Retrieving full content from IndexedDB for: ${docMeta.id}`);
-          fullDocument = await simpleDocumentService.getDocumentById(docMeta.id);
-          
-          if (!fullDocument) {
-            console.log(`⚠️ Could not retrieve full document '${docMeta.filename}' - skipping`);
-            continue;
-          }
-        }
-        
-        // Skip documents without content
-        if (!fullDocument.content) {
-          console.log(`⚠️ Skipping document '${fullDocument.filename}' - no content`);
-          continue;
-        }
-        
-        console.log(`Content length: ${fullDocument.content.length}`);
-        
-        // Extract text based on content type
-        let textContent = "";
-        
-        if (fullDocument.fileType === 'text/html' || fullDocument.filename.endsWith('.html') || 
-            (typeof fullDocument.content === 'string' && (fullDocument.content.trim().startsWith('<') || fullDocument.content.includes('<html')))) {
-          // HTML content - extract text
-          console.log(`Detected HTML content in ${fullDocument.filename}`);
-          textContent = extractTextFromHtml(fullDocument.content);
-        } else if (typeof fullDocument.content === 'string') {
-          // Plain text or other content type
-          textContent = fullDocument.content;
-        } else {
-          console.log(`⚠️ Skipping document '${fullDocument.filename}' - unsupported content type: ${typeof fullDocument.content}`);
-          continue;
-        }
-        
-        // Skip if no meaningful text was extracted
-        if (!textContent || textContent.length < 50) {
-          console.log(`⚠️ Skipping document '${fullDocument.filename}' - insufficient text content (${textContent.length} chars)`);
-          continue;
-        }
-        
-        // Split document into chunks for processing
-        const chunks = chunkText(textContent);
-        console.log(`📄 Document '${fullDocument.filename}' split into ${chunks.length} chunks`);
-        
-        // Generate embeddings for each chunk and index to Pinecone
-        for (let i = 0; i < chunks.length; i++) {
-          const chunk = chunks[i];
-          
-          console.log(`Generating embedding for chunk ${i+1}/${chunks.length} (${chunk.length} chars)`);
-          
-          try {
-            // Generate embedding
-            const embeddingResponse = await openaiClient.embeddings.create({
-              model: "text-embedding-ada-002",
-              input: chunk.substring(0, MAX_EMBEDDING_CHARS),
-            });
-            
-            const embedding = embeddingResponse.data[0].embedding;
-            console.log(`✅ Generated embedding of length: ${embedding.length}`);
-            
-            // Create a unique ID for this chunk with the loan prefix to separate from other content
-            const chunkId = `${LOAN_DOCUMENTS_PREFIX}-${loanId}-doc-${fullDocument.id}-chunk-${i}`;
-            
-            // Index to Pinecone - we'll use ID prefixing and metadata to separate loan documents
-            await pineconeIndex.upsert([{
-              id: chunkId,
-              values: embedding,
-              metadata: {
-                loanId: loanId,
-                documentId: fullDocument.id,
-                documentName: fullDocument.filename,
-                documentType: fullDocument.docType || 'unknown',
-                chunkIndex: i,
-                totalChunks: chunks.length,
-                text: chunk,
-                source: 'loan-document',
-                type: 'loan-document' // Additional type field for filtering
-              }
-            }]);
-            
-            console.log(`✅ Indexed chunk ${i+1}/${chunks.length} of document '${fullDocument.filename}' with ID: ${chunkId}`);
-          } catch (embeddingError: any) {
-            console.error(`❌ Error generating embedding for chunk ${i+1}: ${embeddingError.message}`, embeddingError);
-            errors.push({
-              filename: fullDocument.filename,
-              id: fullDocument.id,
-              chunkIndex: i,
-              error: embeddingError.message || 'Unknown embedding error'
-            });
-          }
-        }
-        
-        indexedDocuments++;
-      } catch (docError: any) {
-        console.error(`❌ Error processing document '${docMeta.filename}':`, docError);
-        errors.push({
-          filename: docMeta.filename,
-          id: docMeta.id,
-          error: docError.message || 'Unknown error'
-        });
-      }
-    }
-    
-    console.log(`✅ Indexing complete. Successfully indexed ${indexedDocuments} out of ${totalDocuments} documents.`);
-    
+
+    // Start the indexing process
+    console.log(`Indexing ${documents.length} documents for loan ${loanId}`);
+    const result = await indexDocumentsForLoan(loanId, documents);
+
+    return NextResponse.json({
+      message: 'Documents indexed successfully',
+      loanId,
+      indexedDocuments: result.indexedCount,
+      totalDocuments: documents.length,
+      storageMode
+    });
+  } catch (error) {
+    console.error('Error indexing documents:', error);
     return NextResponse.json({ 
-      message: `Successfully indexed ${indexedDocuments} out of ${totalDocuments} documents.`,
-      indexedDocuments,
-      totalDocuments,
-      errors: errors.length > 0 ? errors : undefined
-    }, { status: 200 });
-    
-  } catch (error: any) {
-    console.error("❌ Error indexing documents:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+      error: `Failed to index documents: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, { status: 500 });
   }
 }
 
-// GET endpoint to check indexing status
 export async function GET(req: NextRequest) {
   try {
-    // Get the loan ID from the query parameters
     const url = new URL(req.url);
     const loanId = url.searchParams.get('loanId');
-    
+
     if (!loanId) {
-      return NextResponse.json({ error: "Loan ID is required" }, { status: 400 });
+      return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
     }
+
+    // Get the storage mode for debug information
+    const storageMode = KV_CONFIG.USE_FALLBACK ? 'localStorage' : (isVercelKVConfigured() ? 'vercelKV' : 'localStorage');
     
-    // Query Pinecone to get stats, filtering by our type field to get loan documents
-    const stats = await pineconeIndex.describeIndexStats();
+    // Get all documents for this loan
+    const documents = await storageService.getDocumentsForLoan(loanId);
     
-    // Currently we don't have a direct way to count by filter
-    // So we'll just return the total count and note that we're filtering when querying
-    
+    if (!documents || documents.length === 0) {
+      // Check if we have any documents without a loan ID that could be fixed
+      const allDocs = await storageService.getAllDocuments(0, 1000);
+      const unassociatedDocs = allDocs.documents.filter(doc => !doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null');
+      const hasFixableDocuments = unassociatedDocs.length > 0;
+      
+      return NextResponse.json({ 
+        message: 'No documents found for this loan', 
+        indexed: false,
+        loanId,
+        unassociatedDocuments: unassociatedDocs.length,
+        hasFixableDocuments,
+        storageMode
+      });
+    }
+
     return NextResponse.json({
+      message: `Found ${documents.length} documents for loan ${loanId}`,
+      documentCount: documents.length,
       loanId,
-      indexed: true, // Since we can't easily check just loan docs with the stats method
-      totalIndexSize: stats.totalRecordCount,
-      message: "Loan documents are separated using ID prefix and metadata filtering"
-    }, { status: 200 });
-  } catch (error: any) {
-    console.error("❌ Error checking indexing status:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+      storageMode
+    });
+  } catch (error) {
+    console.error('Error checking document status:', error);
+    return NextResponse.json({ 
+      error: `Failed to check document status: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    }, { status: 500 });
   }
 }
