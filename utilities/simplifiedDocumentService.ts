@@ -1,7 +1,7 @@
 // utilities/simplifiedDocumentService.ts
 import { v4 as uuidv4 } from 'uuid';
 import { clientDocumentService } from '@/services/clientDocumentService';
-import { isRedisConfigured, STORAGE_CONFIG } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG } from '@/configuration/storageConfig';
 
 export interface SimpleDocument {
   id: string;
@@ -474,90 +474,6 @@ export const simpleDocumentService = {
     }
   },
   
-  // Sync documents with server storage
-  syncDocumentsToServer: async (loanId?: string): Promise<{
-    success: boolean;
-    message: string;
-    syncedCount: number;
-    errorCount: number;
-  }> => {
-    console.log(`Starting document sync for loan ${loanId || 'all'}...`);
-    
-    try {
-      // Get documents to sync (either for specific loan or all)
-      const docsToSync = loanId 
-        ? simpleDocumentService.getDocumentsForLoan(loanId)
-        : simpleDocumentService.getAllDocuments();
-      
-      if (docsToSync.length === 0) {
-        console.log('No documents to sync');
-        return { 
-          success: true, 
-          message: 'No documents to sync',
-          syncedCount: 0, 
-          errorCount: 0 
-        };
-      }
-      
-      console.log(`Syncing ${docsToSync.length} documents to server storage`);
-      
-      // Track results
-      let syncedCount = 0;
-      let errorCount = 0;
-      let errorMessages: string[] = [];
-      
-      // Sync each document
-      for (const doc of docsToSync) {
-        try {
-          // For each document in localStorage, try to get the full content from IndexedDB
-          let fullDoc = { ...doc };
-          
-          // Try to get full content from IndexedDB
-          try {
-            const content = await getContentFromIndexedDB(doc.id);
-            if (content) {
-              fullDoc.content = content;
-            }
-          } catch (indexedDBError) {
-            console.warn(`Could not retrieve content from IndexedDB for document ${doc.id}:`, indexedDBError);
-            // Continue with the content we have
-          }
-          
-          // Save to server storage
-          await clientDocumentService.saveDocument(fullDoc);
-          syncedCount++;
-          console.log(`✅ Synced document ${doc.id} to server storage`);
-        } catch (docError) {
-          console.error(`Error syncing document ${doc.id}:`, docError);
-          errorCount++;
-          errorMessages.push(`Failed to sync document ${doc.id}: ${docError instanceof Error ? docError.message : 'Unknown error'}`);
-        }
-      }
-      
-      const message = errorCount > 0 
-        ? `Sync completed with ${errorCount} errors. ${errorMessages.join('; ')}`
-        : `Successfully synced ${syncedCount} documents to server storage`;
-        
-      console.log(`🔄 Sync complete. Synced ${syncedCount}/${docsToSync.length} documents to server storage.`);
-      
-      return {
-        success: errorCount === 0,
-        message,
-        syncedCount,
-        errorCount
-      };
-    } catch (error) {
-      const errorMessage = `Global sync error: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.error('Error syncing documents to server:', error);
-      return { 
-        success: false, 
-        message: errorMessage,
-        syncedCount: 0, 
-        errorCount: 1
-      };
-    }
-  },
-  
   // Function to sync documents from server storage to localStorage
   syncDocumentsFromServer: async (loanId?: string): Promise<{
     success: boolean;
@@ -567,102 +483,15 @@ export const simpleDocumentService = {
   }> => {
     console.log(`Starting document sync from server for loan ${loanId || 'all'}...`);
     
-    try {
-      // Skip if server storage not configured
-      if (!isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK) {
-        return {
-          success: false,
-          message: "Server storage not configured or in fallback mode",
-          syncedCount: 0,
-          errorCount: 0
-        };
-      }
-      
-      // Get documents from server storage
-      const serverDocs = loanId 
-        ? await clientDocumentService.getDocumentsForLoan(loanId)
-        : (await clientDocumentService.getAllDocuments(0, 10000)).documents;
-      
-      if (serverDocs.length === 0) {
-        console.log('No documents found on server to sync');
-        return { 
-          success: true, 
-          message: 'No documents found on server to sync',
-          syncedCount: 0, 
-          errorCount: 0 
-        };
-      }
-      
-      console.log(`Syncing ${serverDocs.length} documents from server storage`);
-      
-      // Track results
-      let syncedCount = 0;
-      let errorCount = 0;
-      let errorMessages: string[] = [];
-      
-      // Get current documents in localStorage for comparison
-      const localDocs = simpleDocumentService.getAllDocuments();
-      const localDocIds = new Set(localDocs.map(doc => doc.id));
-      
-      // Sync each document
-      for (const doc of serverDocs) {
-        try {
-          // Add to localStorage if it doesn't exist or update it
-          if (!localDocIds.has(doc.id)) {
-            await simpleDocumentService.addDocumentDirectly(doc);
-          } else {
-            // If the document exists, we merge by keeping latest version
-            const localDoc = localDocs.find(d => d.id === doc.id);
-            if (localDoc) {
-              const serverDate = new Date(doc.dateUploaded);
-              const localDate = new Date(localDoc.dateUploaded);
-              
-              if (serverDate > localDate) {
-                // Server version is newer, update local
-                await simpleDocumentService.addDocumentDirectly(doc);
-              }
-            }
-          }
-          
-          // Always try to update the content in IndexedDB
-          if (doc.content) {
-            await storeContentInIndexedDB(doc.id, doc.content);
-          }
-          
-          syncedCount++;
-          console.log(`✅ Synced document ${doc.id} from server storage`);
-        } catch (docError) {
-          console.error(`Error syncing document ${doc.id} from server:`, docError);
-          errorCount++;
-          errorMessages.push(`Failed to sync document ${doc.id}: ${docError instanceof Error ? docError.message : 'Unknown error'}`);
-        }
-      }
-      
-      const message = errorCount > 0 
-        ? `Sync from server completed with ${errorCount} errors. ${errorMessages.join('; ')}`
-        : `Successfully synced ${syncedCount} documents from server storage`;
-        
-      console.log(`🔄 Sync from server complete. Synced ${syncedCount}/${serverDocs.length} documents.`);
-      
-      return {
-        success: errorCount === 0,
-        message,
-        syncedCount,
-        errorCount
-      };
-    } catch (error) {
-      const errorMessage = `Global sync error from server: ${error instanceof Error ? error.message : 'Unknown error'}`;
-      console.error('Error syncing documents from server:', error);
-      return { 
-        success: false, 
-        message: errorMessage,
-        syncedCount: 0, 
-        errorCount: 1
-      };
-    }
+    return {
+      success: false,
+      message: "Server storage functionality has been removed. Using localStorage only.",
+      syncedCount: 0,
+      errorCount: 0
+    };
   },
   
-  // Modified addDocumentDirectly to automatically sync with server
+  // Modified addDocumentDirectly to use localStorage only
   addDocumentDirectly: async (document: SimpleDocument): Promise<SimpleDocument> => {
     try {
       // Get existing documents from storage
@@ -740,24 +569,6 @@ export const simpleDocumentService = {
         }
       }
       
-      // After saving to localStorage, sync with server storage if configured
-      try {
-        if (isRedisConfigured() && !STORAGE_CONFIG.USE_FALLBACK) {
-          // Save directly to server storage - this includes the full content
-          await clientDocumentService.saveDocument({
-            ...document,
-            id: docId,
-            content: document.content // Use the full content for server storage
-          });
-          console.log(`🔄 Auto-synced document ${docId} to server storage`);
-        } else {
-          console.log(`⚠️ Server storage not configured, document ${docId} saved only to localStorage`);
-        }
-      } catch (syncError) {
-        console.error(`❌ Error syncing document ${docId} to server storage:`, syncError);
-        // Continue anyway, as the document is already in localStorage
-      }
-      
       // Return the original document with full content but update the ID to match what we stored
       return {
         ...document,
@@ -771,7 +582,7 @@ export const simpleDocumentService = {
     }
   },
   
-  // Modified addDocument to automatically sync with server
+  // Modified addDocument to use localStorage only
   addDocument: async (file: File, loanId: string, classification?: { 
     docType: string; 
     category: 'loan' | 'legal' | 'financial' | 'misc' | 'chat' | 'borrower' | 'property' | 'project' | 'compliance' | 'servicing' | 'exit' | 'insurance';
@@ -868,23 +679,6 @@ export const simpleDocumentService = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dedupedDocs));
       
       console.log(`Document added successfully: ${newDoc.filename} (ID: ${newDoc.id}, Category: ${newDoc.category})`);
-      
-      // After saving to localStorage, sync with server storage if configured
-      try {
-        if (isRedisConfigured() && !STORAGE_CONFIG.USE_FALLBACK) {
-          // Save directly to server storage - this includes the full content
-          await clientDocumentService.saveDocument({
-            ...newDoc,
-            content: formattedContent // Use the full content for server storage
-          });
-          console.log(`🔄 Auto-synced document ${newDoc.id} to server storage`);
-        } else {
-          console.log(`⚠️ Server storage not configured, document ${newDoc.id} saved only to localStorage`);
-        }
-      } catch (syncError) {
-        console.error(`❌ Error syncing document ${newDoc.id} to server storage:`, syncError);
-        // Continue anyway, as the document is already in localStorage
-      }
       
       return {
         ...newDoc,

@@ -5,7 +5,7 @@ import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 import { simpleDocumentService, SimpleDocument } from "@/utilities/simplifiedDocumentService";
 import { indexDocumentsForLoan } from '@/utilities/loanDocumentService';
 import storageService from '@/services/storageService';
-import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG } from '@/configuration/storageConfig';
 
 // Maximum characters that can be safely sent to the embeddings API
 const MAX_EMBEDDING_CHARS = 8000;
@@ -100,16 +100,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
     }
     
-    // Storage mode for logging and debugging
-    const storageMode = STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage');
-    console.log(`[Compatibility Route] Indexing documents for loan ${loanId} using storage mode: ${storageMode}`);
+    console.log(`[Compatibility Route] Processing documents for loan ${loanId}`);
     
     // Get all documents for this loan
     const documents = await storageService.getDocumentsForLoan(loanId);
     console.log(`[Compatibility Route] Found ${documents.length} documents for loan ${loanId} to index`);
     
     if (!documents || documents.length === 0) {
-      console.log(`[Compatibility Route] No documents found for loan ${loanId} using storage mode: ${storageMode}`);
+      console.log(`[Compatibility Route] No documents found for loan ${loanId}`);
       
       // Check for unassociated documents
       const allDocs = await storageService.getAllDocuments(0, 1000);
@@ -120,8 +118,7 @@ export async function POST(req: NextRequest) {
         error: 'No documents found for this loan', 
         loanId, 
         unassociatedDocuments: unassociatedDocs.length,
-        hasFixableDocuments,
-        storageMode
+        hasFixableDocuments
       }, { status: 404 });
     }
 
@@ -134,8 +131,7 @@ export async function POST(req: NextRequest) {
       message: 'Documents indexed successfully',
       loanId,
       indexedDocuments: result.indexedCount,
-      totalDocuments: documents.length,
-      storageMode
+      totalDocuments: documents.length
     });
   } catch (error) {
     console.error('[Compatibility Route] Error indexing documents:', error);
@@ -158,9 +154,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
     }
 
-    // Storage mode for logging and debugging
-    const storageMode = STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage');
-    console.log(`[Compatibility Route] Checking document status for loan ${loanId} using storage mode: ${storageMode}`);
+    console.log(`[Compatibility Route] Checking document status for loan ${loanId}`);
     
     // Get all documents for this loan
     const documents = await storageService.getDocumentsForLoan(loanId);
@@ -176,16 +170,14 @@ export async function GET(req: NextRequest) {
         indexed: false,
         loanId,
         unassociatedDocuments: unassociatedDocs.length,
-        hasFixableDocuments,
-        storageMode
+        hasFixableDocuments
       });
     }
 
     return NextResponse.json({
       message: `Found ${documents.length} documents for loan ${loanId}`,
       documentCount: documents.length,
-      loanId,
-      storageMode
+      loanId
     });
   } catch (error) {
     console.error('[Compatibility Route] Error checking document status:', error);

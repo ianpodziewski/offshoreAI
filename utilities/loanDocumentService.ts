@@ -15,9 +15,8 @@ import { getDocumentTemplate } from './templates/documentTemplateStrings';
 import { simpleDocumentService } from './simplifiedDocumentService';
 import { OpenAI } from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
-import { serverRedisUtil } from '@/lib/redis-server';
 import storageService from '@/services/storageService';
-import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG } from '@/configuration/storageConfig';
 
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
@@ -140,119 +139,6 @@ const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
   return result;
 };
 
-// Check if Redis is available for server-side operations
-const isRedisAvailable = () => {
-  // Check if we're in a server-side context
-  const isBrowser = typeof window !== 'undefined';
-  
-  if (isBrowser) {
-    // In browser context, we can't directly check Redis
-    // So we'll check if the Redis API endpoint is available
-    console.log("Browser environment detected, can't directly check Redis");
-    
-    // Make a request to check Redis status
-    // This is async but we'll handle this separately
-    fetch('/api/redis-status')
-      .then(response => {
-        if (response.ok) {
-          return response.json();
-        }
-        throw new Error('Redis status check failed');
-      })
-      .then(data => {
-        console.log('Redis status check:', data);
-        // This is just for logging - the actual call will still use the API
-      })
-      .catch(err => {
-        console.warn('Error checking Redis status:', err);
-      });
-      
-    // In the browser, we'll use the API endpoint for Redis operations
-    return true; // Return true to allow the API call
-  }
-  
-  // Server-side check
-  return isRedisConfigured();
-};
-
-// Helper function to save a document to Redis
-const saveDocumentToRedis = async (document: LoanDocument): Promise<boolean> => {
-  try {
-    if (!isRedisAvailable()) {
-      console.log('Redis not available for document storage');
-      return false;
-    }
-    
-    console.log(`Attempting to save document ${document.id} to Redis for loan ${document.loanId}`);
-    
-    // Convert document to SimpleDocument format
-    const simpleDoc = {
-      id: document.id,
-      loanId: document.loanId,
-      filename: document.filename,
-      fileType: document.fileType || 'text/html',
-      fileSize: document.fileSize || 0,
-      dateUploaded: document.dateUploaded,
-      category: document.category,
-      section: document.section,
-      subsection: document.subsection,
-      docType: document.docType,
-      content: document.content || '',
-      status: document.status,
-      version: document.version || 1,
-      notes: document.notes || ''
-    };
-    
-    // Save to Redis directly using serverRedisUtil when in server environment
-    if (typeof window === 'undefined') {
-      // Server-side Redis saving
-      try {
-        // 1. Store the document
-        await serverRedisUtil.set(`doc:${document.id}`, JSON.stringify(simpleDoc));
-        
-        // 2. Add the document ID to the loan's document set
-        await serverRedisUtil.sadd(`docs_by_loan:${document.loanId}`, document.id);
-        
-        // 3. Add to the global document list
-        await serverRedisUtil.sadd('document_list', document.id);
-        
-        console.log(`Successfully saved document to Redis: ${document.id} for loan ${document.loanId}`);
-        return true;
-      } catch (serverRedisError) {
-        console.error('Error using serverRedisUtil to save document:', serverRedisError);
-        return false;
-      }
-    } else {
-      // Client-side Redis saving via storageService
-      try {
-        await storageService.saveDocument(simpleDoc);
-        console.log(`Successfully saved document to Redis via storageService: ${document.id} for loan ${document.loanId}`);
-        
-        // Call the API to ensure the document is indexed for the chatbot
-        try {
-          await fetch('/api/loan-documents/index-docs', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ loanId: document.loanId }),
-          });
-        } catch (apiError) {
-          console.warn('Non-critical error calling indexing API:', apiError);
-        }
-        
-        return true;
-      } catch (storageError) {
-        console.error('Error saving document via storageService:', storageError);
-        return false;
-      }
-    }
-  } catch (error) {
-    console.error('Error saving document to Redis:', error);
-    return false;
-  }
-};
-
 // Document service for managing loan documents
 export const loanDocumentService = {
   // Get all documents
@@ -310,11 +196,6 @@ export const loanDocumentService = {
     // Add the new document
     filteredDocs.push(document);
     localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
-    
-    // Also try to save the document to Redis for the chatbot to use
-    saveDocumentToRedis(document).catch(err => {
-      console.error('Failed to save document to Redis:', err);
-    });
     
     return document;
   },
@@ -753,81 +634,6 @@ export const loanDocumentService = {
     } catch (error) {
       console.error('Error deduplicating loan documents:', error);
       return [];
-    }
-  },
-  
-  // Index document content for searching
-  indexDocumentContent: async (document: LoanDocument): Promise<boolean> => {
-    try {
-      // Only proceed if the document has content
-      if (!document.content) {
-        console.log(`Document ${document.id} has no content to index`);
-        return false;
-      }
-      
-      // Convert to SimpleDocument format
-      const simpleDoc = {
-        id: document.id,
-        loanId: document.loanId,
-        filename: document.filename,
-        fileType: document.fileType || 'text/html',
-        fileSize: document.fileSize || 0,
-        dateUploaded: document.dateUploaded,
-        category: document.category,
-        section: document.section,
-        subsection: document.subsection,
-        docType: document.docType,
-        content: document.content,
-        status: document.status,
-        version: document.version || 1,
-        notes: document.notes || ''
-      };
-      
-      // Check if running in browser or server
-      const isServerSide = typeof window === 'undefined';
-      
-      if (isServerSide) {
-        // If server-side, we can index directly using the indexDocumentsForLoan function
-        try {
-          const result = await indexDocumentsForLoan(document.loanId, [simpleDoc]);
-          return result.indexedCount > 0;
-        } catch (error) {
-          console.warn(`Server-side indexing failed, but document was still saved: ${error}`);
-          return true; // Return true since document was saved, even if indexing failed
-        }
-      } else {
-        // If client-side, we'll make an API call to trigger the indexing
-        try {
-          // Use fetch to call the indexing API
-          const response = await fetch('/api/loan-documents/index-docs', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ loanId: document.loanId }),
-          });
-          
-          if (response.ok) {
-            console.log('Document indexing result:', await response.json());
-            return true;
-          } else if (response.status === 404) {
-            // API not found - this is likely due to the API route not being registered
-            // We can continue without indexing and still consider the save successful
-            console.warn('Document indexing API not found (404) - document saved but not indexed');
-            return true;
-          } else {
-            console.warn(`Document indexing API responded with status ${response.status} - document saved but not indexed`);
-            return true; // Still return true as the document was saved
-          }
-        } catch (apiError) {
-          // Network error or other fetch issue
-          console.warn('Error calling indexing API, but document was still saved:', apiError);
-          return true; // Still return true as the document was saved
-        }
-      }
-    } catch (error) {
-      console.error(`Error indexing document ${document.id}:`, error);
-      return false;
     }
   }
 }; 

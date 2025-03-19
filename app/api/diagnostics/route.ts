@@ -1,20 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
 import storageService from '@/services/storageService';
-import Redis from 'ioredis';
 import OpenAI from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
-
-// Initialize Redis client (if available)
-let redis: typeof Redis | null = null;
-if (typeof process !== 'undefined' && process.env.REDIS_URL) {
-  try {
-    redis = new Redis(process.env.REDIS_URL);
-  } catch (error) {
-    console.error('Failed to initialize Redis client:', error);
-    redis = null;
-  }
-}
 
 // Temporary types until we create proper utility files
 interface OpenAIVerificationResult {
@@ -48,11 +36,9 @@ export async function GET(req: NextRequest) {
       valid: false,
       message: ''
     },
-    redis: {
-      exists: isRedisConfigured() && !!process.env.REDIS_URL,
-      using_fallback: !redis || STORAGE_CONFIG.USE_FALLBACK,
-      status: 'pending',
-      message: ''
+    storage: {
+      type: 'localStorage',
+      status: 'active'
     }
   };
   
@@ -189,73 +175,52 @@ export async function GET(req: NextRequest) {
     diagnostics.pinecone.error_message = error instanceof Error ? error.message : 'Unknown error connecting to Pinecone';
   }
   
-  // Redis check (previously Vercel KV)
-  diagnostics.redis = {
-    configured: isRedisConfigured() && !!process.env.REDIS_URL,
-    using_fallback: !redis || STORAGE_CONFIG.USE_FALLBACK,
-    connection: 'pending',
-    document_count: 0,
-    error_message: null
+  // Storage check
+  diagnostics.storage = {
+    type: 'localStorage',
+    document_count: 0
   };
   
-  if (isRedisConfigured() && process.env.REDIS_URL) {
-    if (STORAGE_CONFIG.USE_FALLBACK) {
-      diagnostics.redis.connection = 'fallback';
-      diagnostics.redis.message = 'Using localStorage fallback (manual override)';
-      diagnostics.api_keys.redis = { status: 'warning', message: 'Fallback mode enabled' };
-      
-      // Get count from localStorage
-      try {
-        const result = await storageService.getAllDocuments(0, 10000);
-        diagnostics.redis.document_count = result.documents.length;
-      } catch (error) {
-        diagnostics.redis.document_count = 'Error getting count';
-      }
+  // Get count from localStorage (only works server-side with storageService)
+  try {
+    if (typeof storageService.getAllDocuments === 'function') {
+      const result = await storageService.getAllDocuments(0, 10000);
+      diagnostics.storage.document_count = result.documents ? result.documents.length : 0;
     } else {
-      try {
-        // Test Redis connection
-        let redisClient = redis;
-        
-        // If redis wasn't initialized globally, create a temporary client
-        if (!redisClient) {
-          redisClient = new Redis(process.env.REDIS_URL);
-        }
-        
-        // Test connection with ping
-        await redisClient.ping();
-        diagnostics.redis.connection = 'success';
-        diagnostics.api_keys.redis = { status: 'success', message: 'Connected to Redis' };
-        
-        // Get document count
-        const docKeys = await redisClient.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
-        diagnostics.redis.document_count = docKeys.length;
-        
-        // Close the temporary connection if we created one
-        if (redisClient !== redis) {
-          await redisClient.quit();
-        }
-      } catch (error) {
-        diagnostics.redis.connection = 'failed';
-        diagnostics.redis.error_message = error instanceof Error ? error.message : 'Unknown error connecting to Redis';
-        diagnostics.api_keys.redis = { status: 'error', message: 'Configuration found but connection failed' };
-        
-        // Since Redis failed, we're using fallback
-        diagnostics.redis.using_fallback = true;
-      }
+      diagnostics.storage.document_count = 'Cannot count documents server-side';
     }
-  } else {
-    // Not configured
-    diagnostics.redis.connection = 'not_configured';
-    diagnostics.api_keys.redis = { status: 'warning', message: 'Redis URL not configured' };
+  } catch (error) {
+    diagnostics.storage.document_count = 'Error getting count';
   }
   
-  // Storage Statistics
-  diagnostics.storage = {
-    document_count: diagnostics.redis.document_count,
-    storage_mode: STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage')
-  };
-  
-  return NextResponse.json({ 
-    diagnostics
-  });
+  // Return a NextResponse with the diagnostics data
+  return NextResponse.json(diagnostics);
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    // Get document count
+    let documentCount = 0;
+    try {
+      const result = await storageService.getAllDocuments(0, 10000);
+      documentCount = result.documents ? result.documents.length : 0;
+    } catch (error) {
+      console.error('Error getting document count:', error);
+    }
+    
+    return NextResponse.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      storage: {
+        type: 'localStorage',
+        document_count: documentCount
+      }
+    });
+  } catch (error) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
+  }
 } 
