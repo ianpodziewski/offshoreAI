@@ -145,11 +145,21 @@ export function StoplightChecklist({ docType, status, onStatusChange }: Stopligh
     setIsOpen(false);
   };
   
+  // Handle button click with propagation stopping
+  const handleStoplightClick = (e: React.MouseEvent) => {
+    // Stop the event from bubbling up to parent elements
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Open the dialog
+    setIsOpen(true);
+  };
+  
   return (
     <>
-      {/* Stoplight indicator */}
+      {/* Stoplight indicator with updated click handler */}
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={handleStoplightClick}
         className="w-16 h-6 rounded-full flex items-center p-1 bg-gray-800 relative"
         title="Document verification checklist"
       >
