@@ -331,7 +331,7 @@ export default function DetailedReviewPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* File Sockets - Left Side */}
+          {/* File Sockets-Left Side */}
           <div className="w-full lg:w-1/3 space-y-4">
             <Card className="bg-[#1A2234] border-gray-800">
               <CardHeader>
