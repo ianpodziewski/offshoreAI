@@ -37,17 +37,34 @@ export const formatFileSize = (bytes: number): string => {
 
 // Generate fake document content
 const generateDocumentContent = (docType: string, loan: LoanData): string => {
-  const template = getDocumentTemplate(docType);
-  if (!template) return '';
-  
-  // Replace template variables with loan data
-  return template
-    .replace(/\${borrowerName}/g, loan.borrowerName)
-    .replace(/\${propertyAddress}/g, loan.propertyAddress)
-    .replace(/\${loanAmount}/g, loan.loanAmount)
-    .replace(/\${loanTerm}/g, loan.loanTerm)
-    .replace(/\${interestRate}/g, loan.interestRate)
-    .replace(/\${loanType}/g, loan.loanType);
+  // First check if the loan object is valid
+  if (!loan) {
+    console.error(`Cannot generate document content: loan data is undefined`);
+    return `<html><body><h1>Error: Missing Loan Data</h1><p>The loan data required to generate this document is unavailable.</p></body></html>`;
+  }
+
+  // Ensure borrowerName is set to prevent errors in templates
+  const safeLoan = {
+    ...loan,
+    borrowerName: loan.borrowerName || 'Borrower Name Not Available',
+    propertyAddress: loan.propertyAddress || 'Property Address Not Available',
+    loanAmount: loan.loanAmount || 0,
+    loanTerm: loan.loanTerm || 0,
+    interestRate: loan.interestRate || 0,
+    loanType: loan.loanType || 'unknown'
+  };
+
+  try {
+    // Call getDocumentTemplate with both required parameters
+    const template = getDocumentTemplate(docType, safeLoan);
+    if (!template) return '';
+    
+    // The template already has the loan data injected, so we can return it directly
+    return template;
+  } catch (error) {
+    console.error(`Error generating document content for ${docType}:`, error);
+    return `<html><body><h1>Error Generating Document</h1><p>There was an error generating the ${docType} document.</p></body></html>`;
+  }
 };
 
 // Helper function to check if localStorage is almost full

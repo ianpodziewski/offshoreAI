@@ -67,13 +67,16 @@ const getLoanTypePrefix = (loanType: string): string => {
 
 // Helper function to generate unimplemented document templates
 const generateUnimplementedTemplate = (title: string, borrowerName: string): string => {
+  // Ensure borrowerName is never null or undefined
+  const safeBorrowerName = borrowerName || 'Borrower Name Not Available';
+  
   const content = `
     <div class="document-container">
       <h1>${title}</h1>
       
       <div class="warning">
         <p><strong>Document Not Yet Implemented</strong></p>
-        <p>This document template for ${borrowerName} is currently in development and not yet fully implemented.</p>
+        <p>This document template for ${safeBorrowerName} is currently in development and not yet fully implemented.</p>
       </div>
       
       <div class="info">
@@ -87,7 +90,7 @@ const generateUnimplementedTemplate = (title: string, borrowerName: string): str
     </div>
   `;
   
-  return documentStyleService.wrapContentWithWatermark(`${title} - ${borrowerName}`, content);
+  return documentStyleService.wrapContentWithWatermark(`${title} - ${safeBorrowerName}`, content);
 };
 
 // A mapping of document types to their generation functions
@@ -281,6 +284,12 @@ export const fakeDocumentService = {
    * Generate a fake document for a specific loan and document type
    */
   async generateFakeDocument(loan: LoanData, docType: string): Promise<SimpleDocument | null> {
+    // Ensure loan object is valid
+    if (!loan) {
+      console.error(`Cannot generate fake document: loan data is undefined`);
+      return null;
+    }
+
     // Convert potentially aliased document type to standard name
     const standardDocType = this.getStandardDocType(docType);
     
@@ -290,8 +299,14 @@ export const fakeDocumentService = {
       return null;
     }
 
+    // Ensure borrowerName is never null or undefined for document generation
+    const safeLoan = {
+      ...loan,
+      borrowerName: loan.borrowerName || 'Borrower Name Not Available'
+    };
+
     // Generate the HTML content using the appropriate generator
-    let content = documentGenerators[standardDocType](loan);
+    let content = documentGenerators[standardDocType](safeLoan);
     
     // Add watermark to the content if it doesn't already have one
     if (!content.includes('class="watermark"')) {
@@ -299,7 +314,7 @@ export const fakeDocumentService = {
       if (!content.includes('<!DOCTYPE html>')) {
         // Wrap it with our standard watermark template
         const docTitle = documentNames[standardDocType] || docType.replace(/_/g, ' ');
-        content = documentStyleService.wrapContentWithWatermark(`${docTitle} - ${loan.borrowerName}`, content);
+        content = documentStyleService.wrapContentWithWatermark(`${docTitle} - ${safeLoan.borrowerName}`, content);
       }
     }
     
