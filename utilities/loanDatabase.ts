@@ -13,12 +13,12 @@ export const loanDatabase = {
       const initialLoans = generateLoans(DEFAULT_LOAN_COUNT);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(initialLoans));
       
-      // Generate documents for each loan
-      initialLoans.forEach(loan => {
-        documentService.generateDocumentsForLoan(loan);
-      });
+      // Don't generate documents automatically during initialization
+      // initialLoans.forEach(loan => {
+      //   documentService.generateDocumentsForLoan(loan);
+      // });
       
-      console.log(`Initialized loan database with ${DEFAULT_LOAN_COUNT} loans and their documents`);
+      console.log(`Initialized loan database with ${DEFAULT_LOAN_COUNT} loans`);
     }
   },
   
@@ -41,8 +41,8 @@ export const loanDatabase = {
     loans.push(newLoan);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
 
-    // Generate documents for the new loan
-    documentService.generateDocumentsForLoan(newLoan);
+    // Don't generate documents automatically for new loans
+    // documentService.generateDocumentsForLoan(newLoan);
 
     return newLoan;
   },
@@ -148,10 +148,10 @@ export const loanDatabase = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(initialLoans));
     console.log(`Generated ${count} new loans`);
     
-    // Generate documents for each loan
-    initialLoans.forEach(loan => {
-      documentService.generateDocumentsForLoan(loan);
-    });
+    // Don't generate documents automatically during reset
+    // initialLoans.forEach(loan => {
+    //   documentService.generateDocumentsForLoan(loan);
+    // });
     
     console.log('Database reset complete');
     return initialLoans;

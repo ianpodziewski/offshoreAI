@@ -1,6 +1,6 @@
 // components/document/DocumentSockets.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { FileText, Upload, Check, X, Eye, RefreshCw, FileCheck, Clock } from 'lucide-react';
+import { FileText, Upload, Check, X, Eye, RefreshCw, FileCheck, Clock, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SimpleDocument, simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import { fakeDocumentService } from '@/utilities/fakeDocumentService';
@@ -104,31 +104,20 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
     }
   }, [loanId]);
   
-  // Function to delete all documents for a loan
-  const deleteAllDocuments = useCallback(async () => {
+  // Function to delete a single document
+  const deleteDocument = useCallback(async (docId: string) => {
     try {
       setLoading(true);
-      const allDocs = simpleDocumentService.getDocumentsForLoan(loanId);
       
-      if (allDocs.length === 0) {
-        setErrorMessage("No documents to delete");
-        setTimeout(() => setErrorMessage(null), 3000);
-        return;
-      }
+      // Delete the document
+      await simpleDocumentService.deleteDocument(docId);
+      console.log(`Deleted document: ID ${docId}`);
       
-      console.log(`Deleting all ${allDocs.length} documents for loan ${loanId}`);
-      
-      // Delete each document
-      for (const doc of allDocs) {
-        await simpleDocumentService.deleteDocument(doc.id);
-        console.log(`Deleted document: ${doc.filename} (ID: ${doc.id})`);
-      }
-      
-      // Update the state
-      setDocuments([]);
+      // Update the state by removing the deleted document
+      setDocuments(prevDocs => prevDocs.filter(doc => doc.id !== docId));
       
       // Show success message
-      setSuccessMessage(`Deleted all ${allDocs.length} documents successfully`);
+      setSuccessMessage(`Document deleted successfully`);
       setTimeout(() => setSuccessMessage(null), 3000);
       
       // Refresh loan context
@@ -136,13 +125,13 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       setDocumentGenerated(true);
       setLocalRefreshTrigger(prev => prev + 1);
     } catch (error: any) {
-      console.error("Error deleting all documents:", error);
-      setErrorMessage(`Failed to delete documents: ${error?.message || "Unknown error"}`);
+      console.error("Error deleting document:", error);
+      setErrorMessage(`Failed to delete document: ${error?.message || "Unknown error"}`);
       setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setLoading(false);
     }
-  }, [loanId, refreshLoanDocuments]);
+  }, [refreshLoanDocuments]);
   
   // Fetch documents when component mounts or refreshTrigger changes
   useEffect(() => {
@@ -208,47 +197,6 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       }, 1000);
     }
   }, [refreshLoanDocuments, loanId, documents.length, clearDuplicateDocuments]);
-
-  // Auto-detect and clean up legacy documents on first load
-  useEffect(() => {
-    // This effect runs only once when the component mounts
-    const detectAndCleanLegacyDocuments = async () => {
-      try {
-        // Get all documents from the older documentService storage
-        const legacyDocsJson = localStorage.getItem('simulated_loan_documents');
-        if (!legacyDocsJson) return; // No legacy documents, nothing to do
-        
-        // Parse the legacy documents
-        const legacyDocs = JSON.parse(legacyDocsJson);
-        
-        // Filter legacy documents for this loan
-        const legacyDocsForLoan = legacyDocs.filter((doc: any) => doc.loanId === loanId);
-        
-        if (legacyDocsForLoan.length > 0) {
-          console.log(`Found ${legacyDocsForLoan.length} legacy documents for loan ${loanId}`);
-          
-          // Check if we already have documents from simpleDocumentService
-          const modernDocs = simpleDocumentService.getDocumentsForLoan(loanId);
-          
-          if (modernDocs.length > 0 && legacyDocsForLoan.length > 0) {
-            // If we have both legacy and modern documents, this is likely causing the duplication
-            console.log("Detected potential document duplication issue. Clearing all documents...");
-            
-            // Clear all documents and set a flag to prevent auto-showing the message
-            await deleteAllDocuments();
-            
-            // Show a one-time message about legacy document cleanup
-            setSuccessMessage("Legacy documents detected and cleaned up. Generate new samples if needed.");
-            setTimeout(() => setSuccessMessage(null), 5000);
-          }
-        }
-      } catch (error) {
-        console.error("Error detecting legacy documents:", error);
-      }
-    };
-    
-    detectAndCleanLegacyDocuments();
-  }, [loanId, deleteAllDocuments]);
 
   // Get document for a specific docType if it exists
   const getDocumentForType = (docType: string): SimpleDocument | undefined => {
@@ -661,31 +609,9 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
               disabled={loading || generatingAll}
               className="generate-all-button"
             >
-              Generate All
+              Generate All Samples
             </button>
           </div>
-          
-          {/* Clear all documents button */}
-          <button 
-            onClick={deleteAllDocuments}
-            disabled={loading}
-            className="clear-button"
-            style={{
-              backgroundColor: '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '8px 12px',
-              cursor: 'pointer',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <X size={16} />
-            Clear All Documents
-          </button>
         </div>
       </div>
       
@@ -767,15 +693,26 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
                       </p>
                     </div>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => onViewDocument(document)}
-                    style={{ color: COLORS.textAccent }}
-                  >
-                    <Eye size={16} className="mr-1" />
-                    View
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => onViewDocument(document)}
+                      style={{ color: COLORS.textAccent }}
+                    >
+                      <Eye size={16} className="mr-1" />
+                      View
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => deleteDocument(document.id)}
+                      style={{ color: '#f44336' }}
+                    >
+                      <Trash2 size={16} className="mr-1" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               ) : isUploading ? (
                 <div className="text-center py-2">

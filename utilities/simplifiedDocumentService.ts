@@ -671,6 +671,13 @@ export const simpleDocumentService = {
   // Clear all documents (for testing)
   clearAllDocuments: async (): Promise<void> => {
     localStorage.removeItem(STORAGE_KEY);
+    
+    // Also remove legacy document storage to prevent duplicates
+    localStorage.removeItem('simulated_loan_documents');
+    localStorage.removeItem('loan_documents');
+    localStorage.removeItem('extracted_document_data');
+    console.log('Cleared all document storage, including legacy storage');
+    
     try {
       await clearAllContentsFromIndexedDB();
     } catch (error) {
