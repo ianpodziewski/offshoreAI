@@ -336,29 +336,6 @@ export default function LoanDocumentsPage() {
                                            'localStorage only' : 'localStorage and Redis';
                         
                         alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored in ${storageMode}. The chatbot will access them when properly configured.`);
-                        
-                        // Trigger indexing for chatbot
-                        try {
-                          // Make an API call to index the documents in Redis
-                          const response = await fetch('/api/loan-documents/index-docs', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ loanId }),
-                          });
-                          
-                          if (response.ok) {
-                            console.log('Successfully indexed documents for chatbot');
-                          } else if (response.status === 404) {
-                            console.warn('Document indexing API not available (404) - documents saved but not indexed');
-                          } else {
-                            console.warn(`Document indexing API responded with status ${response.status}`, await response.text());
-                          }
-                        } catch (indexError) {
-                          console.warn('Non-critical error triggering document indexing:', indexError);
-                          // This is a non-critical error, so we won't show it to the user
-                        }
                       }
                     } catch (error) {
                       console.error('Error generating fake documents:', error);
@@ -390,32 +367,11 @@ export default function LoanDocumentsPage() {
                       const docs = loanDocumentService.getDocumentsForLoan(loanId);
                       setDocuments(docs);
                       
-                      // Update completion status
-                      if (loan?.loanType) {
-                        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+                      // Update completion status for current loan
+                      const currentLoan = loanDatabase.getLoanById(loanId);
+                      if (currentLoan?.loanType) {
+                        const status = loanDocumentService.getDocumentCompletionStatus(loanId, currentLoan.loanType);
                         setCompletionStatus(status);
-                      }
-                      
-                      // Index documents for all loans
-                      for (const loan of loans) {
-                        try {
-                          // Make an API call to index the documents for each loan
-                          const response = await fetch('/api/loan-documents/index-docs', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ loanId: loan.id }),
-                          });
-                          
-                          if (response.ok) {
-                            console.log(`Successfully indexed documents for loan ${loan.id}`);
-                          } else {
-                            console.error(`Error indexing documents for loan ${loan.id}:`, await response.text());
-                          }
-                        } catch (indexError) {
-                          console.error(`Error triggering document indexing for loan ${loan.id}:`, indexError);
-                        }
                       }
                     } catch (error) {
                       console.error('Error generating fake documents for all loans:', error);
