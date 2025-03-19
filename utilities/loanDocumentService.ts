@@ -15,6 +15,9 @@ import { getDocumentTemplate } from './templates/documentTemplateStrings';
 import { simpleDocumentService } from './simplifiedDocumentService';
 import { OpenAI } from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
+import { serverRedisUtil } from '@/lib/redis-server';
+import storageService from '@/services/storageService';
+import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
 
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
@@ -136,6 +139,51 @@ const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
   return dedupedDocs;
 };
 
+// Check if Redis is available for server-side operations
+const isRedisAvailable = () => {
+  // Check if we're in a server-side context
+  if (typeof window !== 'undefined') return false;
+  
+  // Check if Redis is configured
+  return isRedisConfigured();
+};
+
+// Helper function to save a document to Redis
+const saveDocumentToRedis = async (document: LoanDocument): Promise<boolean> => {
+  try {
+    if (!isRedisAvailable()) {
+      console.log('Redis not available for document storage');
+      return false;
+    }
+    
+    // Convert document to SimpleDocument format
+    const simpleDoc = {
+      id: document.id,
+      loanId: document.loanId,
+      filename: document.filename,
+      fileType: document.fileType || 'text/html',
+      fileSize: document.fileSize || 0,
+      dateUploaded: document.dateUploaded,
+      category: document.category,
+      section: document.section,
+      subsection: document.subsection,
+      docType: document.docType,
+      content: document.content || '',
+      status: document.status,
+      version: document.version || 1,
+      notes: document.notes || ''
+    };
+    
+    // Save to Redis using storageService
+    await storageService.saveDocument(simpleDoc);
+    console.log(`Successfully saved document to Redis: ${document.id}`);
+    return true;
+  } catch (error) {
+    console.error('Error saving document to Redis:', error);
+    return false;
+  }
+};
+
 // Document service for managing loan documents
 export const loanDocumentService = {
   // Get all documents
@@ -194,6 +242,12 @@ export const loanDocumentService = {
     // Add the new document
     filteredDocs.push(document);
     localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
+    
+    // Also try to save the document to Redis for the chatbot to use
+    saveDocumentToRedis(document).catch(err => {
+      console.error('Failed to save document to Redis:', err);
+    });
+    
     return document;
   },
   
@@ -501,37 +555,27 @@ export const loanDocumentService = {
             fakeDocument.expirationDate = expirationDate.toISOString();
           }
           
+          // Add to the list of fake documents
           fakeDocuments.push(fakeDocument);
-        }
-        
-        // Save this batch
-        if (fakeDocuments.length > 0) {
-          const allDocs = loanDocumentService.getAllDocuments();
           
-          // Ensure we don't have duplicates by filtering out documents with same loanId and docType
-          const uniqueDocs = allDocs.filter(existingDoc => 
-            !fakeDocuments.some(fakeDoc => 
-              existingDoc.loanId === fakeDoc.loanId && 
-              existingDoc.docType === fakeDoc.docType
-            )
-          );
+          // Save to localStorage
+          const allExistingDocs = loanDocumentService.getAllDocuments();
+          allExistingDocs.push(fakeDocument);
+          localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
           
-          try {
-            // Save the combined documents (existing + new fake docs)
-            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...uniqueDocs, ...fakeDocuments]));
-          } catch (error) {
-            console.error('localStorage quota exceeded, switching to simpleDocumentService:', error);
-            
-            // If we hit storage limitations, switch to the simpleDocumentService 
-            // and copy over what we've generated so far
-            return await loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType, fakeDocuments);
-          }
+          // Save to Redis for the chatbot
+          await saveDocumentToRedis(fakeDocument);
+          
+          // Index document content for searching
+          await loanDocumentService.indexDocumentContent(fakeDocument);
         }
       }
       
+      console.log(`Generated and stored ${fakeDocuments.length} fake documents for loan ${loanId}`);
+      
       return fakeDocuments;
     } catch (error) {
-      console.error('Error generating fake documents:', error);
+      console.error(`Error generating fake documents for loan ${loanId}:`, error);
       return [];
     }
   },
@@ -680,6 +724,70 @@ export const loanDocumentService = {
     } catch (error) {
       console.error('Error deduplicating loan documents:', error);
       return [];
+    }
+  },
+  
+  // Index document content for searching
+  indexDocumentContent: async (document: LoanDocument): Promise<boolean> => {
+    try {
+      // Only proceed if the document has content
+      if (!document.content) {
+        console.log(`Document ${document.id} has no content to index`);
+        return false;
+      }
+      
+      // Convert to SimpleDocument format
+      const simpleDoc = {
+        id: document.id,
+        loanId: document.loanId,
+        filename: document.filename,
+        fileType: document.fileType || 'text/html',
+        fileSize: document.fileSize || 0,
+        dateUploaded: document.dateUploaded,
+        category: document.category,
+        section: document.section,
+        subsection: document.subsection,
+        docType: document.docType,
+        content: document.content,
+        status: document.status,
+        version: document.version || 1,
+        notes: document.notes || ''
+      };
+      
+      // Check if running in browser or server
+      const isServerSide = typeof window === 'undefined';
+      
+      if (isServerSide) {
+        // If server-side, we can index directly using the indexDocumentsForLoan function
+        const result = await indexDocumentsForLoan(document.loanId, [simpleDoc]);
+        return result.indexedCount > 0;
+      } else {
+        // If client-side, we'll make an API call to trigger the indexing
+        try {
+          // Use fetch to call the indexing API
+          const response = await fetch('/api/loan-documents/index', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ loanId: document.loanId }),
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API responded with status ${response.status}`);
+          }
+          
+          const result = await response.json();
+          console.log('Document indexing result:', result);
+          return true;
+        } catch (apiError) {
+          console.error('Error calling indexing API:', apiError);
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error(`Error indexing document ${document.id}:`, error);
+      return false;
     }
   }
 }; 

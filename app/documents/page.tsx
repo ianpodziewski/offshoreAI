@@ -20,7 +20,7 @@ export default function DocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [showMigrationTool, setShowMigrationTool] = useState(false);
+  const [showMigrationTool, setShowMigrationTool] = useState(true);
 
   useEffect(() => {
     // Load all documents using the client service

@@ -77,6 +77,35 @@ export const localStorageFallback = {
   }
 };
 
+// Detect if Redis is properly configured
+export const isRedisConfigured = (): boolean => {
+  // Check for REDIS_URL in the environment
+  const hasRedisUrl = !!process.env.REDIS_URL;
+  
+  // Log the Redis configuration status for debugging
+  if (IS_DEVELOPMENT) {
+    console.log(`Redis configuration status: ${hasRedisUrl ? 'Configured' : 'Not configured'}`);
+    if (hasRedisUrl && process.env.REDIS_URL) {
+      console.log(`Redis URL begins with: ${process.env.REDIS_URL.substring(0, 8)}...`);
+    }
+  }
+  
+  return hasRedisUrl;
+};
+
+// We want to prioritize Redis for document storage to support the chatbot
+// Only fall back to localStorage if Redis is truly not available
+const shouldUseFallback = (): boolean => {
+  // In server-side context, never use fallback
+  if (!isBrowser) return false;
+  
+  // In production, never use fallback 
+  if (IS_PRODUCTION) return false;
+  
+  // In development, only use fallback if Redis is not configured
+  return !isRedisConfigured();
+};
+
 // Configuration for Redis storage
 export const STORAGE_CONFIG = {
   // Prefixes for different data types
@@ -85,8 +114,8 @@ export const STORAGE_CONFIG = {
   DOCUMENT_LIST_KEY: 'document_list',
   DOCUMENT_BY_LOAN_PREFIX: 'docs_by_loan:',
   
-  // Use a fallback mechanism in development environment
-  USE_FALLBACK: IS_DEVELOPMENT && !process.env.REDIS_URL,
+  // Use a fallback mechanism only when Redis is unavailable
+  USE_FALLBACK: shouldUseFallback(),
   
   // Redis URL (only used server-side)
   REDIS_URL: process.env.REDIS_URL || '',
@@ -102,11 +131,6 @@ export const STORAGE_CONFIG = {
 
 // For backward compatibility
 export const KV_CONFIG = STORAGE_CONFIG;
-
-// Detect if Redis is properly configured
-export const isRedisConfigured = (): boolean => {
-  return !!process.env.REDIS_URL;
-};
 
 // Legacy function name maintained for backward compatibility
 export const isVercelKVConfigured = isRedisConfigured;

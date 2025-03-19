@@ -11,91 +11,83 @@ let redis: any = null;
 // Initialize Redis if we have a URL and we're on the server
 if (typeof process !== 'undefined' && process.env.REDIS_URL) {
   try {
+    console.log(`Initializing Redis with URL: ${process.env.REDIS_URL.substring(0, 15)}...`);
     redis = new Redis(process.env.REDIS_URL);
-    console.log('Server-side Redis client initialized');
+    console.log('Server-side Redis client successfully initialized');
   } catch (error) {
     console.error('Failed to initialize Redis client:', error);
     redis = null;
   }
+} else {
+  console.log('Redis URL not found or not in server environment');
 }
+
+// Simple wrapper that logs all Redis operations
+const withLogging = <T extends (...args: any[]) => Promise<any>>(
+  operation: string,
+  fn: T
+): T => {
+  return (async (...args: any[]) => {
+    try {
+      console.log(`Redis ${operation} operation starting with args:`, args);
+      const result = await fn(...args);
+      console.log(`Redis ${operation} operation successful`);
+      return result;
+    } catch (error) {
+      console.error(`Redis ${operation} operation failed:`, error);
+      throw error;
+    }
+  }) as T;
+};
 
 // Utility functions for Redis operations that should only be called server-side
 const serverRedisUtil = {
   getRedisClient: () => redis,
   
-  get: async (key: string): Promise<string | null> => {
+  get: withLogging('GET', async (key: string): Promise<string | null> => {
     if (!redis) return null;
-    try {
-      return await redis.get(key);
-    } catch (error) {
-      console.error(`Redis GET error for key ${key}:`, error);
-      return null;
-    }
-  },
+    return await redis.get(key);
+  }),
   
-  set: async (key: string, value: string): Promise<boolean> => {
+  set: withLogging('SET', async (key: string, value: string): Promise<boolean> => {
     if (!redis) return false;
-    try {
-      await redis.set(key, value);
-      return true;
-    } catch (error) {
-      console.error(`Redis SET error for key ${key}:`, error);
-      return false;
-    }
-  },
+    await redis.set(key, value);
+    return true;
+  }),
   
-  del: async (key: string): Promise<boolean> => {
+  del: withLogging('DEL', async (key: string): Promise<boolean> => {
     if (!redis) return false;
-    try {
-      await redis.del(key);
-      return true;
-    } catch (error) {
-      console.error(`Redis DEL error for key ${key}:`, error);
-      return false;
-    }
-  },
+    await redis.del(key);
+    return true;
+  }),
   
-  sadd: async (key: string, ...members: string[]): Promise<boolean> => {
+  sadd: withLogging('SADD', async (key: string, ...members: string[]): Promise<boolean> => {
     if (!redis) return false;
-    try {
-      await redis.sadd(key, ...members);
-      return true;
-    } catch (error) {
-      console.error(`Redis SADD error for key ${key}:`, error);
-      return false;
-    }
-  },
+    await redis.sadd(key, ...members);
+    return true;
+  }),
   
-  srem: async (key: string, ...members: string[]): Promise<boolean> => {
+  srem: withLogging('SREM', async (key: string, ...members: string[]): Promise<boolean> => {
     if (!redis) return false;
-    try {
-      await redis.srem(key, ...members);
-      return true;
-    } catch (error) {
-      console.error(`Redis SREM error for key ${key}:`, error);
-      return false;
-    }
-  },
+    await redis.srem(key, ...members);
+    return true;
+  }),
   
-  smembers: async (key: string): Promise<string[]> => {
+  smembers: withLogging('SMEMBERS', async (key: string): Promise<string[]> => {
     if (!redis) return [];
-    try {
-      return await redis.smembers(key);
-    } catch (error) {
-      console.error(`Redis SMEMBERS error for key ${key}:`, error);
-      return [];
-    }
-  },
+    return await redis.smembers(key);
+  }),
   
-  keys: async (pattern: string): Promise<string[]> => {
+  keys: withLogging('KEYS', async (pattern: string): Promise<string[]> => {
     if (!redis) return [];
-    try {
-      return await redis.keys(pattern);
-    } catch (error) {
-      console.error(`Redis KEYS error for pattern ${pattern}:`, error);
-      return [];
-    }
-  },
+    return await redis.keys(pattern);
+  }),
+  
+  // Add a command to test Redis connectivity
+  ping: withLogging('PING', async (): Promise<string> => {
+    if (!redis) return 'DISCONNECTED';
+    return await redis.ping();
+  }),
 };
 
 export { serverRedisUtil }; 

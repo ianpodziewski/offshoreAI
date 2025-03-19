@@ -2,13 +2,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FileText, MessageSquare, BarChart2, DollarSign, Files, Menu, X } from 'lucide-react';
+import { FileText, MessageSquare, BarChart2, DollarSign, Menu, X } from 'lucide-react';
 
 const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: BarChart2 },
   { href: '/loans', label: 'Loans', icon: DollarSign },
   { href: '/new-loan', label: 'New Loan', icon: FileText },
-  { href: '/documents', label: 'Documents', icon: Files },
   { href: '/chat', label: 'Chat Assistant', icon: MessageSquare },
 ];
 

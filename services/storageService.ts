@@ -8,13 +8,28 @@ const LOAN_PREFIX = STORAGE_CONFIG.LOAN_PREFIX;
 const DOCUMENT_LIST_KEY = STORAGE_CONFIG.DOCUMENT_LIST_KEY;
 const DOCUMENT_BY_LOAN_PREFIX = STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX;
 
+// Add a more reliable check for Redis configuration
+const isRedisAvailable = () => {
+  // Check if we have a Redis URL in the environment
+  const hasRedisUrl = typeof process !== 'undefined' && !!process.env.REDIS_URL;
+  console.log(`Redis URL detection: ${hasRedisUrl ? 'Found' : 'Not found'}`);
+  return hasRedisUrl;
+};
+
 // Add a check to make sure we avoid localStorage operations on the server-side
 // Update the "useFallback" check
 const isBrowser = typeof window !== 'undefined';
-const useFallback = (!isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK) && isBrowser;
+const useRedis = isRedisAvailable() && !STORAGE_CONFIG.USE_FALLBACK;
+const useFallback = !useRedis && isBrowser;
 
-// Log the storage mode
-console.log(`Storage Mode: ${useFallback ? 'localStorage Fallback' : 'Redis'}`);
+// Log the storage mode with more details
+console.log(`Storage Mode Decision:
+  - Is browser environment: ${isBrowser}
+  - Redis URL available: ${isRedisAvailable()}
+  - CONFIG.USE_FALLBACK: ${STORAGE_CONFIG.USE_FALLBACK}
+  - Using Redis: ${useRedis}
+  - Using Fallback: ${useFallback}
+  - Final Storage Mode: ${useFallback ? 'localStorage Fallback' : 'Redis'}`);
 
 /**
  * A unified storage service using Redis as the backend
@@ -562,14 +577,24 @@ export const storageService = {
       return { migrated: 0, errors: 1 };
     }
     
-    // Check if Redis is available
-    if (useFallback) {
-      console.log('Cannot migrate when in fallback mode or Redis is not configured');
-      return { migrated: 0, errors: 0 };
+    // Double-check Redis configuration
+    const redisConfigured = isRedisAvailable();
+    if (!redisConfigured) {
+      console.error('Redis URL is not configured - cannot migrate');
+      return { migrated: 0, errors: 1 };
+    }
+    
+    // Check if we're in fallback mode
+    if (STORAGE_CONFIG.USE_FALLBACK) {
+      console.error('Cannot migrate when in fallback mode (USE_FALLBACK is true)');
+      return { migrated: 0, errors: 1 };
     }
     
     try {
+      console.log('Starting migration from localStorage to Redis...');
+      
       // Get all documents from localStorage
+      console.log('Retrieving documents from localStorage...');
       const oldDocs = localStorageFallback.getAllDocuments();
       console.log(`Found ${oldDocs.length} documents to migrate from localStorage`);
       
@@ -577,6 +602,18 @@ export const storageService = {
         console.log('No documents found in localStorage to migrate');
         return { migrated: 0, errors: 0 };
       }
+      
+      // Group documents by loan IDs for better logging
+      const loanGroups = oldDocs.reduce((groups, doc) => {
+        const loanId = doc.loanId || 'unassigned';
+        if (!groups[loanId]) {
+          groups[loanId] = [];
+        }
+        groups[loanId].push(doc);
+        return groups;
+      }, {} as Record<string, SimpleDocument[]>);
+      
+      console.log(`Documents are for ${Object.keys(loanGroups).length} loans: ${Object.keys(loanGroups).join(', ')}`);
       
       let migrated = 0;
       let errors = 0;
@@ -586,6 +623,7 @@ export const storageService = {
         try {
           // Use the Redis service directly to save the document
           const docKey = `${DOCUMENT_PREFIX}${doc.id}`;
+          console.log(`Migrating document: ${doc.filename} (ID: ${doc.id}) for loan: ${doc.loanId || 'unassigned'}`);
           
           // Store the document in Redis
           await serverRedisUtil.set(docKey, JSON.stringify(doc));
@@ -600,7 +638,6 @@ export const storageService = {
           }
           
           migrated++;
-          console.log(`Migrated document ${doc.id} for loan ${doc.loanId || 'N/A'}`);
         } catch (error) {
           console.error(`Error migrating document ${doc.id}:`, error);
           errors++;
@@ -608,6 +645,11 @@ export const storageService = {
       }
       
       console.log(`Migration complete: ${migrated} documents migrated, ${errors} errors`);
+      
+      // Verify the migration was successful
+      const docsInRedis = await serverRedisUtil.smembers(DOCUMENT_LIST_KEY);
+      console.log(`Verification: ${docsInRedis.length} documents now in Redis`);
+      
       return { migrated, errors };
     } catch (error) {
       console.error('Error during migration:', error);

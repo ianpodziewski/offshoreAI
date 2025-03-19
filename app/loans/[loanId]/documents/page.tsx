@@ -314,6 +314,7 @@ export default function LoanDocumentsPage() {
                 <Button 
                   onClick={async () => {
                     try {
+                      console.log(`Generating sample documents for loan ${loanId} with type ${loan.loanType}`);
                       const fakeDocuments = await loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
                       if (fakeDocuments.length > 0) {
                         // Deduplicate documents after generation
@@ -328,9 +329,33 @@ export default function LoanDocumentsPage() {
                           const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
                           setCompletionStatus(status);
                         }
+                        
+                        // Show success message
+                        alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored both in localStorage and Redis for chatbot access.`);
+                        
+                        // Trigger indexing for chatbot
+                        try {
+                          // Make an API call to index the documents in Redis
+                          const response = await fetch('/api/loan-documents/index', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ loanId }),
+                          });
+                          
+                          if (response.ok) {
+                            console.log('Successfully indexed documents for chatbot');
+                          } else {
+                            console.error('Error indexing documents:', await response.text());
+                          }
+                        } catch (indexError) {
+                          console.error('Error triggering document indexing:', indexError);
+                        }
                       }
                     } catch (error) {
                       console.error('Error generating fake documents:', error);
+                      alert('There was an error generating sample documents. Please check the console for details.');
                     }
                   }} 
                   className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"
@@ -342,6 +367,7 @@ export default function LoanDocumentsPage() {
                 <Button 
                   onClick={async () => {
                     try {
+                      console.log('Generating sample documents for all loans');
                       const totalGenerated = await loanDocumentService.generateFakeDocumentsForAllLoans();
                       
                       // Get all loans and deduplicate their documents
@@ -350,7 +376,8 @@ export default function LoanDocumentsPage() {
                         loanDocumentService.deduplicateLoanDocuments(loan.id);
                       }
                       
-                      alert(`Generated ${totalGenerated} sample documents across all loans.`);
+                      // Update success message to include Redis information
+                      alert(`Generated ${totalGenerated} sample documents across all loans. Documents are stored in both localStorage and Redis for chatbot access.`);
                       
                       // Refresh documents for current loan
                       const docs = loanDocumentService.getDocumentsForLoan(loanId);
@@ -361,8 +388,31 @@ export default function LoanDocumentsPage() {
                         const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
                         setCompletionStatus(status);
                       }
+                      
+                      // Index documents for all loans
+                      for (const loan of loans) {
+                        try {
+                          // Make an API call to index the documents for each loan
+                          const response = await fetch('/api/loan-documents/index', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ loanId: loan.id }),
+                          });
+                          
+                          if (response.ok) {
+                            console.log(`Successfully indexed documents for loan ${loan.id}`);
+                          } else {
+                            console.error(`Error indexing documents for loan ${loan.id}:`, await response.text());
+                          }
+                        } catch (indexError) {
+                          console.error(`Error triggering document indexing for loan ${loan.id}:`, indexError);
+                        }
+                      }
                     } catch (error) {
                       console.error('Error generating fake documents for all loans:', error);
+                      alert('There was an error generating sample documents for all loans. Please check the console for details.');
                     }
                   }} 
                   className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"
