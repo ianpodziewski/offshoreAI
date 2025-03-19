@@ -358,10 +358,29 @@ export const simpleDocumentService = {
   // Get documents for a specific loan
   getDocumentsForLoan: (loanId: string): SimpleDocument[] => {
     try {
+      console.log(`🔍 Getting documents for loan ID: ${loanId}`);
       const allDocs = simpleDocumentService.getAllDocuments();
-      return allDocs.filter(doc => doc.loanId === loanId);
+      console.log(`📋 Found ${allDocs.length} total documents in storage`);
+      
+      // Log all document loanIds to help diagnose association issues
+      const loanIds = Array.from(new Set(allDocs.map(doc => doc.loanId)));
+      console.log(`📝 Documents in storage have the following loan IDs: ${loanIds.join(', ')}`);
+      
+      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
+      console.log(`📂 Filtered ${loanDocs.length} documents for loan ID ${loanId}`);
+      
+      // If no documents found but we have documents in storage
+      if (loanDocs.length === 0 && allDocs.length > 0) {
+        console.warn(`⚠️ No documents found for loan ID ${loanId} despite having ${allDocs.length} total documents`);
+        // Log the first few documents for debugging
+        if (allDocs.length > 0) {
+          console.log('Sample document:', JSON.stringify(allDocs[0], null, 2).substring(0, 500) + '...');
+        }
+      }
+      
+      return loanDocs;
     } catch (error) {
-      console.error('Error getting loan documents:', error);
+      console.error('❌ Error getting loan documents:', error);
       return [];
     }
   },
@@ -931,6 +950,58 @@ export const simpleDocumentService = {
       console.log('Migration to IndexedDB complete!');
     } catch (error) {
       console.error('Error during migration to IndexedDB:', error);
+    }
+  },
+  
+  /**
+   * Fix document associations by ensuring all documents have the correct loanId
+   * This function can help when documents are visible in the UI but not found by the indexing process
+   */
+  fixDocumentAssociations: (loanId: string): SimpleDocument[] => {
+    try {
+      console.log(`🔧 Attempting to fix document associations for loan ${loanId}`);
+      const allDocs = simpleDocumentService.getAllDocuments();
+      
+      // Find documents with missing or incorrect loanId
+      const unassociatedDocs = allDocs.filter(doc => 
+        // Documents with no loanId
+        !doc.loanId || 
+        // Documents with empty string loanId 
+        doc.loanId === '' ||
+        // Documents with 'undefined' as string
+        doc.loanId === 'undefined'
+      );
+      
+      console.log(`🔍 Found ${unassociatedDocs.length} documents with missing loanId`);
+      
+      if (unassociatedDocs.length === 0) {
+        console.log('👍 No documents need fixing');
+        return [];
+      }
+      
+      // Fix the documents by assigning the loanId
+      const fixedDocs: SimpleDocument[] = [];
+      const updatedAllDocs = [...allDocs];
+      
+      for (const doc of unassociatedDocs) {
+        const docIndex = updatedAllDocs.findIndex(d => d.id === doc.id);
+        if (docIndex !== -1) {
+          updatedAllDocs[docIndex] = {
+            ...updatedAllDocs[docIndex],
+            loanId: loanId
+          };
+          fixedDocs.push(updatedAllDocs[docIndex]);
+        }
+      }
+      
+      // Save the updated documents
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedAllDocs));
+      
+      console.log(`✅ Fixed ${fixedDocs.length} documents by associating them with loan ${loanId}`);
+      return fixedDocs;
+    } catch (error) {
+      console.error('❌ Error fixing document associations:', error);
+      return [];
     }
   }
 };

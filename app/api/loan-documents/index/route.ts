@@ -105,7 +105,29 @@ export async function POST(req: NextRequest) {
     // Get loan documents from the simple document service
     const documentsMetadata = simpleDocumentService.getDocumentsForLoan(loanId);
     
+    // Log document metadata to help with debugging
+    console.log(`📊 Document metadata for loanId ${loanId}:`, JSON.stringify(documentsMetadata.map(d => ({
+      id: d.id,
+      loanId: d.loanId,
+      filename: d.filename,
+      docType: d.docType,
+      hasContent: !!d.content,
+      contentLength: d.content ? d.content.length : 0
+    })), null, 2));
+    
     if (!documentsMetadata || documentsMetadata.length === 0) {
+      console.warn(`⚠️ No documents found for loan ${loanId} in storage`);
+      
+      // Check if there are any documents at all in storage
+      const allDocs = simpleDocumentService.getAllDocuments();
+      console.log(`📚 Total documents in storage: ${allDocs.length}`);
+      
+      // Log a sample of document loanIds to help diagnose association issues
+      if (allDocs.length > 0) {
+        const loanIdSamples = Array.from(new Set(allDocs.slice(0, 5).map(d => d.loanId)));
+        console.log(`🔍 Sample loan IDs in storage: ${loanIdSamples.join(', ')}`);
+      }
+      
       return NextResponse.json({ 
         message: "No documents found for this loan",
         indexed: 0,

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench, Trash2 } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench, Trash2, Link } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 
 interface LoanChatIndexerProps {
   loanId: string;
@@ -18,6 +19,8 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
   const [diagnosticData, setDiagnosticData] = useState<any>(null);
   const [isDiagnosticLoading, setIsDiagnosticLoading] = useState(false);
   const [showStorageWarning, setShowStorageWarning] = useState(false);
+  const [fixingAssociations, setFixingAssociations] = useState(false);
+  const [fixedCount, setFixedCount] = useState(0);
 
   const startIndexing = async () => {
     try {
@@ -202,6 +205,36 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     }
   };
 
+  // New function to fix document associations
+  const fixDocumentAssociations = async () => {
+    try {
+      setFixingAssociations(true);
+      setIndexingStatus('indexing');
+      setProgress(30);
+      setMessage('Fixing document associations...');
+      
+      // Call our utility function to fix document associations
+      const fixedDocs = simpleDocumentService.fixDocumentAssociations(loanId);
+      
+      setFixedCount(fixedDocs.length);
+      setProgress(100);
+      
+      if (fixedDocs.length > 0) {
+        setIndexingStatus('success');
+        setMessage(`Fixed ${fixedDocs.length} document associations. Try indexing again.`);
+      } else {
+        setIndexingStatus('success');
+        setMessage('No document associations needed fixing. The issue may be elsewhere.');
+      }
+    } catch (error) {
+      setIndexingStatus('error');
+      setMessage(`Error fixing document associations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setProgress(100);
+    } finally {
+      setFixingAssociations(false);
+    }
+  };
+
   // Check if the error is related to storage quota
   useEffect(() => {
     if (indexingStatus === 'error' && 
@@ -245,6 +278,17 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
           >
             {isDiagnosticLoading ? <RefreshCw size={14} className="animate-spin mr-1" /> : <Wrench size={14} />}
             Diagnostics
+          </Button>
+          
+          <Button 
+            size="sm"
+            variant="outline"
+            onClick={fixDocumentAssociations}
+            disabled={fixingAssociations || indexingStatus === 'indexing'}
+            className="flex items-center gap-1"
+          >
+            <Link size={14} />
+            Fix Associations
           </Button>
           
           <Button 
