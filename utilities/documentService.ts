@@ -167,7 +167,7 @@ export const documentService = {
   },
   
   // Update document status
-  updateDocumentStatus: (docId: string, status: string): LoanDocument | null => {
+  updateDocumentStatus: async (docId: string, status: string): Promise<LoanDocument | null> => {
     const allDocs = documentService.getAllDocuments();
     const docIndex = allDocs.findIndex(doc => doc.id === docId);
     

@@ -103,9 +103,9 @@ export async function POST(req: NextRequest) {
     });
     
     // Get loan documents from the simple document service
-    const documents = simpleDocumentService.getDocumentsForLoan(loanId);
+    const documentsMetadata = simpleDocumentService.getDocumentsForLoan(loanId);
     
-    if (!documents || documents.length === 0) {
+    if (!documentsMetadata || documentsMetadata.length === 0) {
       return NextResponse.json({ 
         message: "No documents found for this loan",
         indexed: 0,
@@ -113,48 +113,68 @@ export async function POST(req: NextRequest) {
       }, { status: 200 });
     }
     
-    console.log(`📚 Found ${documents.length} documents for loan ${loanId}`);
+    console.log(`📚 Found ${documentsMetadata.length} documents for loan ${loanId}`);
     
     let indexedDocuments = 0;
-    const totalDocuments = documents.length;
+    const totalDocuments = documentsMetadata.length;
     const errors: any[] = [];
     
     // Process and index each document
-    for (const doc of documents) {
+    for (const docMeta of documentsMetadata) {
       try {
+        console.log(`🔍 Processing document: ${docMeta.filename}, Content type: ${docMeta.fileType || 'unknown'}`);
+        
+        // Get the full document content from IndexedDB if needed
+        let fullDocument: SimpleDocument | null;
+        
+        if (docMeta.content && !docMeta.content.includes('[Content stored in IndexedDB]')) {
+          // Content is already available in localStorage
+          fullDocument = docMeta;
+          console.log(`Document content available directly: ${docMeta.id}`);
+        } else {
+          // Retrieve full content from IndexedDB
+          console.log(`Retrieving full content from IndexedDB for: ${docMeta.id}`);
+          fullDocument = await simpleDocumentService.getDocumentById(docMeta.id);
+          
+          if (!fullDocument) {
+            console.log(`⚠️ Could not retrieve full document '${docMeta.filename}' - skipping`);
+            continue;
+          }
+        }
+        
         // Skip documents without content
-        if (!doc.content) {
-          console.log(`⚠️ Skipping document '${doc.filename}' - no content`);
+        if (!fullDocument.content) {
+          console.log(`⚠️ Skipping document '${fullDocument.filename}' - no content`);
           continue;
         }
         
-        console.log(`🔍 Processing document: ${doc.filename}, Content type: ${doc.fileType || 'unknown'}, Content length: ${doc.content.length}`);
+        console.log(`Content length: ${fullDocument.content.length}`);
         
         // Extract text based on content type
         let textContent = "";
         
-        if (doc.fileType === 'text/html' || doc.filename.endsWith('.html') || 
-            (typeof doc.content === 'string' && (doc.content.trim().startsWith('<') || doc.content.includes('<html')))) {
+        if (fullDocument.fileType === 'text/html' || fullDocument.filename.endsWith('.html') || 
+            (typeof fullDocument.content === 'string' && (fullDocument.content.trim().startsWith('<') || fullDocument.content.includes('<html')))) {
           // HTML content - extract text
-          console.log(`Detected HTML content in ${doc.filename}`);
-          textContent = extractTextFromHtml(doc.content);
-        } else if (typeof doc.content === 'string') {
+          console.log(`Detected HTML content in ${fullDocument.filename}`);
+          textContent = extractTextFromHtml(fullDocument.content);
+        } else if (typeof fullDocument.content === 'string') {
           // Plain text or other content type
-          textContent = doc.content;
+          textContent = fullDocument.content;
         } else {
-          console.log(`⚠️ Skipping document '${doc.filename}' - unsupported content type: ${typeof doc.content}`);
+          console.log(`⚠️ Skipping document '${fullDocument.filename}' - unsupported content type: ${typeof fullDocument.content}`);
           continue;
         }
         
         // Skip if no meaningful text was extracted
         if (!textContent || textContent.length < 50) {
-          console.log(`⚠️ Skipping document '${doc.filename}' - insufficient text content (${textContent.length} chars)`);
+          console.log(`⚠️ Skipping document '${fullDocument.filename}' - insufficient text content (${textContent.length} chars)`);
           continue;
         }
         
         // Split document into chunks for processing
         const chunks = chunkText(textContent);
-        console.log(`📄 Document '${doc.filename}' split into ${chunks.length} chunks`);
+        console.log(`📄 Document '${fullDocument.filename}' split into ${chunks.length} chunks`);
         
         // Generate embeddings for each chunk and index to Pinecone
         for (let i = 0; i < chunks.length; i++) {
@@ -173,7 +193,7 @@ export async function POST(req: NextRequest) {
             console.log(`✅ Generated embedding of length: ${embedding.length}`);
             
             // Create a unique ID for this chunk with the loan prefix to separate from other content
-            const chunkId = `${LOAN_DOCUMENTS_PREFIX}-${loanId}-doc-${doc.id}-chunk-${i}`;
+            const chunkId = `${LOAN_DOCUMENTS_PREFIX}-${loanId}-doc-${fullDocument.id}-chunk-${i}`;
             
             // Index to Pinecone - we'll use ID prefixing and metadata to separate loan documents
             await pineconeIndex.upsert([{
@@ -181,9 +201,9 @@ export async function POST(req: NextRequest) {
               values: embedding,
               metadata: {
                 loanId: loanId,
-                documentId: doc.id,
-                documentName: doc.filename,
-                documentType: doc.docType || 'unknown',
+                documentId: fullDocument.id,
+                documentName: fullDocument.filename,
+                documentType: fullDocument.docType || 'unknown',
                 chunkIndex: i,
                 totalChunks: chunks.length,
                 text: chunk,
@@ -192,12 +212,12 @@ export async function POST(req: NextRequest) {
               }
             }]);
             
-            console.log(`✅ Indexed chunk ${i+1}/${chunks.length} of document '${doc.filename}' with ID: ${chunkId}`);
+            console.log(`✅ Indexed chunk ${i+1}/${chunks.length} of document '${fullDocument.filename}' with ID: ${chunkId}`);
           } catch (embeddingError: any) {
             console.error(`❌ Error generating embedding for chunk ${i+1}: ${embeddingError.message}`, embeddingError);
             errors.push({
-              filename: doc.filename,
-              id: doc.id,
+              filename: fullDocument.filename,
+              id: fullDocument.id,
               chunkIndex: i,
               error: embeddingError.message || 'Unknown embedding error'
             });
@@ -206,10 +226,10 @@ export async function POST(req: NextRequest) {
         
         indexedDocuments++;
       } catch (docError: any) {
-        console.error(`❌ Error processing document '${doc.filename}':`, docError);
+        console.error(`❌ Error processing document '${docMeta.filename}':`, docError);
         errors.push({
-          filename: doc.filename,
-          id: doc.id,
+          filename: docMeta.filename,
+          id: docMeta.id,
           error: docError.message || 'Unknown error'
         });
       }

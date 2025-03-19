@@ -231,12 +231,15 @@ export default function LoanDocumentsPage() {
     }
   };
   
-  // Handle document status change from stoplight
-  const handleDocumentStatusChange = (documentId: string, newStatus: string) => {
-    // Find the document in the documents array
+  // Handle document status change
+  const handleDocumentStatusChange = async (documentId: string, newStatus: string) => {
+    // Update UI first for responsiveness
     const updatedDocuments = documents.map(doc => {
       if (doc.id === documentId) {
-        return { ...doc, status: newStatus as DocumentStatus };
+        return {
+          ...doc,
+          status: newStatus as DocumentStatus
+        };
       }
       return doc;
     });
@@ -244,13 +247,19 @@ export default function LoanDocumentsPage() {
     // Update state
     setDocuments(updatedDocuments as LoanDocument[]);
     
-    // Update document in the database
-    loanDocumentService.updateDocumentStatus(documentId, newStatus as DocumentStatus);
-    
-    // Update completion status
-    if (loan?.loanType) {
-      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-      setCompletionStatus(status);
+    try {
+      // Update document in the database
+      await loanDocumentService.updateDocumentStatus(documentId, newStatus as DocumentStatus);
+      
+      // Update completion status
+      if (loan?.loanType) {
+        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+        setCompletionStatus(status);
+      }
+    } catch (error) {
+      console.error('Error updating document status:', error);
+      // Revert UI state if update failed
+      setDocuments(documents);
     }
   };
   

@@ -49,16 +49,24 @@ const SimpleDocumentViewer: React.FC<SimpleDocumentViewerProps> = ({
     }
   }, [document]);
 
-  const updateDocumentStatus = (status: 'pending' | 'approved' | 'rejected') => {
-    simpleDocumentService.updateDocumentStatus(document.id, status, notes);
-    setCurrentStatus(status);
-    if (onStatusChange) onStatusChange();
+  const updateDocumentStatus = async (status: 'pending' | 'approved' | 'rejected') => {
+    try {
+      await simpleDocumentService.updateDocumentStatus(document.id, status, notes);
+      setCurrentStatus(status);
+      if (onStatusChange) onStatusChange();
+    } catch (error) {
+      console.error('Error updating document status:', error);
+    }
   };
 
-  const deleteDocument = () => {
+  const deleteDocument = async () => {
     if (window.confirm('Are you sure you want to delete this document?')) {
-      simpleDocumentService.deleteDocument(document.id);
-      if (onDelete) onDelete();
+      try {
+        await simpleDocumentService.deleteDocument(document.id);
+        if (onDelete) onDelete();
+      } catch (error) {
+        console.error('Error deleting document:', error);
+      }
     }
   };
 

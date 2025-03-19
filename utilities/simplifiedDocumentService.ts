@@ -20,17 +20,156 @@ export interface SimpleDocument {
 
 // Constants for storage keys
 const STORAGE_KEY = 'simple_documents';
+const DB_NAME = 'offshoreAI_DocumentDB';
+const CONTENT_STORE = 'documentContents';
+const DB_VERSION = 1;
 
-// Add this utility function at the top of the file, right after the imports
-const compressContent = (content: string): string => {
-  // Only store first 2000 chars for localStorage to prevent quota issues
-  // The full content should be retrieved from the server when needed
-  if (typeof content === 'string' && content.length > 2000) {
-    // Store beginning and a bit of the end
-    return content.substring(0, 1800) + '...[content truncated for storage]...' + 
-           content.substring(content.length - 200);
+// IndexedDB setup and helper functions
+let dbPromise: Promise<IDBDatabase> | null = null;
+
+const getDB = (): Promise<IDBDatabase> => {
+  if (dbPromise) return dbPromise;
+  
+  dbPromise = new Promise((resolve, reject) => {
+    if (!window.indexedDB) {
+      console.error('This browser doesn\'t support IndexedDB');
+      reject(new Error('IndexedDB not supported'));
+      return;
+    }
+    
+    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
+    
+    request.onerror = (event) => {
+      console.error('Error opening IndexedDB', event);
+      reject(new Error('Error opening IndexedDB'));
+    };
+    
+    request.onsuccess = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      resolve(db);
+    };
+    
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      // Create object store for document contents
+      if (!db.objectStoreNames.contains(CONTENT_STORE)) {
+        db.createObjectStore(CONTENT_STORE, { keyPath: 'id' });
+        console.log('Created document content store');
+      }
+    };
+  });
+  
+  return dbPromise;
+};
+
+// Store document content in IndexedDB
+const storeContentInIndexedDB = async (id: string, content: string): Promise<void> => {
+  try {
+    const db = await getDB();
+    const transaction = db.transaction([CONTENT_STORE], 'readwrite');
+    const store = transaction.objectStore(CONTENT_STORE);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.put({ id, content });
+      
+      request.onsuccess = () => {
+        resolve();
+      };
+      
+      request.onerror = (event) => {
+        console.error('Error storing content in IndexedDB', event);
+        reject(new Error('Failed to store content in IndexedDB'));
+      };
+    });
+  } catch (error) {
+    console.error('Error accessing IndexedDB:', error);
+    throw error;
   }
-  return content;
+};
+
+// Get document content from IndexedDB
+const getContentFromIndexedDB = async (id: string): Promise<string | null> => {
+  try {
+    const db = await getDB();
+    const transaction = db.transaction([CONTENT_STORE], 'readonly');
+    const store = transaction.objectStore(CONTENT_STORE);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.get(id);
+      
+      request.onsuccess = () => {
+        if (request.result) {
+          resolve(request.result.content);
+        } else {
+          resolve(null);
+        }
+      };
+      
+      request.onerror = (event) => {
+        console.error('Error retrieving content from IndexedDB', event);
+        reject(new Error('Failed to retrieve content from IndexedDB'));
+      };
+    });
+  } catch (error) {
+    console.error('Error accessing IndexedDB:', error);
+    return null;
+  }
+};
+
+// Delete document content from IndexedDB
+const deleteContentFromIndexedDB = async (id: string): Promise<void> => {
+  try {
+    const db = await getDB();
+    const transaction = db.transaction([CONTENT_STORE], 'readwrite');
+    const store = transaction.objectStore(CONTENT_STORE);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.delete(id);
+      
+      request.onsuccess = () => {
+        resolve();
+      };
+      
+      request.onerror = (event) => {
+        console.error('Error deleting content from IndexedDB', event);
+        reject(new Error('Failed to delete content from IndexedDB'));
+      };
+    });
+  } catch (error) {
+    console.error('Error accessing IndexedDB:', error);
+  }
+};
+
+// Clear all contents from IndexedDB
+const clearAllContentsFromIndexedDB = async (): Promise<void> => {
+  try {
+    const db = await getDB();
+    const transaction = db.transaction([CONTENT_STORE], 'readwrite');
+    const store = transaction.objectStore(CONTENT_STORE);
+    
+    return new Promise((resolve, reject) => {
+      const request = store.clear();
+      
+      request.onsuccess = () => {
+        console.log('All document contents cleared from IndexedDB');
+        resolve();
+      };
+      
+      request.onerror = (event) => {
+        console.error('Error clearing contents from IndexedDB', event);
+        reject(new Error('Failed to clear contents from IndexedDB'));
+      };
+    });
+  } catch (error) {
+    console.error('Error accessing IndexedDB:', error);
+  }
+};
+
+// Old compressContent utility function - now we store full content in IndexedDB
+// and just keep a placeholder in localStorage
+const compressContent = (content: string): string => {
+  // Just store a placeholder in localStorage now that we use IndexedDB
+  return '[Content stored in IndexedDB]';
 };
 
 // Helper function for document type classification
@@ -238,11 +377,28 @@ export const simpleDocumentService = {
     }
   },
   
-  // Get document by ID
-  getDocumentById: (docId: string): SimpleDocument | null => {
+  // Get document by ID with full content
+  getDocumentById: async (docId: string): Promise<SimpleDocument | null> => {
     try {
       const allDocs = simpleDocumentService.getAllDocuments();
-      return allDocs.find(doc => doc.id === docId) || null;
+      const doc = allDocs.find(doc => doc.id === docId);
+      
+      if (!doc) return null;
+      
+      // Try to get full content from IndexedDB
+      try {
+        const fullContent = await getContentFromIndexedDB(docId);
+        if (fullContent) {
+          return {
+            ...doc,
+            content: fullContent
+          };
+        }
+      } catch (indexedDBError) {
+        console.warn('Failed to retrieve content from IndexedDB, using stored content');
+      }
+      
+      return doc;
     } catch (error) {
       console.error('Error getting document by ID:', error);
       return null;
@@ -251,7 +407,7 @@ export const simpleDocumentService = {
   
   // Add a document directly (without file upload)
   // This is used for pre-generated documents
-  addDocumentDirectly: (document: SimpleDocument): SimpleDocument => {
+  addDocumentDirectly: async (document: SimpleDocument): Promise<SimpleDocument> => {
     try {
       // Get existing documents from storage
       const existingDocs = simpleDocumentService.getAllDocuments();
@@ -262,10 +418,17 @@ export const simpleDocumentService = {
         doc.docType === document.docType
       );
       
-      // Create a storage-friendly version of the document
+      // Store full content in IndexedDB
+      try {
+        await storeContentInIndexedDB(document.id, document.content);
+        console.log(`✅ Stored document content in IndexedDB: ${document.id}`);
+      } catch (indexedDBError) {
+        console.error('Failed to store content in IndexedDB, falling back to compressed content', indexedDBError);
+      }
+      
+      // Create a storage-friendly version with placeholder content for localStorage
       const storageDoc = {
         ...document,
-        // Compress content to avoid localStorage quota issues
         content: compressContent(document.content)
       };
       
@@ -285,8 +448,8 @@ export const simpleDocumentService = {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
             console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
           } catch (storageError) {
-            console.error('❌ localStorage quota exceeded, implementing storage cleanup');
-            // If localStorage is full, remove older documents to make space
+            console.error('❌ localStorage issue, implementing cleanup');
+            // Remove older documents to make space
             const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 4));
             localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, updatedDoc]));
           }
@@ -301,7 +464,7 @@ export const simpleDocumentService = {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
       } catch (storageError) {
-        console.error('❌ localStorage quota exceeded, implementing storage cleanup');
+        console.error('❌ localStorage issue, implementing cleanup');
         // If localStorage is full, remove older documents to make space
         const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 3));
         localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, storageDoc]));
@@ -360,11 +523,21 @@ export const simpleDocumentService = {
       const allDocs = simpleDocumentService.getAllDocuments();
       
       // Check if a document with the same docType already exists for this loan
-      // This ensures we replace by document type for document sockets
       const existingDoc = allDocs.find(doc => 
         doc.loanId === loanId && 
         doc.docType === docType
       );
+      
+      // Create document ID
+      const docId = existingDoc ? existingDoc.id : uuidv4();
+      
+      // Store full content in IndexedDB
+      try {
+        await storeContentInIndexedDB(docId, formattedContent);
+        console.log(`✅ Stored document content in IndexedDB: ${docId}`);
+      } catch (indexedDBError) {
+        console.error('Failed to store content in IndexedDB, falling back to compressed content', indexedDBError);
+      }
       
       if (existingDoc) {
         console.log(`Updating existing document: ${file.name} as ${docType}`);
@@ -376,13 +549,10 @@ export const simpleDocumentService = {
           fileType: file.type || 'application/pdf',
           fileSize: file.size,
           dateUploaded: new Date().toISOString(),
-          content: formattedContent,
+          content: compressContent(formattedContent), // Store placeholder in localStorage
           section,
           subsection
         };
-        
-        // Compress content for storage
-        updatedDoc.content = compressContent(formattedContent);
         
         // Replace in array
         const index = allDocs.findIndex(doc => doc.id === existingDoc.id);
@@ -399,7 +569,7 @@ export const simpleDocumentService = {
       
       // Create new document object if no existing document was found and updated
       const newDoc: SimpleDocument = {
-        id: uuidv4(),
+        id: docId,
         loanId,
         filename: file.name,
         fileType: file.type || 'application/pdf',
@@ -408,7 +578,7 @@ export const simpleDocumentService = {
         category,
         docType,
         status: 'pending',
-        content: compressContent(formattedContent), // Compress for storage
+        content: compressContent(formattedContent), // Store placeholder in localStorage
         section,
         subsection
       };
@@ -428,8 +598,42 @@ export const simpleDocumentService = {
     }
   },
   
+  // Delete document
+  deleteDocument: async (docId: string): Promise<boolean> => {
+    try {
+      const allDocs = simpleDocumentService.getAllDocuments();
+      const filteredDocs = allDocs.filter(doc => doc.id !== docId);
+      
+      if (filteredDocs.length === allDocs.length) return false;
+      
+      // Also delete from IndexedDB
+      try {
+        await deleteContentFromIndexedDB(docId);
+        console.log(`Deleted document content from IndexedDB: ${docId}`);
+      } catch (indexedDBError) {
+        console.warn('Failed to delete content from IndexedDB', indexedDBError);
+      }
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredDocs));
+      return true;
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      return false;
+    }
+  },
+  
+  // Clear all documents (for testing)
+  clearAllDocuments: async (): Promise<void> => {
+    localStorage.removeItem(STORAGE_KEY);
+    try {
+      await clearAllContentsFromIndexedDB();
+    } catch (error) {
+      console.error('Error clearing IndexedDB contents:', error);
+    }
+  },
+  
   // Update document status
-  updateDocumentStatus: (docId: string, status: 'pending' | 'approved' | 'rejected', notes?: string, assignedTo?: string): SimpleDocument | null => {
+  updateDocumentStatus: async (docId: string, status: 'pending' | 'approved' | 'rejected', notes?: string, assignedTo?: string): Promise<SimpleDocument | null> => {
     try {
       const allDocs = simpleDocumentService.getAllDocuments();
       const docIndex = allDocs.findIndex(doc => doc.id === docId);
@@ -452,24 +656,8 @@ export const simpleDocumentService = {
     }
   },
   
-  // Delete document
-  deleteDocument: (docId: string): boolean => {
-    try {
-      const allDocs = simpleDocumentService.getAllDocuments();
-      const filteredDocs = allDocs.filter(doc => doc.id !== docId);
-      
-      if (filteredDocs.length === allDocs.length) return false;
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredDocs));
-      return true;
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      return false;
-    }
-  },
-  
   // Transfer documents from temporary loan ID to actual loan ID
-  transferDocumentsToLoan: (tempLoanId: string, actualLoanId: string): SimpleDocument[] => {
+  transferDocumentsToLoan: async (tempLoanId: string, actualLoanId: string): Promise<SimpleDocument[]> => {
     try {
       const allDocs = simpleDocumentService.getAllDocuments();
       const transferredDocs: SimpleDocument[] = [];
@@ -554,13 +742,8 @@ export const simpleDocumentService = {
     }
   },
   
-  // Clear all documents (for testing)
-  clearAllDocuments: (): void => {
-    localStorage.removeItem(STORAGE_KEY);
-  },
-  
   // Update a document directly
-  updateDocument: (document: SimpleDocument): void => {
+  updateDocument: async (document: SimpleDocument): Promise<void> => {
     try {
       const allDocs = simpleDocumentService.getAllDocuments();
       const index = allDocs.findIndex(d => d.id === document.id);
@@ -575,7 +758,7 @@ export const simpleDocumentService = {
   },
   
   // Sync loan documents with the chat
-  syncLoanDocumentsWithChat: (loanId: string): SimpleDocument[] => {
+  syncLoanDocumentsWithChat: async (loanId: string): Promise<SimpleDocument[]> => {
     try {
       // Get all documents
       const allDocs = simpleDocumentService.getAllDocuments();
@@ -603,5 +786,65 @@ export const simpleDocumentService = {
       console.error('Error syncing loan documents with chat:', error);
       return [];
     }
+  },
+  
+  // Add a helper function to migrate existing documents to IndexedDB
+  migrateToIndexedDB: async (): Promise<void> => {
+    try {
+      console.log('Starting migration of document contents to IndexedDB...');
+      const allDocs = simpleDocumentService.getAllDocuments();
+      
+      // Only migrate documents that have actual content (not placeholders)
+      const docsToMigrate = allDocs.filter(doc => 
+        doc.content && 
+        !doc.content.includes('[Content stored in IndexedDB]')
+      );
+      
+      console.log(`Found ${docsToMigrate.length} documents to migrate to IndexedDB`);
+      
+      // Create metadata-only versions for localStorage
+      const metadataDocs = allDocs.map(doc => ({
+        ...doc,
+        content: compressContent(doc.content)
+      }));
+      
+      // Store metadata in localStorage
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(metadataDocs));
+      
+      // Migrate content to IndexedDB
+      for (const doc of docsToMigrate) {
+        try {
+          await storeContentInIndexedDB(doc.id, doc.content);
+          console.log(`Migrated document ${doc.id} to IndexedDB`);
+        } catch (error) {
+          console.error(`Failed to migrate document ${doc.id}:`, error);
+        }
+      }
+      
+      console.log('Migration to IndexedDB complete!');
+    } catch (error) {
+      console.error('Error during migration to IndexedDB:', error);
+    }
   }
 };
+
+// Try to migrate existing documents when the module is loaded
+if (typeof window !== 'undefined') {
+  // Check if migration has been done
+  if (!localStorage.getItem('indexeddb_migration_done')) {
+    // Set a timeout to allow the app to load first
+    setTimeout(() => {
+      simpleDocumentService.migrateToIndexedDB()
+        .then(() => {
+          localStorage.setItem('indexeddb_migration_done', 'true');
+          console.log('IndexedDB migration completed and marked as done');
+        })
+        .catch(error => {
+          console.error('Error completing IndexedDB migration:', error);
+        });
+    }, 3000);
+  }
+}
+
+// Update document methods that need both storage types
+// ... existing methods with minor adjustments as needed

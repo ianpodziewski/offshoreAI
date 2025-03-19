@@ -42,41 +42,52 @@ function DocumentViewerContent() {
     if (docId) {
       setDocumentId(docId);
       
-      // Fetch the document
-      const doc = simpleDocumentService.getDocumentById(docId);
-      if (doc) {
-        setDocData(doc);
-        setStatus(doc.status);
-        setAssignedTo(doc.assignedTo || '');
-        setNotes(doc.notes || '');
-        
-        // Process PDF data to create a blob URL
+      // Define an async function to fetch the document
+      const fetchDocument = async () => {
         try {
-          if (doc.content) {
-            let dataUrl = doc.content;
+          // Fetch the document - now properly awaiting the Promise
+          const doc = await simpleDocumentService.getDocumentById(docId);
+          if (doc) {
+            setDocData(doc);
+            setStatus(doc.status);
+            setAssignedTo(doc.assignedTo || '');
+            setNotes(doc.notes || '');
             
-            // If it's not a complete data URL add the prefix
-            if (!dataUrl.startsWith('data:application/pdf')) {
-              dataUrl = `data:application/pdf;base64,${dataUrl.replace(/^data:.*?;base64,/, '')}`;
+            // Process PDF data to create a blob URL
+            try {
+              if (doc.content) {
+                let dataUrl = doc.content;
+                
+                // If it's not a complete data URL add the prefix
+                if (!dataUrl.startsWith('data:application/pdf')) {
+                  dataUrl = `data:application/pdf;base64,${dataUrl.replace(/^data:.*?;base64,/, '')}`;
+                }
+                
+                // Convert Data URL to Blob
+                fetch(dataUrl)
+                  .then(res => res.blob())
+                  .then(blob => {
+                    // Create a blob URL from the blob
+                    const url = URL.createObjectURL(blob);
+                    setPdfBlobUrl(url);
+                  })
+                  .catch(err => {
+                    console.error("Error creating blob URL:", err);
+                  });
+              }
+            } catch (error) {
+              console.error('Error processing PDF data:', error);
             }
-            
-            // Convert Data URL to Blob
-            fetch(dataUrl)
-              .then(res => res.blob())
-              .then(blob => {
-                // Create a blob URL from the blob
-                const url = URL.createObjectURL(blob);
-                setPdfBlobUrl(url);
-              })
-              .catch(err => {
-                console.error("Error creating blob URL:", err);
-              });
           }
+          setLoading(false);
         } catch (error) {
-          console.error('Error processing PDF data:', error);
+          console.error('Error fetching document:', error);
+          setLoading(false);
         }
-      }
-      setLoading(false);
+      };
+      
+      // Execute the async function
+      fetchDocument();
     } else {
       // No document ID provided
       setLoading(false);
@@ -88,7 +99,7 @@ function DocumentViewerContent() {
         URL.revokeObjectURL(pdfBlobUrl);
       }
     };
-  }, [searchParams]);
+  }, [searchParams, pdfBlobUrl]);
   
   // Open PDF in a new tab
   const openPdfInNewTab = () => {
@@ -118,7 +129,7 @@ function DocumentViewerContent() {
       setSaveSuccess(false);
       setSaveError('');
       
-      const updatedDoc = simpleDocumentService.updateDocumentStatus(
+      const updatedDoc = await simpleDocumentService.updateDocumentStatus(
         docData.id,
         status as 'pending' | 'approved' | 'rejected',
         notes,

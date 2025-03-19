@@ -128,7 +128,7 @@ export function StoplightChecklist({ docType, status, onStatusChange }: Stopligh
   };
   
   // Update document status based on verification
-  const updateDocumentStatus = () => {
+  const updateDocumentStatus = async () => {
     const verificationStatus = getVerificationStatus();
     
     let newStatus: DocumentStatus = status;
@@ -138,8 +138,13 @@ export function StoplightChecklist({ docType, status, onStatusChange }: Stopligh
       newStatus = 'reviewed';
     }
     
-    if (onStatusChange && newStatus !== status) {
-      onStatusChange(newStatus);
+    // Only update if status has changed
+    if (newStatus !== status && onStatusChange) {
+      try {
+        onStatusChange(newStatus);
+      } catch (error) {
+        console.error('Error updating document status:', error);
+      }
     }
     
     setIsOpen(false);

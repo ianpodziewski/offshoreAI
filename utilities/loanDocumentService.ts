@@ -12,6 +12,7 @@ import {
 import { loanDatabase } from './loanDatabase';
 import { LoanData } from './loanGenerator';
 import { getDocumentTemplate } from './templates/documentTemplateStrings';
+import { simpleDocumentService } from './simplifiedDocumentService';
 
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
@@ -34,155 +35,111 @@ export const formatFileSize = (bytes: number): string => {
   else return (bytes / 1048576).toFixed(1) + ' MB';
 };
 
+// Generate fake document content
+const generateDocumentContent = (docType: string, loan: LoanData): string => {
+  const template = getDocumentTemplate(docType);
+  if (!template) return '';
+  
+  // Replace template variables with loan data
+  return template
+    .replace(/\${borrowerName}/g, loan.borrowerName)
+    .replace(/\${propertyAddress}/g, loan.propertyAddress)
+    .replace(/\${loanAmount}/g, loan.loanAmount)
+    .replace(/\${loanTerm}/g, loan.loanTerm)
+    .replace(/\${interestRate}/g, loan.interestRate)
+    .replace(/\${loanType}/g, loan.loanType);
+};
+
+// Helper function to check if localStorage is almost full
+// Returns true if we have less than 10% space remaining
+const isLocalStorageFull = (): boolean => {
+  try {
+    const maxSize = 5 * 1024 * 1024; // Estimate: 5MB max for most browsers
+    let totalSize = 0;
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      const value = localStorage.getItem(key);
+      totalSize += (key?.length || 0) + (value?.length || 0);
+    }
+    
+    const percentUsed = (totalSize / maxSize) * 100;
+    return percentUsed > 90; // More than 90% used
+  } catch (error) {
+    console.error('Error checking localStorage capacity:', error);
+    return true; // Assume full to be safe
+  }
+};
+
+// Batch size for generating fake documents
+const BATCH_SIZE = 5;
+
 // Document service for managing loan documents
 export const loanDocumentService = {
   // Get all documents
   getAllDocuments: (): LoanDocument[] => {
-    try {
-      const docsJson = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
-      const docs = docsJson ? JSON.parse(docsJson) : [];
-      
-      // Validate data structure
-      if (!Array.isArray(docs)) {
-        console.warn("Invalid document data structure detected");
-        return [];
-      }
-      
-      return docs;
-    } catch (error) {
-      console.error('Error getting documents:', error);
-      return [];
-    }
+    const docsJson = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+    return docsJson ? JSON.parse(docsJson) : [];
   },
   
   // Get documents for a specific loan
   getDocumentsForLoan: (loanId: string): LoanDocument[] => {
-    try {
-      const allDocs = loanDocumentService.getAllDocuments();
-      return allDocs.filter(doc => doc.loanId === loanId);
-    } catch (error) {
-      console.error('Error getting loan documents:', error);
-      return [];
-    }
+    const allDocs = loanDocumentService.getAllDocuments();
+    return allDocs.filter(doc => doc.loanId === loanId);
   },
   
   // Get documents for a specific loan by category
   getDocumentsByCategory: (loanId: string, category: DocumentCategory): LoanDocument[] => {
-    try {
-      const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
-      return loanDocs.filter(doc => doc.category === category);
-    } catch (error) {
-      console.error('Error getting documents by category:', error);
-      return [];
-    }
+    const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
+    return loanDocs.filter(doc => doc.category === category);
   },
   
   // Get documents for a specific loan by section
   getDocumentsBySection: (loanId: string, section: string): LoanDocument[] => {
-    try {
-      const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
-      return loanDocs.filter(doc => doc.section === section);
-    } catch (error) {
-      console.error('Error getting documents by section:', error);
-      return [];
-    }
+    const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
+    return loanDocs.filter(doc => doc.section === section);
   },
   
   // Get document by ID
   getDocumentById: (docId: string): LoanDocument | null => {
-    try {
-      const allDocs = loanDocumentService.getAllDocuments();
-      return allDocs.find(doc => doc.id === docId) || null;
-    } catch (error) {
-      console.error('Error getting document by ID:', error);
-      return null;
-    }
+    const allDocs = loanDocumentService.getAllDocuments();
+    return allDocs.find(doc => doc.id === docId) || null;
   },
   
   // Add a document
-  addDocument: (document: Omit<LoanDocument, 'id'>): LoanDocument => {
-    try {
-      // Get existing documents from storage
-      const existingDocs = loanDocumentService.getAllDocuments();
-      
-      // Create new document with ID
-      const newDocument: LoanDocument = {
-        ...document,
-        id: uuidv4()
-      };
-      
-      // Save the updated documents
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...existingDocs, newDocument]));
-      
-      return newDocument;
-    } catch (error) {
-      console.error('Error adding document:', error);
-      throw error;
-    }
+  addDocument: (document: LoanDocument): LoanDocument => {
+    const allDocs = loanDocumentService.getAllDocuments();
+    allDocs.push(document);
+    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+    return document;
   },
   
   // Update a document
-  updateDocument: (docId: string, updates: Partial<LoanDocument>): LoanDocument | null => {
-    try {
-      // Get existing documents from storage
-      const existingDocs = loanDocumentService.getAllDocuments();
-      
-      // Find the document to update
-      const docIndex = existingDocs.findIndex(doc => doc.id === docId);
-      
-      if (docIndex === -1) {
-        console.warn(`Document with ID ${docId} not found`);
-        return null;
-      }
-      
-      // Create updated document
-      const updatedDocument: LoanDocument = {
-        ...existingDocs[docIndex],
-        ...updates,
-        // Increment version if it exists
-        version: existingDocs[docIndex].version ? existingDocs[docIndex].version! + 1 : 1
-      };
-      
-      // Update the document in the array
-      existingDocs[docIndex] = updatedDocument;
-      
-      // Save the updated documents
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(existingDocs));
-      
-      return updatedDocument;
-    } catch (error) {
-      console.error('Error updating document:', error);
-      return null;
-    }
+  updateDocument: async (documentId: string, updates: Partial<LoanDocument>): Promise<LoanDocument | null> => {
+    const allDocs = loanDocumentService.getAllDocuments();
+    const docIndex = allDocs.findIndex(doc => doc.id === documentId);
+    
+    if (docIndex === -1) return null;
+    
+    allDocs[docIndex] = { ...allDocs[docIndex], ...updates };
+    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+    
+    return allDocs[docIndex];
   },
   
   // Delete a document
-  deleteDocument: (docId: string): boolean => {
-    try {
-      // Get existing documents from storage
-      const existingDocs = loanDocumentService.getAllDocuments();
-      
-      // Filter out the document to delete
-      const updatedDocs = existingDocs.filter(doc => doc.id !== docId);
-      
-      // Check if a document was removed
-      if (updatedDocs.length === existingDocs.length) {
-        console.warn(`Document with ID ${docId} not found`);
-        return false;
-      }
-      
-      // Save the updated documents
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(updatedDocs));
-      
-      return true;
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      return false;
-    }
+  deleteDocument: (documentId: string): boolean => {
+    const allDocs = loanDocumentService.getAllDocuments();
+    const filteredDocs = allDocs.filter(doc => doc.id !== documentId);
+    
+    if (filteredDocs.length === allDocs.length) return false;
+    
+    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
+    return true;
   },
   
   // Update document status
-  updateDocumentStatus: (docId: string, status: DocumentStatus): LoanDocument | null => {
+  updateDocumentStatus: async (docId: string, status: DocumentStatus): Promise<LoanDocument | null> => {
     return loanDocumentService.updateDocument(docId, { status });
   },
   
@@ -344,6 +301,14 @@ export const loanDocumentService = {
   // Generate fake documents for a loan
   generateFakeDocuments: (loanId: string, loanType: string): LoanDocument[] => {
     try {
+      console.log(`Generating fake documents for loan ${loanId} (type: ${loanType})`);
+      
+      // Check if localStorage is getting full - if so, use simpleDocumentService instead
+      if (isLocalStorageFull()) {
+        console.log('localStorage is close to full, using simpleDocumentService instead');
+        return loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType);
+      }
+      
       // Get all required document types for this loan type
       const requiredDocTypes = getRequiredDocuments(loanType);
       
@@ -382,81 +347,181 @@ export const loanDocumentService = {
         return FILE_TYPES[Math.floor(Math.random() * FILE_TYPES.length)];
       };
       
-      // Function to generate content for different document types
-      const generateDocumentContent = (docType: string): string => {
-        // Get the loan data for the current loan
-        const loanData = loanDatabase.getLoanById(loanId);
-        if (!loanData) {
-          console.error('Loan data not found for ID:', loanId);
-          return '';
-        }
-        
-        // Use the template system to generate document content
-        return getDocumentTemplate(docType, loanData);
-      };
+      // Generate fake documents in batches to avoid memory issues
+      console.log(`Need to generate ${requiredDocTypes.length} document types`);
       
-      // Process each required document type
-      for (const docType of requiredDocTypes) {
-        // Skip if document already exists
-        if (existingDocs.some(doc => doc.docType === docType.docType)) {
-          continue;
-        }
-        
-        // Generate random properties
-        const uploadDate = getRandomDate();
-        const status = getRandomStatus();
-        const fileType = ".html"; // Change to HTML for proper rendering
-        const fileSize = getRandomFileSize();
-        
-        // Create a more realistic filename
-        const sanitizedLabel = docType.label.toLowerCase().replace(/\s+/g, '_');
-        const filename = `SAMPLE_${sanitizedLabel}${fileType}`;
-        
-        // Generate document-specific content
-        const content = generateDocumentContent(docType.docType);
-        
-        // Create the fake document
-        const fakeDocument: LoanDocument = {
-          id: uuidv4(),
-          loanId,
-          filename,
-          fileType,
-          fileSize,
-          dateUploaded: uploadDate,
-          category: docType.category,
-          section: docType.section,
-          subsection: docType.subsection,
-          docType: docType.docType,
-          status,
-          isRequired: true,
-          version: 1,
-          content, // Add the generated content
-          notes: `This is a sample document for ${loanData.borrowerName} with loan amount ${loanData.loanAmount} for the property at ${loanData.propertyAddress}. Status: ${status === 'approved' ? 'Document verified and approved.' : 
-                 status === 'rejected' ? 'Document rejected. Please resubmit.' : 
-                 status === 'reviewed' ? 'Document reviewed, pending approval.' : 
-                 'Document uploaded, awaiting review.'}`
-        };
-        
-        // Add expiration date for certain document types
-        if (['insurance_policy', 'appraisal_report', 'credit_report', 'background_check'].includes(docType.docType)) {
-          const expirationDate = new Date();
-          expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-          fakeDocument.expirationDate = expirationDate.toISOString();
-        }
-        
-        fakeDocuments.push(fakeDocument);
-      }
+      // Filter out document types that already exist
+      const existingDocTypes = new Set(existingDocs.map(doc => doc.docType));
+      const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
       
-      // Save the fake documents
-      if (fakeDocuments.length > 0) {
-        const allDocs = loanDocumentService.getAllDocuments();
-        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...allDocs, ...fakeDocuments]));
+      console.log(`After filtering existing docs, need to generate ${docTypesToGenerate.length} document types`);
+      
+      // Process in small batches
+      for (let i = 0; i < docTypesToGenerate.length; i += BATCH_SIZE) {
+        const batch = docTypesToGenerate.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${i/BATCH_SIZE + 1} (${batch.length} docs)`);
+        
+        // Process each doc type in this batch
+        for (const docType of batch) {
+          // Generate random document attributes
+          const fileType = getRandomFileType();
+          const fileSize = getRandomFileSize();
+          const uploadDate = getRandomDate();
+          const status = getRandomStatus();
+          
+          // Generate a filename
+          const filename = `${docType.docType.replace(/_/g, '-')}${fileType}`;
+          
+          // Generate document content based on the document type
+          const content = generateDocumentContent(docType.docType, loanData);
+          
+          // Create the fake document
+          const fakeDocument: LoanDocument = {
+            id: uuidv4(),
+            loanId,
+            filename,
+            fileType,
+            fileSize,
+            dateUploaded: uploadDate,
+            category: docType.category,
+            section: docType.section,
+            subsection: docType.subsection,
+            docType: docType.docType,
+            status,
+            isRequired: true,
+            version: 1,
+            content, // Add the generated content
+            notes: `This is a sample document for ${loanData.borrowerName} with loan amount ${loanData.loanAmount} for the property at ${loanData.propertyAddress}. Status: ${status === 'approved' ? 'Document verified and approved.' : 
+                   status === 'rejected' ? 'Document rejected. Please resubmit.' : 
+                   status === 'reviewed' ? 'Document reviewed, pending approval.' : 
+                   'Document uploaded, awaiting review.'}`
+          };
+          
+          // Add expiration date for certain document types
+          if (['insurance_policy', 'appraisal_report', 'credit_report', 'background_check'].includes(docType.docType)) {
+            const expirationDate = new Date();
+            expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+            fakeDocument.expirationDate = expirationDate.toISOString();
+          }
+          
+          fakeDocuments.push(fakeDocument);
+        }
+        
+        // Save this batch
+        if (fakeDocuments.length > 0) {
+          const allDocs = loanDocumentService.getAllDocuments();
+          try {
+            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...allDocs, ...fakeDocuments]));
+          } catch (error) {
+            console.error('localStorage quota exceeded, switching to simpleDocumentService:', error);
+            
+            // If we hit storage limitations, switch to the simpleDocumentService 
+            // and copy over what we've generated so far
+            return loanDocumentService.generateFakeDocumentsUsingSimpleService(loanId, loanType, fakeDocuments);
+          }
+        }
       }
       
       return fakeDocuments;
     } catch (error) {
       console.error('Error generating fake documents:', error);
       return [];
+    }
+  },
+  
+  // Generate fake documents using simpleDocumentService (which uses IndexedDB for content)
+  generateFakeDocumentsUsingSimpleService: (loanId: string, loanType: string, existingFakeDocs: LoanDocument[] = []): LoanDocument[] => {
+    try {
+      console.log('Generating fake documents using simpleDocumentService with IndexedDB');
+      
+      // Get all required document types for this loan type
+      const requiredDocTypes = getRequiredDocuments(loanType);
+      
+      // Get existing documents for this loan (from simpleDocumentService)
+      const existingSimpleDocs = simpleDocumentService.getDocumentsForLoan(loanId);
+      const existingDocTypes = new Set([
+        ...existingSimpleDocs.map(doc => doc.docType),
+        ...existingFakeDocs.map(doc => doc.docType)
+      ]);
+      
+      // Filter out document types that already exist
+      const docTypesToGenerate = requiredDocTypes.filter(docType => !existingDocTypes.has(docType.docType));
+      
+      // Fetch loan data
+      const loanData = loanDatabase.getLoanById(loanId);
+      if (!loanData) {
+        console.error(`Loan data not found for loanId: ${loanId}`);
+        return existingFakeDocs;
+      }
+      
+      // Track the documents we create
+      const generatedDocs: LoanDocument[] = [...existingFakeDocs];
+      
+      // Process in small batches
+      for (let i = 0; i < docTypesToGenerate.length; i += BATCH_SIZE) {
+        const batch = docTypesToGenerate.slice(i, i + BATCH_SIZE);
+        console.log(`Processing batch ${i/BATCH_SIZE + 1} (${batch.length} docs) with simpleDocumentService`);
+        
+        // Process each doc type in this batch
+        for (const docType of batch) {
+          // Generate random document attributes
+          const fileType = '.html'; // Use HTML for all docs in simpleDocumentService
+          const uploadDate = new Date().toISOString();
+          const status = 'pending';
+          
+          // Generate a filename
+          const filename = `${docType.docType.replace(/_/g, '-')}${fileType}`;
+          
+          // Generate document content based on the document type
+          const content = generateDocumentContent(docType.docType, loanData);
+          
+          // Create a unique ID
+          const docId = uuidv4();
+          
+          // Create the document in simpleDocumentService
+          try {
+            const simpleDoc = await simpleDocumentService.addDocumentDirectly({
+              id: docId,
+              loanId,
+              filename,
+              fileType: 'text/html',
+              dateUploaded: uploadDate,
+              category: docType.category as any,
+              docType: docType.docType,
+              status: status as any,
+              content,
+              section: docType.section,
+              subsection: docType.subsection
+            });
+            
+            console.log(`Added document to simpleDocumentService: ${filename} (ID: ${docId})`);
+            
+            // Add to our tracking array
+            generatedDocs.push({
+              id: docId,
+              loanId,
+              filename,
+              fileType: 'text/html',
+              dateUploaded: uploadDate,
+              category: docType.category,
+              section: docType.section,
+              subsection: docType.subsection,
+              docType: docType.docType,
+              status,
+              isRequired: true,
+              version: 1,
+              content
+            });
+          } catch (error) {
+            console.error(`Error adding document to simpleDocumentService: ${filename}`, error);
+          }
+        }
+      }
+      
+      return generatedDocs;
+    } catch (error) {
+      console.error('Error generating fake documents using simpleDocumentService:', error);
+      return existingFakeDocs;
     }
   },
   

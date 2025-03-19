@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, XCircle, AlertTriangle, Wrench, Trash2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -17,6 +17,7 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [diagnosticData, setDiagnosticData] = useState<any>(null);
   const [isDiagnosticLoading, setIsDiagnosticLoading] = useState(false);
+  const [showStorageWarning, setShowStorageWarning] = useState(false);
 
   const startIndexing = async () => {
     try {
@@ -119,6 +120,99 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     }
   };
   
+  // Function to clear localStorage and IndexedDB
+  const clearDocumentStorage = async () => {
+    try {
+      setIndexingStatus('indexing');
+      setProgress(20);
+      setMessage('Clearing document storage...');
+      
+      // Call a special endpoint to clear the storage
+      const response = await fetch('/api/loan-documents/clear-storage', {
+        method: 'POST',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to clear storage: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Handle client-side storage clearing based on response
+      if (data.clientAction === "clearStorage") {
+        setProgress(50);
+        setMessage('Clearing browser storage...');
+        
+        // Clear localStorage items
+        if (data.clearInstructions?.storageKeys) {
+          data.clearInstructions.storageKeys.forEach((key: string) => {
+            try {
+              localStorage.removeItem(key);
+              console.log(`Cleared localStorage item: ${key}`);
+            } catch (err) {
+              console.error(`Error clearing localStorage key ${key}:`, err);
+            }
+          });
+        }
+        
+        // Clear IndexedDB if specified
+        if (data.clearInstructions?.dbName) {
+          try {
+            const dbName = data.clearInstructions.dbName;
+            const request = indexedDB.deleteDatabase(dbName);
+            
+            request.onsuccess = () => {
+              console.log(`Successfully deleted IndexedDB database: ${dbName}`);
+              setProgress(90);
+              setMessage('Storage cleared successfully, finalizing...');
+            };
+            
+            request.onerror = () => {
+              console.error(`Error deleting IndexedDB database: ${dbName}`);
+              // Continue anyway
+              setProgress(90);
+              setMessage('Partial storage clear completed, finalizing...');
+            };
+            
+            // Wait for the operation to complete
+            request.onblocked = () => {
+              console.warn(`IndexedDB deletion was blocked. Close any other open tabs of this site and try again.`);
+              setProgress(90);
+              setMessage('Storage partially cleared, please close other tabs and try again.');
+            };
+          } catch (dbError) {
+            console.error('Error accessing IndexedDB:', dbError);
+            // Continue anyway
+          }
+        }
+      }
+      
+      // Set a short timeout to let browser finish operations
+      setTimeout(() => {
+        setProgress(100);
+        setIndexingStatus('success');
+        setMessage('Document storage cleared successfully. You can now try indexing again.');
+        setShowStorageWarning(false);
+      }, 1000);
+      
+    } catch (error) {
+      setIndexingStatus('error');
+      setMessage(`Error clearing storage: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setProgress(100);
+    }
+  };
+
+  // Check if the error is related to storage quota
+  useEffect(() => {
+    if (indexingStatus === 'error' && 
+        message && 
+        (message.includes('quota') || message.includes('exceeded') || message.includes('storage'))) {
+      setShowStorageWarning(true);
+    } else {
+      setShowStorageWarning(false);
+    }
+  }, [indexingStatus, message]);
+
   // Render status icon based on indexing status
   const renderStatusIcon = () => {
     switch (indexingStatus) {
@@ -208,6 +302,33 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
               </p>
             )}
           </div>
+          
+          {/* Storage quota warning */}
+          {showStorageWarning && (
+            <div className="bg-amber-900/30 border border-amber-800 rounded p-3 mt-2">
+              <h4 className="text-amber-200 font-medium flex items-center">
+                <AlertTriangle size={14} className="mr-2" />
+                Storage Quota Exceeded
+              </h4>
+              <p className="text-amber-100 text-sm mt-1">
+                Your browser's storage limit has been reached. This can happen when you have many or large documents.
+              </p>
+              <div className="mt-3">
+                <Button 
+                  size="sm"
+                  variant="destructive"
+                  onClick={clearDocumentStorage}
+                  className="flex items-center gap-1"
+                >
+                  <Trash2 size={14} />
+                  Clear Document Storage
+                </Button>
+              </div>
+              <p className="text-amber-200/70 text-xs mt-2">
+                Note: This will remove all cached documents, but won't affect your actual loan data.
+              </p>
+            </div>
+          )}
         </div>
       )}
       

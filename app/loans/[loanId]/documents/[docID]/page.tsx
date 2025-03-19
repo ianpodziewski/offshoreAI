@@ -47,11 +47,15 @@ export default function DocumentViewerPage() {
     fetchDocument();
   }, [params?.docId, params?.loanId]);
   
-  const updateStatus = (status: string) => {
+  const updateStatus = async (status: string) => {
     if (document) {
-      const updatedDoc = documentService.updateDocumentStatus(document.id, status);
-      if (updatedDoc) {
-        setDocument(updatedDoc);
+      try {
+        const updatedDoc = await documentService.updateDocumentStatus(document.id, status);
+        if (updatedDoc) {
+          setDocument(updatedDoc);
+        }
+      } catch (error) {
+        console.error('Error updating document status:', error);
       }
     }
   };
