@@ -26,12 +26,6 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
       path: `/loans/${loan.id}/documents`,
       icon: <FileText size={18} />,
       isActive: activePage === 'documents'
-    },
-    {
-      name: 'Review',
-      path: `/loans/${loan.id}/review`,
-      icon: <ClipboardCheck size={18} />,
-      isActive: activePage === 'review'
     }
   ];
 
