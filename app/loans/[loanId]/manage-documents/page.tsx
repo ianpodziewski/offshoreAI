@@ -64,61 +64,139 @@ function ManageDocumentsContent({ loanId }: { loanId: string }) {
   
   // Handle opening document in new tab
   const handleViewDocument = (document: SimpleDocument) => {
-    const newWindow = window.open('', '_blank');
-    if (newWindow) {
-      // If the document has HTML content or any content at all
-      if (document.content) {
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>${document.filename}</title>
-              <style>
-                body { 
-                  font-family: Arial, sans-serif;
-                  line-height: 1.6;
-                  padding: 20px;
-                  max-width: 800px;
-                  margin: 0 auto;
-                }
-                .document-header {
-                  text-align: center;
-                  margin-bottom: 30px;
-                  border-bottom: 2px solid #1e5a9a;
-                  padding-bottom: 20px;
-                }
-                .document-content {
-                  padding: 20px;
-                  background-color: white;
-                }
-              </style>
-            </head>
-            <body>
-              <div class="document-header">
-                <h1>${document.filename}</h1>
-              </div>
-              <div class="document-content">
-                ${document.content}
-              </div>
-            </body>
-          </html>
-        `);
-        newWindow.document.close(); // Important for some browsers
-      } else {
-        // If no content, show placeholder
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>${document.filename}</title>
-            </head>
-            <body>
-              <div style="text-align: center; margin-top: 50px;">
-                <h1>${document.filename}</h1>
-                <p>This document could not be previewed.</p>
-              </div>
-            </body>
-          </html>
-        `);
-        newWindow.document.close();
+    // Check if the document is likely a PDF based on filename or content
+    const isPdf = document.filename.toLowerCase().endsWith('.pdf') || 
+                 (document.fileType && document.fileType.includes('pdf')) ||
+                 (typeof document.content === 'string' && document.content.startsWith('data:application/pdf'));
+    
+    if (isPdf) {
+      // Handle PDF content
+      try {
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          // Create a PDF viewer page
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>${document.filename}</title>
+                <style>
+                  body, html {
+                    margin: 0;
+                    padding: 0;
+                    height: 100%;
+                    overflow: hidden;
+                  }
+                  #pdf-container {
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                  }
+                  .header {
+                    background: #f0f0f0;
+                    padding: 10px;
+                    text-align: center;
+                    border-bottom: 1px solid #ccc;
+                  }
+                  iframe {
+                    flex: 1;
+                    border: none;
+                  }
+                </style>
+              </head>
+              <body>
+                <div id="pdf-container">
+                  <div class="header">
+                    <h2>${document.filename}</h2>
+                  </div>
+                  <iframe src="${document.content}" width="100%" height="100%"></iframe>
+                </div>
+              </body>
+            </html>
+          `);
+          newWindow.document.close();
+        }
+      } catch (error) {
+        console.error('Error displaying PDF:', error);
+        // Fall back to basic display if there's an error
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>${document.filename}</title>
+              </head>
+              <body>
+                <div style="text-align: center; margin-top: 50px;">
+                  <h1>${document.filename}</h1>
+                  <p>There was an error displaying this PDF document.</p>
+                  <p>Try downloading it instead.</p>
+                  <a href="${document.content}" download="${document.filename}">Download PDF</a>
+                </div>
+              </body>
+            </html>
+          `);
+          newWindow.document.close();
+        }
+      }
+    } else {
+      // Handle HTML and other content types as before
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        // If the document has HTML content or any content at all
+        if (document.content) {
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>${document.filename}</title>
+                <style>
+                  body { 
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    padding: 20px;
+                    max-width: 800px;
+                    margin: 0 auto;
+                  }
+                  .document-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #1e5a9a;
+                    padding-bottom: 20px;
+                  }
+                  .document-content {
+                    padding: 20px;
+                    background-color: white;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="document-header">
+                  <h1>${document.filename}</h1>
+                </div>
+                <div class="document-content">
+                  ${document.content}
+                </div>
+              </body>
+            </html>
+          `);
+          newWindow.document.close(); // Important for some browsers
+        } else {
+          // If no content, show placeholder
+          newWindow.document.write(`
+            <html>
+              <head>
+                <title>${document.filename}</title>
+              </head>
+              <body>
+                <div style="text-align: center; margin-top: 50px;">
+                  <h1>${document.filename}</h1>
+                  <p>This document could not be previewed.</p>
+                </div>
+              </body>
+            </html>
+          `);
+          newWindow.document.close();
+        }
       }
     }
   };
