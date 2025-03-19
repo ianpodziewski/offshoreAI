@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     const { documentId, loanId } = await req.json();
 
     // Get the original document
-    const originalDoc = simpleDocumentService.getDocumentById(documentId);
+    const originalDoc = await simpleDocumentService.getDocumentById(documentId);
     if (!originalDoc) {
       return NextResponse.json({ 
         success: false, 
