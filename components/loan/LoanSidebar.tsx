@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Info, ChevronRight, ChevronLeft, ClipboardCheck } from 'lucide-react';
+import { FileText, Info, ChevronRight, ChevronLeft, MessageCircle } from 'lucide-react';
 import { COLORS } from '@/app/theme/colors';
 import Link from 'next/link';
 
@@ -26,6 +26,12 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
       path: `/loans/${loan.id}/documents`,
       icon: <FileText size={18} />,
       isActive: activePage === 'documents'
+    },
+    {
+      name: 'Loan Chatbot',
+      path: `/loans/${loan.id}/chat`,
+      icon: <MessageCircle size={18} />,
+      isActive: activePage === 'chat'
     }
   ];
 
