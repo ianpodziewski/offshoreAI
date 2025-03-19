@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     console.log(`📚 Found ${documents.length} documents for loan ${loanId}`);
     
     let indexedDocuments = 0;
-    let totalDocuments = documents.length;
+    const totalDocuments = documents.length;
     const errors: any[] = [];
     
     // Process and index each document
@@ -248,4 +248,4 @@ export async function GET(req: NextRequest) {
     console.error("❌ Error checking indexing status:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-} 
+}
