@@ -383,7 +383,7 @@ export const loanDocumentService = {
     return requiredDocTypes.map(docType => ({
       id: uuidv4(),
       loanId,
-      filename: `${docType.label}.pdf`,
+      filename: `${docType.label}.html`,
       dateUploaded: new Date().toISOString(),
       category: docType.category,
       section: docType.section,
@@ -412,7 +412,7 @@ export const loanDocumentService = {
     return missingDocTypes.map(docType => ({
       id: uuidv4(),
       loanId,
-      filename: `${docType.label}.pdf`,
+      filename: `${docType.label}.html`,
       dateUploaded: new Date().toISOString(),
       category: docType.category,
       section: docType.section,

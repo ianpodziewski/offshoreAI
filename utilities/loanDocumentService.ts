@@ -20,8 +20,8 @@ const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
 // Document statuses for fake documents (excluding 'required' since we want to show uploaded docs)
 const FAKE_DOCUMENT_STATUSES: DocumentStatus[] = ['pending', 'approved', 'received', 'reviewed'];
 
-// Document file types
-const FILE_TYPES = ['.pdf', '.docx', '.jpg', '.png'];
+// Document file types - Changed to only use HTML to avoid creating PDFs
+const FILE_TYPES = ['.html'];
 
 // Function to generate a random file size between 100KB and 10MB
 const getRandomFileSize = (): number => {
@@ -179,7 +179,7 @@ export const loanDocumentService = {
       return missingDocTypes.map(docType => ({
         id: uuidv4(),
         loanId,
-        filename: `SAMPLE_${docType.label}.pdf`,
+        filename: `SAMPLE_${docType.label}.html`,
         dateUploaded: new Date().toISOString(),
         category: docType.category,
         section: docType.section,
@@ -205,7 +205,7 @@ export const loanDocumentService = {
       const placeholderDocs = requiredDocTypes.map(docType => ({
         id: uuidv4(),
         loanId,
-        filename: `SAMPLE_${docType.label}.pdf`,
+        filename: `SAMPLE_${docType.label}.html`,
         dateUploaded: new Date().toISOString(),
         category: docType.category,
         section: docType.section,

@@ -362,12 +362,12 @@ export function generateLoan(overrides = {}): LoanData {
         category: 'financial',
         files: [
           {
-            filename: 'proof_of_funds.pdf',
+            filename: 'proof_of_funds.html',
             uploadDate: dateCreated,
             status: 'approved',
           },
           {
-            filename: 'personal_financial_statement.pdf',
+            filename: 'personal_financial_statement.html',
             uploadDate: dateCreated,
             status: 'pending',
           }
@@ -377,12 +377,12 @@ export function generateLoan(overrides = {}): LoanData {
         category: 'property',
         files: [
           {
-            filename: 'property_photos.pdf',
+            filename: 'property_photos.html',
             uploadDate: dateCreated,
             status: 'pending',
           },
           {
-            filename: 'rehab_scope_of_work.pdf',
+            filename: 'rehab_scope_of_work.html',
             uploadDate: dateCreated,
             status: 'pending',
           }
@@ -392,12 +392,12 @@ export function generateLoan(overrides = {}): LoanData {
         category: 'legal',
         files: [
           {
-            filename: 'purchase_contract.pdf',
+            filename: 'purchase_contract.html',
             uploadDate: dateCreated,
             status: 'pending',
           },
           {
-            filename: 'deed_of_trust.pdf',
+            filename: 'deed_of_trust.html',
             uploadDate: dateCreated,
             status: 'pending',
           }
@@ -407,12 +407,12 @@ export function generateLoan(overrides = {}): LoanData {
         category: 'loan',
         files: [
           {
-            filename: 'promissory_note.pdf',
+            filename: 'promissory_note.html',
             uploadDate: dateCreated,
             status: 'pending',
           },
           {
-            filename: 'draw_schedule.pdf',
+            filename: 'draw_schedule.html',
             uploadDate: dateCreated,
             status: 'pending',
           }
@@ -468,7 +468,9 @@ export function generateLoan(overrides = {}): LoanData {
   // Apply any overrides
   const loan = { ...baseLoan, ...overrides };
   
-  // Generate fake documents for the loan
+  // Comment out the automatic generation of fake documents to prevent preloading
+  // This is likely contributing to the PDF file issue
+  /* 
   setTimeout(async () => {
     try {
       await loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
@@ -476,6 +478,7 @@ export function generateLoan(overrides = {}): LoanData {
       console.error('Error generating fake documents in timeout:', error);
     }
   }, 100);
+  */
   
   return loan;
 }
