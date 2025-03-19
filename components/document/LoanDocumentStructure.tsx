@@ -382,8 +382,14 @@ export function LoanDocumentStructure({
     const isDragging = draggingDocType === docType;
     const status = getDocumentStatus(docType);
     
-    const handleHeaderClick = () => {
-      // Always trigger file upload when clicking the header, regardless of whether a document exists
+    const handleHeaderClick = (e: React.MouseEvent) => {
+      // Check if the click is coming from a stoplight element
+      const target = e.target as HTMLElement;
+      if (target.closest('.stoplight-container')) {
+        return; // If clicking stoplight, do nothing
+      }
+      
+      // Otherwise, trigger file upload
       if (onUploadDocument) {
         onUploadDocument(category, section, docType);
       }
@@ -393,14 +399,17 @@ export function LoanDocumentStructure({
       <div key={docType} className="mb-4">
         {/* Document header - always shown */}
         <div 
-          className={`bg-[#131B2E] border-gray-800 border rounded-t-lg cursor-pointer transition-colors duration-200 hover:bg-[#1F2A42] ${isDragging ? 'border-blue-500 border-2' : ''} ${!isUploaded ? 'rounded-b-lg' : ''}`}
-          onClick={handleHeaderClick}
+          className={`bg-[#131B2E] border-gray-800 border rounded-t-lg transition-colors duration-200 hover:bg-[#1F2A42] ${isDragging ? 'border-blue-500 border-2' : ''} ${!isUploaded ? 'rounded-b-lg' : ''}`}
           onDragOver={(e) => handleDragOver(e, docType)}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, docType, section)}
         >
           <div className="py-4 px-5 flex justify-between items-center">
-            <div className="flex items-center">
+            {/* Left side content - clickable for upload */}
+            <div 
+              className="flex items-center flex-1 cursor-pointer"
+              onClick={(e) => handleHeaderClick(e)}
+            >
               <h3 className="text-base text-white">{label}</h3>
               {isUploaded && (
                 <span className="ml-2 text-xs px-2 py-1 rounded-full bg-blue-900/50 text-blue-300">
@@ -408,15 +417,26 @@ export function LoanDocumentStructure({
                 </span>
               )}
             </div>
+            
+            {/* Right side content - stoplight and add button */}
             <div className="flex items-center space-x-2">
               {isUploaded && (
-                <StoplightChecklist 
-                  docType={docType} 
-                  status={status} 
-                  onStatusChange={(newStatus) => handleStoplightStatusChange(docType, newStatus)}
-                />
+                <div onClick={(e) => {
+                  // Stop event propagation at this level
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}>
+                  <StoplightChecklist 
+                    docType={docType} 
+                    status={status} 
+                    onStatusChange={(newStatus) => handleStoplightStatusChange(docType, newStatus)}
+                  />
+                </div>
               )}
-              <Plus size={18} className="text-blue-500" />
+              {/* Add button - clickable for upload */}
+              <div onClick={(e) => handleHeaderClick(e)} className="cursor-pointer">
+                <Plus size={18} className="text-blue-500" />
+              </div>
             </div>
           </div>
         </div>

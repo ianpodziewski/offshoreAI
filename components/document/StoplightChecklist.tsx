@@ -145,21 +145,32 @@ export function StoplightChecklist({ docType, status, onStatusChange }: Stopligh
     setIsOpen(false);
   };
   
-  // Handle button click with propagation stopping
+  // Enhanced event handling to prevent propagation
   const handleStoplightClick = (e: React.MouseEvent) => {
-    // Stop the event from bubbling up to parent elements
+    // Make sure to stop all event propagation
     e.preventDefault();
     e.stopPropagation();
     
     // Open the dialog
     setIsOpen(true);
+    
+    // Return false as an extra measure
+    return false;
   };
   
   return (
-    <>
+    <div 
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className="stoplight-container"
+    >
       {/* Stoplight indicator with updated click handler */}
       <button
         onClick={handleStoplightClick}
+        onMouseDown={(e) => e.stopPropagation()}
+        onMouseUp={(e) => e.stopPropagation()}
         className="w-16 h-6 rounded-full flex items-center p-1 bg-gray-800 relative"
         title="Document verification checklist"
       >
@@ -203,6 +214,6 @@ export function StoplightChecklist({ docType, status, onStatusChange }: Stopligh
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 } 
