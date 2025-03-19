@@ -1,6 +1,6 @@
 // utilities/simplifiedDocumentService.ts
 import { v4 as uuidv4 } from 'uuid';
-import storageService from '@/services/storageService';
+import { clientDocumentService } from '@/services/clientDocumentService';
 import { isRedisConfigured, STORAGE_CONFIG } from '@/configuration/storageConfig';
 
 export interface SimpleDocument {
@@ -336,55 +336,31 @@ function readFileAsBase64(file: File): Promise<string> {
   });
 }
 
-// Create and export the document service
+// Export the simplified document service that uses the client service
 export const simpleDocumentService = {
   // Get all documents
   getAllDocuments: (): SimpleDocument[] => {
-    try {
-      const docsJson = localStorage.getItem(STORAGE_KEY);
-      const docs = docsJson ? JSON.parse(docsJson) : [];
-      
-      // Validate data structure
-      if (!Array.isArray(docs)) {
-        console.warn("Invalid document data structure detected");
-        return [];
-      }
-      
-      return docs;
-    } catch (error) {
-      console.error('Error getting documents:', error);
-      return [];
-    }
+    return clientDocumentService.getAllDocumentsSync();
   },
   
   // Get documents for a specific loan
   getDocumentsForLoan: (loanId: string): SimpleDocument[] => {
-    try {
-      console.log(`🔍 Getting documents for loan ID: ${loanId}`);
-      const allDocs = simpleDocumentService.getAllDocuments();
-      console.log(`📋 Found ${allDocs.length} total documents in storage`);
-      
-      // Log all document loanIds to help diagnose association issues
-      const loanIds = Array.from(new Set(allDocs.map(doc => doc.loanId)));
-      console.log(`📝 Documents in storage have the following loan IDs: ${loanIds.join(', ')}`);
-      
-      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
-      console.log(`📂 Filtered ${loanDocs.length} documents for loan ID ${loanId}`);
-      
-      // If no documents found but we have documents in storage
-      if (loanDocs.length === 0 && allDocs.length > 0) {
-        console.warn(`⚠️ No documents found for loan ID ${loanId} despite having ${allDocs.length} total documents`);
-        // Log the first few documents for debugging
-        if (allDocs.length > 0) {
-          console.log('Sample document:', JSON.stringify(allDocs[0], null, 2).substring(0, 500) + '...');
-        }
-      }
-      
-      return loanDocs;
-    } catch (error) {
-      console.error('❌ Error getting loan documents:', error);
-      return [];
-    }
+    return clientDocumentService.getDocumentsForLoanSync(loanId);
+  },
+  
+  // Get a document by ID
+  getDocument: (docId: string): SimpleDocument | null => {
+    return clientDocumentService.getDocumentSync(docId);
+  },
+  
+  // Save a document
+  saveDocument: (document: SimpleDocument): SimpleDocument => {
+    return clientDocumentService.saveDocumentSync(document);
+  },
+  
+  // Delete a document
+  deleteDocument: (docId: string): boolean => {
+    return clientDocumentService.deleteDocumentSync(docId);
   },
   
   // Get chat documents
@@ -548,7 +524,7 @@ export const simpleDocumentService = {
           }
           
           // Save to server storage
-          await storageService.saveDocument(fullDoc);
+          await clientDocumentService.saveDocument(fullDoc);
           syncedCount++;
           console.log(`✅ Synced document ${doc.id} to server storage`);
         } catch (docError) {
@@ -604,8 +580,8 @@ export const simpleDocumentService = {
       
       // Get documents from server storage
       const serverDocs = loanId 
-        ? await storageService.getDocumentsForLoan(loanId)
-        : (await storageService.getAllDocuments(0, 10000)).documents;
+        ? await clientDocumentService.getDocumentsForLoan(loanId)
+        : (await clientDocumentService.getAllDocuments(0, 10000)).documents;
       
       if (serverDocs.length === 0) {
         console.log('No documents found on server to sync');
@@ -768,7 +744,7 @@ export const simpleDocumentService = {
       try {
         if (isRedisConfigured() && !STORAGE_CONFIG.USE_FALLBACK) {
           // Save directly to server storage - this includes the full content
-          await storageService.saveDocument({
+          await clientDocumentService.saveDocument({
             ...document,
             id: docId,
             content: document.content // Use the full content for server storage
@@ -897,7 +873,7 @@ export const simpleDocumentService = {
       try {
         if (isRedisConfigured() && !STORAGE_CONFIG.USE_FALLBACK) {
           // Save directly to server storage - this includes the full content
-          await storageService.saveDocument({
+          await clientDocumentService.saveDocument({
             ...newDoc,
             content: formattedContent // Use the full content for server storage
           });
@@ -917,30 +893,6 @@ export const simpleDocumentService = {
     } catch (error) {
       console.error('Error adding document:', error);
       return null;
-    }
-  },
-  
-  // Delete document
-  deleteDocument: async (docId: string): Promise<boolean> => {
-    try {
-      const allDocs = simpleDocumentService.getAllDocuments();
-      const filteredDocs = allDocs.filter(doc => doc.id !== docId);
-      
-      if (filteredDocs.length === allDocs.length) return false;
-      
-      // Also delete from IndexedDB
-      try {
-        await deleteContentFromIndexedDB(docId);
-        console.log(`Deleted document content from IndexedDB: ${docId}`);
-      } catch (indexedDBError) {
-        console.warn('Failed to delete content from IndexedDB', indexedDBError);
-      }
-      
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredDocs));
-      return true;
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      return false;
     }
   },
   

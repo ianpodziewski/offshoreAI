@@ -1,6 +1,6 @@
-import Redis from 'ioredis';
 import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
 import { STORAGE_CONFIG, localStorageFallback, isRedisConfigured, STORAGE_KEYS } from '@/configuration/storageConfig';
+import { serverRedisUtil } from '@/lib/redis-server';
 
 // Prefixes for different data types
 const DOCUMENT_PREFIX = STORAGE_CONFIG.DOCUMENT_PREFIX;
@@ -8,20 +8,8 @@ const LOAN_PREFIX = STORAGE_CONFIG.LOAN_PREFIX;
 const DOCUMENT_LIST_KEY = STORAGE_CONFIG.DOCUMENT_LIST_KEY;
 const DOCUMENT_BY_LOAN_PREFIX = STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX;
 
-// Initialize Redis client (if available)
-let redis: typeof Redis | null = null;
-if (typeof process !== 'undefined' && process.env.REDIS_URL) {
-  try {
-    redis = new Redis(process.env.REDIS_URL);
-    console.log('Redis client initialized');
-  } catch (error) {
-    console.error('Failed to initialize Redis client:', error);
-    redis = null;
-  }
-}
-
 // Check if we should use the fallback mechanism
-const useFallback = !redis || !isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK;
+const useFallback = !isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK;
 
 // Log the storage mode
 console.log(`Storage Mode: ${useFallback ? 'localStorage Fallback' : 'Redis'}`);
@@ -61,15 +49,15 @@ export const storageService = {
       const docKey = `${DOCUMENT_PREFIX}${document.id}`;
       
       // Store the document in Redis (need to JSON.stringify)
-      await redis!.set(docKey, JSON.stringify(document));
+      await serverRedisUtil.set(docKey, JSON.stringify(document));
       
       // Add to the document list
-      await redis!.sadd(DOCUMENT_LIST_KEY, document.id);
+      await serverRedisUtil.sadd(DOCUMENT_LIST_KEY, document.id);
       
       // Add to the loan's document list
       if (document.loanId) {
         const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${document.loanId}`;
-        await redis!.sadd(loanDocListKey, document.id);
+        await serverRedisUtil.sadd(loanDocListKey, document.id);
       }
       
       console.log(`Successfully saved document (Redis): ${document.id} for loan: ${document.loanId}`);
@@ -93,7 +81,7 @@ export const storageService = {
       
       // Use Redis
       const docKey = `${DOCUMENT_PREFIX}${docId}`;
-      const documentStr = await redis!.get(docKey);
+      const documentStr = await serverRedisUtil.get(docKey);
       
       if (!documentStr) return null;
       
@@ -130,21 +118,21 @@ export const storageService = {
       const docKey = `${DOCUMENT_PREFIX}${docId}`;
       
       // First get the document to find its loanId
-      const documentStr = await redis!.get(docKey);
+      const documentStr = await serverRedisUtil.get(docKey);
       const document = documentStr ? JSON.parse(documentStr) as SimpleDocument : null;
       
       if (document) {
         // Remove from the loan's document list
         if (document.loanId) {
           const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${document.loanId}`;
-          await redis!.srem(loanDocListKey, docId);
+          await serverRedisUtil.srem(loanDocListKey, docId);
         }
         
         // Remove from the document list
-        await redis!.srem(DOCUMENT_LIST_KEY, docId);
+        await serverRedisUtil.srem(DOCUMENT_LIST_KEY, docId);
         
         // Delete the document itself
-        await redis!.del(docKey);
+        await serverRedisUtil.del(docKey);
         
         console.log(`Successfully deleted document (Redis): ${docId}`);
         return true;
@@ -175,7 +163,7 @@ export const storageService = {
       
       // Use Redis
       // Get all document IDs
-      const docIds = await redis!.smembers(DOCUMENT_LIST_KEY);
+      const docIds = await serverRedisUtil.smembers(DOCUMENT_LIST_KEY);
       
       const total = docIds.length;
       const slicedIds = docIds.slice(cursor, cursor + limit);
@@ -185,7 +173,7 @@ export const storageService = {
       const documents: SimpleDocument[] = [];
       for (const docId of slicedIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        const documentStr = await redis!.get(docKey);
+        const documentStr = await serverRedisUtil.get(docKey);
         if (documentStr) {
           documents.push(JSON.parse(documentStr) as SimpleDocument);
         }
@@ -259,17 +247,17 @@ export const storageService = {
       console.log(`Looking up loan documents with key: ${loanDocListKey}`);
       
       // Get all document IDs for this loan
-      const docIds = await redis!.smembers(loanDocListKey);
+      const docIds = await serverRedisUtil.smembers(loanDocListKey);
       console.log(`📋 Found ${docIds.length} document IDs for loan ${loanId}`);
       
       if (docIds.length === 0) {
         // If no documents found, check if we can list any other loan keys to debug
         try {
-          const allLoanKeys = await redis!.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
+          const allLoanKeys = await serverRedisUtil.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
           console.log(`Available loan document lists: ${allLoanKeys.join(', ')}`);
           
           // Check for unassociated documents that might need fixing
-          const allDocKeys = await redis!.keys(`${DOCUMENT_PREFIX}*`);
+          const allDocKeys = await serverRedisUtil.keys(`${DOCUMENT_PREFIX}*`);
           console.log(`Total document keys in Redis: ${allDocKeys.length}`);
           
           if (allDocKeys.length > 0) {
@@ -277,7 +265,7 @@ export const storageService = {
             const sampleSize = Math.min(5, allDocKeys.length);
             for (let i = 0; i < sampleSize; i++) {
               const docKey = allDocKeys[i];
-              const docStr = await redis!.get(docKey);
+              const docStr = await serverRedisUtil.get(docKey);
               const doc = docStr ? JSON.parse(docStr) : null;
               console.log(`Sample document ${i+1}: loanId=${typeof doc === 'object' && doc !== null && 'loanId' in doc ? doc.loanId : 'none'}, id=${typeof doc === 'object' && doc !== null && 'id' in doc ? doc.id : 'none'}`);
             }
@@ -293,7 +281,7 @@ export const storageService = {
       const documents: SimpleDocument[] = [];
       for (const docId of docIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        const docStr = await redis!.get(docKey);
+        const docStr = await serverRedisUtil.get(docKey);
         if (docStr) {
           const doc = JSON.parse(docStr) as SimpleDocument;
           documents.push(doc);
@@ -339,7 +327,7 @@ export const storageService = {
       const docKey = `${DOCUMENT_PREFIX}${document.id}`;
       
       // First check if the document exists
-      const existingDocStr = await redis!.get(docKey);
+      const existingDocStr = await serverRedisUtil.get(docKey);
       const existingDoc = existingDocStr ? JSON.parse(existingDocStr) as SimpleDocument : null;
       
       if (!existingDoc) {
@@ -352,18 +340,18 @@ export const storageService = {
         // Remove from old loan's document list
         if (existingDoc.loanId) {
           const oldLoanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${existingDoc.loanId}`;
-          await redis!.srem(oldLoanDocListKey, document.id);
+          await serverRedisUtil.srem(oldLoanDocListKey, document.id);
         }
         
         // Add to new loan's document list
         if (document.loanId) {
           const newLoanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${document.loanId}`;
-          await redis!.sadd(newLoanDocListKey, document.id);
+          await serverRedisUtil.sadd(newLoanDocListKey, document.id);
         }
       }
       
       // Update the document
-      await redis!.set(docKey, JSON.stringify(document));
+      await serverRedisUtil.set(docKey, JSON.stringify(document));
       
       console.log(`Successfully updated document (Redis): ${document.id}`);
       return document;
@@ -387,23 +375,23 @@ export const storageService = {
       
       // Use Redis
       // Get all document IDs
-      const docIds = await redis!.smembers(DOCUMENT_LIST_KEY);
+      const docIds = await serverRedisUtil.smembers(DOCUMENT_LIST_KEY);
       
       // Delete each document
       for (const docId of docIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        await redis!.del(docKey);
+        await serverRedisUtil.del(docKey);
       }
       
       // Clear the document list
-      await redis!.del(DOCUMENT_LIST_KEY);
+      await serverRedisUtil.del(DOCUMENT_LIST_KEY);
       
       // Get all loan keys
-      const loanKeys = await redis!.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
+      const loanKeys = await serverRedisUtil.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
       
       // Delete each loan document list
       for (const key of loanKeys) {
-        await redis!.del(key);
+        await serverRedisUtil.del(key);
       }
       
       console.log('Successfully cleared all documents (Redis)');
@@ -464,7 +452,7 @@ export const storageService = {
       const targetLoanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${targetLoanId}`;
       
       // Get all document IDs for this loan
-      const docIds = await redis!.smembers(loanDocListKey);
+      const docIds = await serverRedisUtil.smembers(loanDocListKey);
       console.log(`Found ${docIds.length} documents to reassociate from ${loanId} to ${targetLoanId} (Redis)`);
       
       const updatedDocs: SimpleDocument[] = [];
@@ -472,7 +460,7 @@ export const storageService = {
       // Update each document
       for (const docId of docIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        const docStr = await redis!.get(docKey);
+        const docStr = await serverRedisUtil.get(docKey);
         const doc = docStr ? JSON.parse(docStr) as SimpleDocument : null;
         
         if (doc) {
@@ -483,11 +471,11 @@ export const storageService = {
           };
           
           // Save the updated document
-          await redis!.set(docKey, JSON.stringify(updatedDoc));
+          await serverRedisUtil.set(docKey, JSON.stringify(updatedDoc));
           
           // Move from old loan to new loan
-          await redis!.srem(loanDocListKey, docId);
-          await redis!.sadd(targetLoanDocListKey, docId);
+          await serverRedisUtil.srem(loanDocListKey, docId);
+          await serverRedisUtil.sadd(targetLoanDocListKey, docId);
           
           updatedDocs.push(updatedDoc);
         }
@@ -627,10 +615,10 @@ export const storageService = {
       }
     } else {
       // Redis
-      const docKeys = await redis!.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
+      const docKeys = await serverRedisUtil.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
       
       for (const key of docKeys) {
-        const docStr = await redis!.get(key);
+        const docStr = await serverRedisUtil.get(key);
         if (docStr) {
           const doc = JSON.parse(docStr) as SimpleDocument;
           if (!doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null') {
@@ -695,10 +683,10 @@ export const storageService = {
     } else {
       // Redis
       // Get all documents without loanId
-      const docKeys = await redis!.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
+      const docKeys = await serverRedisUtil.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
       
       for (const key of docKeys) {
-        const docStr = await redis!.get(key);
+        const docStr = await serverRedisUtil.get(key);
         if (docStr) {
           let doc = JSON.parse(docStr) as SimpleDocument;
           if (!doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null') {
@@ -706,14 +694,14 @@ export const storageService = {
             doc.loanId = loanId;
             
             // Store the updated document back to Redis
-            await redis!.set(key, JSON.stringify(doc));
+            await serverRedisUtil.set(key, JSON.stringify(doc));
             
             // Add to fixed documents list
             fixedDocuments.push(doc);
             
             // Add to loan documents list
             const loanDocsKey = `${STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX}:${loanId}`;
-            await redis!.sadd(loanDocsKey, doc.id);
+            await serverRedisUtil.sadd(loanDocsKey, doc.id);
           }
         }
       }
@@ -760,7 +748,7 @@ export const storageService = {
       if (docIds.length > 0) {
         // Add IDs one by one to avoid spread operator issues
         for (const id of docIds) {
-          await redis!.sadd(loanDocsKey, id);
+          await serverRedisUtil.sadd(loanDocsKey, id);
         }
       }
     }

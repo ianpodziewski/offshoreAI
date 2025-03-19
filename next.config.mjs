@@ -28,6 +28,20 @@ const nextConfig = {
       // In case config.externals doesn't exist, spread it into an array
       config.externals = [...(config.externals || []), "pdf-parse"];
     }
+    
+    // Handle Node.js modules used by ioredis
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        net: false,
+        tls: false,
+        dns: false,
+        fs: false,
+        path: false,
+        os: false,
+      };
+    }
+    
     return config;
   },
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
+import { clientDocumentService } from '@/services/clientDocumentService';
 import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
 import LayoutWrapper from '@/app/layout-wrapper';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,11 +21,20 @@ export default function DocumentsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    // Load all documents
-    const allDocs = simpleDocumentService.getAllDocuments();
-    setDocuments(allDocs);
-    setFilteredDocuments(allDocs);
-    setLoading(false);
+    // Load all documents using the client service
+    const fetchDocuments = async () => {
+      try {
+        const result = await clientDocumentService.getAllDocuments();
+        setDocuments(result.documents || []);
+        setFilteredDocuments(result.documents || []);
+      } catch (error) {
+        console.error('Error loading documents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchDocuments();
   }, [refreshKey]);
 
   // Filter documents based on search term and category
