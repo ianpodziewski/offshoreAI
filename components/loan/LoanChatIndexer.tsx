@@ -241,7 +241,6 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
                     <h4>OpenAI API Key</h4>
                   </div>
                   <p className="text-sm ml-5">{diagnosticData.api_keys?.openai?.message}</p>
-                  <p className="text-xs text-gray-400 ml-5">Key: {diagnosticData.openai_key_redacted}</p>
                 </div>
                 
                 <div>
@@ -250,7 +249,6 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
                     <h4>Pinecone API Key</h4>
                   </div>
                   <p className="text-sm ml-5">{diagnosticData.api_keys?.pinecone?.message}</p>
-                  <p className="text-xs text-gray-400 ml-5">Key: {diagnosticData.pinecone_key_redacted}</p>
                 </div>
               </div>
               

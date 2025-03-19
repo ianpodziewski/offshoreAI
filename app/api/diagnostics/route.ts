@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
-import { validateOpenAIKey, validatePineconeKey, getRedactedKey } from "@/configuration/apiKeys";
+import { validateOpenAIKey, validatePineconeKey } from "@/configuration/apiKeys";
 
 export const runtime = "nodejs";
 
@@ -16,26 +16,43 @@ export async function GET(req: NextRequest) {
         openai: validateOpenAIKey(),
         pinecone: validatePineconeKey(),
       },
-      openai_key_redacted: getRedactedKey(process.env.OPENAI_API_KEY),
-      pinecone_key_redacted: getRedactedKey(process.env.PINECONE_API_KEY),
       pinecone: {
         index_name: PINECONE_INDEX_NAME
+      },
+      openai: {
+        // Initialize with basic info
+        status: "pending"
       }
     };
     
     // Test connections if keys are valid
     if (diagnostics.api_keys.openai.valid) {
       try {
-        const openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        // Create a new OpenAI client instance for each request to avoid connection issues
+        const openaiClient = new OpenAI({ 
+          apiKey: process.env.OPENAI_API_KEY || ""
+        });
+        
+        // Test a simple models list call
         const modelResponse = await openaiClient.models.list();
-        diagnostics.openai.connection = "success";
-        diagnostics.openai.available_models = modelResponse.data.length;
+        
+        // Update diagnostics with success info
+        diagnostics.openai = {
+          connection: "success",
+          available_models: modelResponse.data.length
+        };
       } catch (openaiError: any) {
+        // Update diagnostics with error info
         diagnostics.openai = {
           connection: "error",
           error_message: openaiError.message
         };
       }
+    } else {
+      diagnostics.openai = {
+        connection: "error",
+        error_message: "API key not configured correctly"
+      };
     }
     
     if (diagnostics.api_keys.pinecone.valid) {

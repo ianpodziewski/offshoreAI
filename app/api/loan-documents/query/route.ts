@@ -17,7 +17,9 @@ if (!openaiApiKey) throw new Error("OPENAI_API_KEY is not set");
 
 const pineconeClient = new Pinecone({ apiKey: pineconeApiKey });
 const pineconeIndex = pineconeClient.Index(PINECONE_INDEX_NAME);
-const openaiClient = new OpenAI({ apiKey: openaiApiKey });
+
+// Don't initialize OpenAI client at the module level - we'll create a fresh instance in the request handlers
+// to avoid "Cannot set properties of undefined" errors
 
 export const runtime = "nodejs";
 
@@ -53,6 +55,13 @@ export async function POST(req: NextRequest) {
     }
     
     console.log(`🔍 Querying loan documents for loan ${loanId} with: "${query}"`);
+    
+    // Initialize OpenAI client inside the request handler for better error handling
+    const openaiClient = new OpenAI({ 
+      apiKey: openaiApiKey,
+      // Add a default timeout to prevent hanging requests
+      timeout: 60000 
+    });
     
     // Generate an embedding for the query
     const queryEmbeddingResponse = await openaiClient.embeddings.create({

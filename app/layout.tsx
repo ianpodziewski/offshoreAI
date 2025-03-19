@@ -14,6 +14,22 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Make sure this is only called on the server side
+  if (typeof window === 'undefined') {
+    const requiredEnvVars = [
+      { name: 'OPENAI_API_KEY', value: process.env.OPENAI_API_KEY },
+      { name: 'PINECONE_API_KEY', value: process.env.PINECONE_API_KEY }
+    ];
+    
+    for (const { name, value } of requiredEnvVars) {
+      if (!value) {
+        console.error(`⚠️ Warning: ${name} environment variable is not set`);
+      } else {
+        console.log(`✅ ${name} environment variable is set`);
+      }
+    }
+  }
+
   return (
     <html lang="en">
       <TooltipProvider>
