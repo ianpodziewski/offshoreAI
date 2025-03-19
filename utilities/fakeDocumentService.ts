@@ -281,21 +281,19 @@ export const fakeDocumentService = {
   },
 
   /**
-   * Generate a fake document for a specific loan and document type
+   * Generate a fake document for a loan based on document type
    */
   async generateFakeDocument(loan: LoanData, docType: string): Promise<SimpleDocument | null> {
-    // Ensure loan object is valid
     if (!loan) {
-      console.error(`Cannot generate fake document: loan data is undefined`);
+      console.error('Cannot generate document: Loan data is missing');
       return null;
     }
 
-    // Convert potentially aliased document type to standard name
+    // Get the standard version of the doc type (handle aliases)
     const standardDocType = this.getStandardDocType(docType);
     
-    // Check if we have a generator for this document type
-    if (!documentGenerators[standardDocType]) {
-      console.error(`No generator found for document type: ${docType}`);
+    if (!standardDocType) {
+      console.error(`Unknown document type: ${docType}`);
       return null;
     }
 
@@ -304,6 +302,18 @@ export const fakeDocumentService = {
       ...loan,
       borrowerName: loan.borrowerName || 'Borrower Name Not Available'
     };
+
+    // First, check if a document of this type already exists for this loan
+    const existingDocs = simpleDocumentService.getDocumentsForLoan(loan.id);
+    const existingDoc = existingDocs.find(doc => 
+      doc.docType === docType || doc.docType === standardDocType
+    );
+
+    // If an existing document is found, delete it to prevent duplicates
+    if (existingDoc) {
+      console.log(`Removing existing document of type ${docType} before generating a new one`);
+      await simpleDocumentService.deleteDocument(existingDoc.id);
+    }
 
     // Generate the HTML content using the appropriate generator
     let content = documentGenerators[standardDocType](safeLoan);
@@ -320,7 +330,7 @@ export const fakeDocumentService = {
     
     // Create a SimpleDocument object with the generated content
     const fakeDocument: SimpleDocument = {
-      id: `fake-${docType}-${loan.id}`,
+      id: `fake-${docType}-${loan.id}`, // Consistent ID based on docType and loanId
       loanId: loan.id,
       filename: `${docType.replace(/_/g, '-')}.html`,
       docType: docType, // Keep original docType for consistency with requests
@@ -339,13 +349,19 @@ export const fakeDocumentService = {
    * Generate all available fake documents for a loan
    */
   async generateAllFakeDocuments(loan: LoanData): Promise<SimpleDocument[]> {
+    // First, to avoid any duplicates, we'll log what we're doing
+    console.log(`Generating all sample documents for loan ${loan.id}`);
+    
     const generatedDocuments: SimpleDocument[] = [];
 
     // Generate each document type sequentially to avoid overwhelming the system
     for (const docType of Object.keys(documentGenerators)) {
       try {
+        console.log(`Generating document type: ${docType}`);
+        // The generateFakeDocument method now handles removing existing documents
         const document = await this.generateFakeDocument(loan, docType);
         if (document) {
+          console.log(`Successfully generated ${docType} document with ID: ${document.id}`);
           generatedDocuments.push(document);
         }
       } catch (error) {
@@ -353,6 +369,7 @@ export const fakeDocumentService = {
       }
     }
 
+    console.log(`Successfully generated ${generatedDocuments.length} sample documents`);
     return generatedDocuments;
   },
 

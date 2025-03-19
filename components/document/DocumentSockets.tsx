@@ -241,17 +241,14 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
         const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
         setDocuments(updatedDocs);
         
-        // Clean up any duplicate documents
-        await clearDuplicateDocuments();
-        
         // Show success message
         setSuccessMessage(`Generated ${docType} document successfully`);
-        setTimeout(() => setSuccessMessage(""), 3000);
+        setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (error: any) {
       console.error("Error generating sample document:", error);
       setErrorMessage(`Failed to generate ${docType} document: ${error?.message || "Unknown error"}`);
-      setTimeout(() => setErrorMessage(""), 5000);
+      setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setLoading(false);
     }
@@ -282,19 +279,16 @@ const DocumentSockets: React.FC<DocumentSocketsProps> = ({
       const updatedDocs = simpleDocumentService.getDocumentsForLoan(loanId);
       setDocuments(updatedDocs);
       
-      // Clean up any duplicate documents
-      await clearDuplicateDocuments();
-      
       // Refresh loan context to ensure documents are persisted
       refreshLoanDocuments();
       
       // Show success message
       setSuccessMessage("Generated all sample documents successfully");
-      setTimeout(() => setSuccessMessage(""), 3000);
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (error: any) {
       console.error("Error generating all sample documents:", error);
       setErrorMessage(`Failed to generate all documents: ${error?.message || "Unknown error"}`);
-      setTimeout(() => setErrorMessage(""), 5000);
+      setTimeout(() => setErrorMessage(null), 5000);
     } finally {
       setLoading(false);
     }

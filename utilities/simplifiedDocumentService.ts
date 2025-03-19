@@ -413,21 +413,25 @@ export const simpleDocumentService = {
       const existingDocs = simpleDocumentService.getAllDocuments();
       
       // Check if a document with the same docType already exists for this loan
-      const existingDoc = existingDocs.find(doc => 
+      // We need to check both loanId AND docType to avoid duplicates
+      const existingDocIndex = existingDocs.findIndex(doc => 
         doc.loanId === document.loanId && 
         doc.docType === document.docType
       );
       
+      const existingDoc = existingDocIndex >= 0 ? existingDocs[existingDocIndex] : null;
+      
       // Create a unique ID for the document if it doesn't have one
-      if (!document.id) {
-        document.id = uuidv4();
-      }
+      // If we found an existing document, we'll reuse its ID
+      const docId = existingDoc ? existingDoc.id : (document.id || uuidv4());
+      
+      console.log(`${existingDoc ? 'Updating' : 'Creating new'} document for loanId=${document.loanId}, docType=${document.docType}, id=${docId}`);
       
       // Try to store full content in IndexedDB first
       let indexedDBSuccess = false;
       try {
-        await storeContentInIndexedDB(document.id, document.content);
-        console.log(`✅ Stored document content in IndexedDB: ${document.id}`);
+        await storeContentInIndexedDB(docId, document.content);
+        console.log(`✅ Stored document content in IndexedDB: ${docId}`);
         indexedDBSuccess = true;
       } catch (indexedDBError) {
         console.error('Failed to store content in IndexedDB, falling back to compressed content', indexedDBError);
@@ -437,56 +441,27 @@ export const simpleDocumentService = {
       // Create a storage-friendly version with placeholder content for localStorage
       const storageDoc = {
         ...document,
+        id: docId, // Use existing ID or the one we just created
         content: indexedDBSuccess 
-          ? `[Content stored in IndexedDB - ID: ${document.id}]` 
+          ? `[Content stored in IndexedDB - ID: ${docId}]` 
           : compressContent(document.content)
       };
       
       if (existingDoc) {
-        // Update existing document instead of creating new
-        const updatedDoc = {
-          ...existingDoc,
-          ...storageDoc,
-          id: existingDoc.id // Keep the original ID
-        };
+        console.log(`Updating existing document ID ${existingDoc.id} (${document.docType}) for loan ${document.loanId}`);
         
-        // Replace in array
-        const index = existingDocs.findIndex(doc => doc.id === existingDoc.id);
-        if (index >= 0) {
-          existingDocs[index] = updatedDoc;
-          try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
-            console.log(`Updated existing document: ${updatedDoc.filename} (ID: ${updatedDoc.id})`);
-          } catch (storageError) {
-            console.error('❌ localStorage issue, implementing cleanup', storageError);
-            try {
-              // Remove older documents to make space
-              const trimmedDocs = existingDocs.slice(Math.floor(existingDocs.length / 4));
-              localStorage.setItem(STORAGE_KEY, JSON.stringify([...trimmedDocs, updatedDoc]));
-              console.log(`Trimmed documents and updated storage - now ${trimmedDocs.length + 1} documents`);
-            } catch (finalError) {
-              console.error('Failed to save document even after trimming', finalError);
-              // As a last resort, just save this document
-              localStorage.setItem(STORAGE_KEY, JSON.stringify([updatedDoc]));
-            }
-          }
-          
-          // If we were able to save to IndexedDB, return a document with full content
-          // Otherwise, return the original document with content intact
-          return indexedDBSuccess ? {
-            ...document,
-            content: document.content // Return original with full content
-          } : document;
-        }
+        // Update the document in place
+        existingDocs[existingDocIndex] = storageDoc;
+      } else {
+        // Add as a new document
+        console.log(`Adding new document ID ${docId} (${document.docType}) for loan ${document.loanId}`);
+        existingDocs.push(storageDoc);
       }
-      
-      // Add the new document to the array
-      existingDocs.push(storageDoc);
       
       // Save back to storage with robust error handling
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(existingDocs));
-        console.log(`✅ Added new document to localStorage: ${document.filename} (ID: ${document.id})`);
+        console.log(`✅ ${existingDoc ? 'Updated' : 'Added new'} document to localStorage: ${document.filename} (ID: ${docId})`);
       } catch (storageError) {
         console.error('❌ localStorage issue during add, implementing cleanup', storageError);
         
@@ -506,8 +481,12 @@ export const simpleDocumentService = {
         }
       }
       
-      // Return the original document with full content
-      return document;
+      // Return the original document with full content but update the ID to match what we stored
+      return {
+        ...document,
+        id: docId,
+        content: document.content // Return original with full content
+      };
     } catch (error) {
       console.error('Error adding document directly:', error);
       // Still return the document even if we couldn't save it
