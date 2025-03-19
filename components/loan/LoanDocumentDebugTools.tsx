@@ -198,15 +198,11 @@ export default function LoanDocumentDebugTools({ loanId }: LoanDocumentDebugTool
                   <Badge>{diagnostics.environment}</Badge>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium">Vercel KV</h3>
+                  <h3 className="text-sm font-medium">Redis</h3>
                   <Badge variant={
-                    diagnostics.vercelKV.url === 'configured' && 
-                    diagnostics.vercelKV.restUrl === 'configured' && 
-                    diagnostics.vercelKV.restToken === 'configured' ? 'default' : 'destructive'
+                    diagnostics.redis.url === 'configured' ? 'default' : 'destructive'
                   }>
-                    {diagnostics.vercelKV.url === 'configured' && 
-                     diagnostics.vercelKV.restUrl === 'configured' && 
-                     diagnostics.vercelKV.restToken === 'configured' ? 'Configured' : 'Missing Config'}
+                    {diagnostics.redis.url === 'configured' ? 'Configured' : 'Missing Config'}
                   </Badge>
                 </div>
                 <div>

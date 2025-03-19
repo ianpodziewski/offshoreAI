@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { simpleDocumentService } from "@/utilities/simplifiedDocumentService";
-import { isVercelKVConfigured, KV_CONFIG } from '@/configuration/storageConfig';
+import { isRedisConfigured, STORAGE_CONFIG } from '@/configuration/storageConfig';
 
 export const runtime = "nodejs";
 
@@ -9,14 +9,18 @@ export const runtime = "nodejs";
  */
 export async function POST(req: NextRequest) {
   try {
-    const { loanId } = await req.json();
+    const url = new URL(req.url);
+    const loanId = url.searchParams.get('loanId');
     
-    // Check if server storage is configured
-    if (!isVercelKVConfigured() || KV_CONFIG.USE_FALLBACK) {
+    if (!loanId) {
+      return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
+    }
+    
+    if (!isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK) {
       return NextResponse.json({ 
-        error: 'Server storage not properly configured', 
-        storageMode: KV_CONFIG.USE_FALLBACK ? 'localStorage Fallback' : 'Not Configured'
-      }, { status: 400 });
+        error: 'Server storage not configured or fallback enabled', 
+        storageMode: STORAGE_CONFIG.USE_FALLBACK ? 'localStorage Fallback' : 'Not Configured'
+      }, { status: 500 });
     }
     
     // Sync documents
@@ -25,7 +29,8 @@ export async function POST(req: NextRequest) {
     if (!syncResult.success) {
       return NextResponse.json({
         error: 'Document synchronization failed',
-        details: syncResult.errors,
+        details: syncResult.message,
+        errorCount: syncResult.errorCount,
         syncedCount: syncResult.syncedCount
       }, { status: 500 });
     }
@@ -51,12 +56,15 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const loanId = url.searchParams.get('loanId');
     
-    // Check if server storage is configured
-    if (!isVercelKVConfigured() || KV_CONFIG.USE_FALLBACK) {
+    if (!loanId) {
+      return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
+    }
+    
+    if (!isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK) {
       return NextResponse.json({ 
-        error: 'Server storage not properly configured', 
-        storageMode: KV_CONFIG.USE_FALLBACK ? 'localStorage Fallback' : 'Not Configured'
-      }, { status: 400 });
+        error: 'Server storage not configured or fallback enabled', 
+        storageMode: STORAGE_CONFIG.USE_FALLBACK ? 'localStorage Fallback' : 'Not Configured'
+      }, { status: 500 });
     }
     
     // Sync documents
@@ -65,7 +73,8 @@ export async function GET(req: NextRequest) {
     if (!syncResult.success) {
       return NextResponse.json({
         error: 'Document synchronization failed',
-        details: syncResult.errors,
+        details: syncResult.message,
+        errorCount: syncResult.errorCount,
         syncedCount: syncResult.syncedCount
       }, { status: 500 });
     }

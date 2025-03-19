@@ -15,7 +15,7 @@ export const STORAGE_KEYS = {
   INDEXED_DB_MIGRATION: 'indexeddb_migration_done'
 };
 
-// Helper for localStorage fallback when Vercel KV is not available in development
+// Helper for localStorage fallback when Redis is not available in development
 export const localStorageFallback = {
   getItem: (key: string): string | null => {
     if (!isBrowser) return null;
@@ -77,8 +77,8 @@ export const localStorageFallback = {
   }
 };
 
-// Configuration for Vercel KV
-export const KV_CONFIG = {
+// Configuration for Redis storage
+export const STORAGE_CONFIG = {
   // Prefixes for different data types
   DOCUMENT_PREFIX: 'doc:',
   LOAN_PREFIX: 'loan:',
@@ -86,20 +86,22 @@ export const KV_CONFIG = {
   DOCUMENT_BY_LOAN_PREFIX: 'docs_by_loan:',
   
   // Use a fallback mechanism in development environment
-  USE_FALLBACK: IS_DEVELOPMENT && !process.env.VERCEL_KV_URL,
+  USE_FALLBACK: IS_DEVELOPMENT && !process.env.REDIS_URL,
   
   // Log level
   LOG_LEVEL: IS_PRODUCTION ? 'error' : 'debug',
 };
 
-// Detect if Vercel KV is properly configured
-export const isVercelKVConfigured = (): boolean => {
-  const hasKVUrl = !!process.env.VERCEL_KV_URL;
-  const hasKVRestToken = !!process.env.VERCEL_KV_REST_API_TOKEN;
-  const hasKVRestUrl = !!process.env.VERCEL_KV_REST_API_URL;
-  
-  return hasKVUrl || (hasKVRestToken && hasKVRestUrl);
+// For backward compatibility
+export const KV_CONFIG = STORAGE_CONFIG;
+
+// Detect if Redis is properly configured
+export const isRedisConfigured = (): boolean => {
+  return !!process.env.REDIS_URL;
 };
 
+// Legacy function name maintained for backward compatibility
+export const isVercelKVConfigured = isRedisConfigured;
+
 // Export the config
-export default KV_CONFIG; 
+export default STORAGE_CONFIG; 

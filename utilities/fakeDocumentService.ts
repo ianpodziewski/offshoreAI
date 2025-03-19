@@ -393,8 +393,8 @@ export const fakeDocumentService = {
       const syncResult = await simpleDocumentService.syncDocumentsToServer(loan.id);
       console.log(`Sync result: ${syncResult.success ? 'Success' : 'Failed'}, synced ${syncResult.syncedCount} documents`);
       
-      if (syncResult.errors.length > 0) {
-        console.warn('Sync errors:', syncResult.errors);
+      if (syncResult.errorCount > 0) {
+        console.warn('Sync errors:', syncResult.message);
       }
     } catch (syncError) {
       console.error('Error synchronizing documents to server:', syncError);

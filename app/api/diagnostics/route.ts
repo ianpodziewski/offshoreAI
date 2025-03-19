@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
 import storageService from '@/services/storageService';
-import { kv } from '@vercel/kv';
+import Redis from 'ioredis';
 import OpenAI from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
+
+// Initialize Redis client (if available)
+let redis: Redis | null = null;
+if (typeof process !== 'undefined' && process.env.REDIS_URL) {
+  try {
+    redis = new Redis(process.env.REDIS_URL);
+  } catch (error) {
+    console.error('Failed to initialize Redis client:', error);
+    redis = null;
+  }
+}
 
 // Temporary types until we create proper utility files
 interface OpenAIVerificationResult {
@@ -37,9 +48,10 @@ export async function GET(req: NextRequest) {
       valid: false,
       message: ''
     },
-    vercel_kv: {
-      exists: isVercelKVConfigured(),
-      using_fallback: KV_CONFIG.USE_FALLBACK,
+    redis: {
+      exists: isRedisConfigured() && !!process.env.REDIS_URL,
+      using_fallback: !redis || STORAGE_CONFIG.USE_FALLBACK,
+      status: 'pending',
       message: ''
     }
   };
@@ -177,65 +189,70 @@ export async function GET(req: NextRequest) {
     diagnostics.pinecone.error_message = error instanceof Error ? error.message : 'Unknown error connecting to Pinecone';
   }
   
-  // Vercel KV check
-  diagnostics.vercel_kv = {
-    configured: isVercelKVConfigured(),
-    using_fallback: KV_CONFIG.USE_FALLBACK,
+  // Redis check (previously Vercel KV)
+  diagnostics.redis = {
+    configured: isRedisConfigured() && !!process.env.REDIS_URL,
+    using_fallback: !redis || STORAGE_CONFIG.USE_FALLBACK,
     connection: 'pending',
     document_count: 0,
     error_message: null
   };
   
-  if (isVercelKVConfigured()) {
-    if (KV_CONFIG.USE_FALLBACK) {
-      diagnostics.vercel_kv.connection = 'fallback';
-      diagnostics.vercel_kv.message = 'Using localStorage fallback (manual override)';
-      diagnostics.api_keys.vercel_kv.message = 'Fallback mode enabled';
+  if (isRedisConfigured() && process.env.REDIS_URL) {
+    if (STORAGE_CONFIG.USE_FALLBACK) {
+      diagnostics.redis.connection = 'fallback';
+      diagnostics.redis.message = 'Using localStorage fallback (manual override)';
+      diagnostics.api_keys.redis = { status: 'warning', message: 'Fallback mode enabled' };
       
       // Get count from localStorage
       try {
         const result = await storageService.getAllDocuments(0, 10000);
-        diagnostics.vercel_kv.document_count = result.documents.length;
+        diagnostics.redis.document_count = result.documents.length;
       } catch (error) {
-        diagnostics.vercel_kv.document_count = 'Error getting count';
+        diagnostics.redis.document_count = 'Error getting count';
       }
     } else {
       try {
-        // Test KV connection
-        await kv.ping();
-        diagnostics.vercel_kv.connection = 'success';
-        diagnostics.api_keys.vercel_kv.message = 'Connected to Vercel KV';
+        // Test Redis connection
+        let redisClient = redis;
+        
+        // If redis wasn't initialized globally, create a temporary client
+        if (!redisClient) {
+          redisClient = new Redis(process.env.REDIS_URL);
+        }
+        
+        // Test connection with ping
+        await redisClient.ping();
+        diagnostics.redis.connection = 'success';
+        diagnostics.api_keys.redis = { status: 'success', message: 'Connected to Redis' };
         
         // Get document count
-        const docKeys = await kv.keys(`${KV_CONFIG.DOCUMENT_PREFIX}:*`);
-        diagnostics.vercel_kv.document_count = docKeys.length;
-      } catch (error) {
-        diagnostics.vercel_kv.connection = 'failed';
-        diagnostics.vercel_kv.error_message = error instanceof Error ? error.message : 'Unknown error connecting to Vercel KV';
-        diagnostics.api_keys.vercel_kv.message = 'Configuration found but connection failed';
+        const docKeys = await redisClient.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
+        diagnostics.redis.document_count = docKeys.length;
         
-        // Since KV failed, we're using fallback
-        diagnostics.vercel_kv.using_fallback = true;
+        // Close the temporary connection if we created one
+        if (redisClient !== redis) {
+          await redisClient.quit();
+        }
+      } catch (error) {
+        diagnostics.redis.connection = 'failed';
+        diagnostics.redis.error_message = error instanceof Error ? error.message : 'Unknown error connecting to Redis';
+        diagnostics.api_keys.redis = { status: 'error', message: 'Configuration found but connection failed' };
+        
+        // Since Redis failed, we're using fallback
+        diagnostics.redis.using_fallback = true;
       }
     }
   } else {
-    diagnostics.vercel_kv.connection = 'not_configured';
-    diagnostics.vercel_kv.message = 'Vercel KV not configured, using localStorage fallback';
-    diagnostics.api_keys.vercel_kv.message = 'Not configured, using localStorage fallback';
-    
-    // Get count from localStorage
-    try {
-      const result = await storageService.getAllDocuments(0, 10000);
-      diagnostics.vercel_kv.document_count = result.documents.length;
-    } catch (error) {
-      diagnostics.vercel_kv.document_count = 'Error getting count';
-    }
+    // Not configured
+    diagnostics.redis.connection = 'not_configured';
+    diagnostics.api_keys.redis = { status: 'warning', message: 'Redis URL not configured' };
   }
   
   // Storage Statistics
   diagnostics.storage = {
-    document_count: diagnostics.vercel_kv.document_count,
-    storage_mode: KV_CONFIG.USE_FALLBACK ? 'localStorage' : (isVercelKVConfigured() ? 'vercelKV' : 'localStorage')
+    document_count: diagnostics.redis.document_count,
+    storage_mode: STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage')
   };
   
   return NextResponse.json({ 

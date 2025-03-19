@@ -1,24 +1,36 @@
-import { kv } from '@vercel/kv';
+import Redis from 'ioredis';
 import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
-import { KV_CONFIG, localStorageFallback, isVercelKVConfigured, STORAGE_KEYS } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG, localStorageFallback, isRedisConfigured, STORAGE_KEYS } from '@/configuration/storageConfig';
 
 // Prefixes for different data types
-const DOCUMENT_PREFIX = KV_CONFIG.DOCUMENT_PREFIX;
-const LOAN_PREFIX = KV_CONFIG.LOAN_PREFIX;
-const DOCUMENT_LIST_KEY = KV_CONFIG.DOCUMENT_LIST_KEY;
-const DOCUMENT_BY_LOAN_PREFIX = KV_CONFIG.DOCUMENT_BY_LOAN_PREFIX;
+const DOCUMENT_PREFIX = STORAGE_CONFIG.DOCUMENT_PREFIX;
+const LOAN_PREFIX = STORAGE_CONFIG.LOAN_PREFIX;
+const DOCUMENT_LIST_KEY = STORAGE_CONFIG.DOCUMENT_LIST_KEY;
+const DOCUMENT_BY_LOAN_PREFIX = STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX;
+
+// Initialize Redis client (if available)
+let redis: Redis | null = null;
+if (typeof process !== 'undefined' && process.env.REDIS_URL) {
+  try {
+    redis = new Redis(process.env.REDIS_URL);
+    console.log('Redis client initialized');
+  } catch (error) {
+    console.error('Failed to initialize Redis client:', error);
+    redis = null;
+  }
+}
 
 // Check if we should use the fallback mechanism
-const useFallback = !isVercelKVConfigured() || KV_CONFIG.USE_FALLBACK;
+const useFallback = !redis || !isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK;
 
 // Log the storage mode
-console.log(`Storage Mode: ${useFallback ? 'localStorage Fallback' : 'Vercel KV'}`);
+console.log(`Storage Mode: ${useFallback ? 'localStorage Fallback' : 'Redis'}`);
 
 /**
- * A unified storage service using Vercel KV (Redis) as the backend
+ * A unified storage service using Redis as the backend
  * This replaces the mix of localStorage, IndexedDB, and other storage mechanisms
  * 
- * In development without Vercel KV configured, it falls back to localStorage
+ * In development without Redis configured, it falls back to localStorage
  */
 export const storageService = {
   // Document Operations
@@ -45,22 +57,22 @@ export const storageService = {
         return document;
       }
       
-      // Use Vercel KV
+      // Use Redis
       const docKey = `${DOCUMENT_PREFIX}${document.id}`;
       
-      // Store the document in KV
-      await kv.set(docKey, document);
+      // Store the document in Redis (need to JSON.stringify)
+      await redis!.set(docKey, JSON.stringify(document));
       
       // Add to the document list
-      await kv.sadd(DOCUMENT_LIST_KEY, document.id);
+      await redis!.sadd(DOCUMENT_LIST_KEY, document.id);
       
       // Add to the loan's document list
       if (document.loanId) {
         const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${document.loanId}`;
-        await kv.sadd(loanDocListKey, document.id);
+        await redis!.sadd(loanDocListKey, document.id);
       }
       
-      console.log(`Successfully saved document (KV): ${document.id} for loan: ${document.loanId}`);
+      console.log(`Successfully saved document (Redis): ${document.id} for loan: ${document.loanId}`);
       return document;
     } catch (error) {
       console.error('Error saving document:', error);
@@ -79,10 +91,14 @@ export const storageService = {
         return allDocs.find(doc => doc.id === docId) || null;
       }
       
-      // Use Vercel KV
+      // Use Redis
       const docKey = `${DOCUMENT_PREFIX}${docId}`;
-      const document = await kv.get<SimpleDocument>(docKey);
-      return document;
+      const documentStr = await redis!.get(docKey);
+      
+      if (!documentStr) return null;
+      
+      // Parse the JSON string back to an object
+      return JSON.parse(documentStr) as SimpleDocument;
     } catch (error) {
       console.error(`Error retrieving document ${docId}:`, error);
       return null;
@@ -110,26 +126,27 @@ export const storageService = {
         return true;
       }
       
-      // Use Vercel KV
+      // Use Redis
       const docKey = `${DOCUMENT_PREFIX}${docId}`;
       
       // First get the document to find its loanId
-      const document = await kv.get<SimpleDocument>(docKey);
+      const documentStr = await redis!.get(docKey);
+      const document = documentStr ? JSON.parse(documentStr) as SimpleDocument : null;
       
       if (document) {
         // Remove from the loan's document list
         if (document.loanId) {
           const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${document.loanId}`;
-          await kv.srem(loanDocListKey, docId);
+          await redis!.srem(loanDocListKey, docId);
         }
         
         // Remove from the document list
-        await kv.srem(DOCUMENT_LIST_KEY, docId);
+        await redis!.srem(DOCUMENT_LIST_KEY, docId);
         
         // Delete the document itself
-        await kv.del(docKey);
+        await redis!.del(docKey);
         
-        console.log(`Successfully deleted document (KV): ${docId}`);
+        console.log(`Successfully deleted document (Redis): ${docId}`);
         return true;
       }
       
@@ -156,9 +173,9 @@ export const storageService = {
         return { documents: slicedDocs, nextCursor };
       }
       
-      // Use Vercel KV
+      // Use Redis
       // Get all document IDs
-      const docIds = await kv.smembers(DOCUMENT_LIST_KEY) as string[];
+      const docIds = await redis!.smembers(DOCUMENT_LIST_KEY);
       
       const total = docIds.length;
       const slicedIds = docIds.slice(cursor, cursor + limit);
@@ -168,9 +185,9 @@ export const storageService = {
       const documents: SimpleDocument[] = [];
       for (const docId of slicedIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        const doc = await kv.get<SimpleDocument>(docKey);
-        if (doc) {
-          documents.push(doc);
+        const documentStr = await redis!.get(docKey);
+        if (documentStr) {
+          documents.push(JSON.parse(documentStr) as SimpleDocument);
         }
       }
       
@@ -232,42 +249,41 @@ export const storageService = {
         return loanDocs;
       }
       
-      // Use Vercel KV
-      console.log(`Using Vercel KV mode for loan ${loanId}`);
+      // Use Redis
+      console.log(`Using Redis mode for loan ${loanId}`);
       
-      // Debug Vercel KV configuration
-      console.log(`Vercel KV URL configured: ${!!process.env.VERCEL_KV_URL}`);
-      console.log(`Vercel KV REST API URL configured: ${!!process.env.VERCEL_KV_REST_API_URL}`);
-      console.log(`Vercel KV REST API Token configured: ${!!process.env.VERCEL_KV_REST_API_TOKEN}`);
+      // Debug Redis configuration
+      console.log(`Redis URL configured: ${!!process.env.REDIS_URL}`);
       
       const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${loanId}`;
       console.log(`Looking up loan documents with key: ${loanDocListKey}`);
       
       // Get all document IDs for this loan
-      const docIds = await kv.smembers(loanDocListKey) as string[];
+      const docIds = await redis!.smembers(loanDocListKey);
       console.log(`📋 Found ${docIds.length} document IDs for loan ${loanId}`);
       
       if (docIds.length === 0) {
         // If no documents found, check if we can list any other loan keys to debug
         try {
-          const allLoanKeys = await kv.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
+          const allLoanKeys = await redis!.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
           console.log(`Available loan document lists: ${allLoanKeys.join(', ')}`);
           
           // Check for unassociated documents that might need fixing
-          const allDocKeys = await kv.keys(`${DOCUMENT_PREFIX}*`);
-          console.log(`Total document keys in KV: ${allDocKeys.length}`);
+          const allDocKeys = await redis!.keys(`${DOCUMENT_PREFIX}*`);
+          console.log(`Total document keys in Redis: ${allDocKeys.length}`);
           
           if (allDocKeys.length > 0) {
             // Sample a few documents to check loanId
             const sampleSize = Math.min(5, allDocKeys.length);
             for (let i = 0; i < sampleSize; i++) {
               const docKey = allDocKeys[i];
-              const doc = await kv.get(docKey);
+              const docStr = await redis!.get(docKey);
+              const doc = docStr ? JSON.parse(docStr) : null;
               console.log(`Sample document ${i+1}: loanId=${typeof doc === 'object' && doc !== null && 'loanId' in doc ? doc.loanId : 'none'}, id=${typeof doc === 'object' && doc !== null && 'id' in doc ? doc.id : 'none'}`);
             }
           }
         } catch (listError) {
-          console.error(`Error listing KV keys:`, listError);
+          console.error(`Error listing Redis keys:`, listError);
         }
         
         return [];
@@ -277,15 +293,16 @@ export const storageService = {
       const documents: SimpleDocument[] = [];
       for (const docId of docIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        const doc = await kv.get<SimpleDocument>(docKey);
-        if (doc) {
+        const docStr = await redis!.get(docKey);
+        if (docStr) {
+          const doc = JSON.parse(docStr) as SimpleDocument;
           documents.push(doc);
         } else {
-          console.warn(`Document with ID ${docId} referenced in loan ${loanId} list but not found in KV store`);
+          console.warn(`Document with ID ${docId} referenced in loan ${loanId} list but not found in Redis store`);
         }
       }
       
-      console.log(`📂 Retrieved ${documents.length} documents for loan ID ${loanId} (KV)`);
+      console.log(`📂 Retrieved ${documents.length} documents for loan ID ${loanId} (Redis)`);
       return documents;
     } catch (error) {
       console.error(`❌ Error getting loan documents for ${loanId}:`, error);
@@ -318,14 +335,15 @@ export const storageService = {
         return document;
       }
       
-      // Use Vercel KV
+      // Use Redis
       const docKey = `${DOCUMENT_PREFIX}${document.id}`;
       
       // First check if the document exists
-      const existingDoc = await kv.get<SimpleDocument>(docKey);
+      const existingDocStr = await redis!.get(docKey);
+      const existingDoc = existingDocStr ? JSON.parse(existingDocStr) as SimpleDocument : null;
       
       if (!existingDoc) {
-        console.error(`Document ${document.id} not found for update (KV)`);
+        console.error(`Document ${document.id} not found for update (Redis)`);
         return null;
       }
       
@@ -334,20 +352,20 @@ export const storageService = {
         // Remove from old loan's document list
         if (existingDoc.loanId) {
           const oldLoanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${existingDoc.loanId}`;
-          await kv.srem(oldLoanDocListKey, document.id);
+          await redis!.srem(oldLoanDocListKey, document.id);
         }
         
         // Add to new loan's document list
         if (document.loanId) {
           const newLoanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${document.loanId}`;
-          await kv.sadd(newLoanDocListKey, document.id);
+          await redis!.sadd(newLoanDocListKey, document.id);
         }
       }
       
       // Update the document
-      await kv.set(docKey, document);
+      await redis!.set(docKey, JSON.stringify(document));
       
-      console.log(`Successfully updated document (KV): ${document.id}`);
+      console.log(`Successfully updated document (Redis): ${document.id}`);
       return document;
     } catch (error) {
       console.error(`Error updating document ${document.id}:`, error);
@@ -367,28 +385,28 @@ export const storageService = {
         return true;
       }
       
-      // Use Vercel KV
+      // Use Redis
       // Get all document IDs
-      const docIds = await kv.smembers(DOCUMENT_LIST_KEY) as string[];
+      const docIds = await redis!.smembers(DOCUMENT_LIST_KEY);
       
       // Delete each document
       for (const docId of docIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        await kv.del(docKey);
+        await redis!.del(docKey);
       }
       
       // Clear the document list
-      await kv.del(DOCUMENT_LIST_KEY);
+      await redis!.del(DOCUMENT_LIST_KEY);
       
       // Get all loan keys
-      const loanKeys = await kv.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
+      const loanKeys = await redis!.keys(`${DOCUMENT_BY_LOAN_PREFIX}*`);
       
       // Delete each loan document list
       for (const key of loanKeys) {
-        await kv.del(key);
+        await redis!.del(key);
       }
       
-      console.log('Successfully cleared all documents (KV)');
+      console.log('Successfully cleared all documents (Redis)');
       return true;
     } catch (error) {
       console.error('Error clearing all documents:', error);
@@ -441,20 +459,21 @@ export const storageService = {
         return unassociatedDocs.map(doc => ({ ...doc, loanId: targetLoanId }));
       }
       
-      // Use Vercel KV
+      // Use Redis
       const loanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${loanId}`;
       const targetLoanDocListKey = `${DOCUMENT_BY_LOAN_PREFIX}${targetLoanId}`;
       
       // Get all document IDs for this loan
-      const docIds = await kv.smembers(loanDocListKey) as string[];
-      console.log(`Found ${docIds.length} documents to reassociate from ${loanId} to ${targetLoanId} (KV)`);
+      const docIds = await redis!.smembers(loanDocListKey);
+      console.log(`Found ${docIds.length} documents to reassociate from ${loanId} to ${targetLoanId} (Redis)`);
       
       const updatedDocs: SimpleDocument[] = [];
       
       // Update each document
       for (const docId of docIds) {
         const docKey = `${DOCUMENT_PREFIX}${docId}`;
-        const doc = await kv.get<SimpleDocument>(docKey);
+        const docStr = await redis!.get(docKey);
+        const doc = docStr ? JSON.parse(docStr) as SimpleDocument : null;
         
         if (doc) {
           // Update the loanId
@@ -464,17 +483,17 @@ export const storageService = {
           };
           
           // Save the updated document
-          await kv.set(docKey, updatedDoc);
+          await redis!.set(docKey, JSON.stringify(updatedDoc));
           
           // Move from old loan to new loan
-          await kv.srem(loanDocListKey, docId);
-          await kv.sadd(targetLoanDocListKey, docId);
+          await redis!.srem(loanDocListKey, docId);
+          await redis!.sadd(targetLoanDocListKey, docId);
           
           updatedDocs.push(updatedDoc);
         }
       }
       
-      console.log(`Successfully reassociated ${updatedDocs.length} documents (KV)`);
+      console.log(`Successfully reassociated ${updatedDocs.length} documents (Redis)`);
       return updatedDocs;
     } catch (error) {
       console.error(`Error fixing document associations for ${loanId}:`, error);
@@ -542,7 +561,7 @@ export const storageService = {
   },
   
   /**
-   * Migrate documents from localStorage to Vercel KV
+   * Migrate documents from localStorage to Redis
    * Use this to transition from the old storage to the new one
    */
   migrateFromLocalStorage: async (): Promise<{migrated: number, errors: number}> => {
@@ -580,14 +599,14 @@ export const storageService = {
   
   // Get documents that don't have a loan ID
   async getUnassociatedDocuments(): Promise<SimpleDocument[]> {
-    const USE_FALLBACK = KV_CONFIG.USE_FALLBACK || !isVercelKVConfigured();
-    console.log(`[Storage] Getting unassociated documents, using ${USE_FALLBACK ? 'localStorage fallback' : 'Vercel KV'}`);
+    const USE_FALLBACK = STORAGE_CONFIG.USE_FALLBACK || !isRedisConfigured();
+    console.log(`[Storage] Getting unassociated documents, using ${USE_FALLBACK ? 'localStorage fallback' : 'Redis'}`);
     
     const unassociatedDocs: SimpleDocument[] = [];
     
     if (USE_FALLBACK) {
       // Local storage fallback
-      const allDocsKey = KV_CONFIG.DOCUMENT_LIST_KEY;
+      const allDocsKey = STORAGE_CONFIG.DOCUMENT_LIST_KEY;
       let allDocs = [];
       
       try {
@@ -607,13 +626,16 @@ export const storageService = {
         }
       }
     } else {
-      // Vercel KV
-      const docKeys = await kv.keys(`${KV_CONFIG.DOCUMENT_PREFIX}:*`);
+      // Redis
+      const docKeys = await redis!.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
       
       for (const key of docKeys) {
-        const doc = await kv.get<SimpleDocument>(key);
-        if (doc && (!doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null')) {
-          unassociatedDocs.push(doc);
+        const docStr = await redis!.get(key);
+        if (docStr) {
+          const doc = JSON.parse(docStr) as SimpleDocument;
+          if (!doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null') {
+            unassociatedDocs.push(doc);
+          }
         }
       }
     }
@@ -623,14 +645,14 @@ export const storageService = {
   
   // Fix unassociated documents (documents without a loanId)
   async fixUnassociatedDocuments(loanId: string): Promise<SimpleDocument[]> {
-    const USE_FALLBACK = KV_CONFIG.USE_FALLBACK || !isVercelKVConfigured();
-    console.log(`[Storage] Fixing unassociated documents for loan ${loanId}, using ${USE_FALLBACK ? 'localStorage fallback' : 'Vercel KV'}`);
+    const USE_FALLBACK = STORAGE_CONFIG.USE_FALLBACK || !isRedisConfigured();
+    console.log(`[Storage] Fixing unassociated documents for loan ${loanId}, using ${USE_FALLBACK ? 'localStorage fallback' : 'Redis'}`);
     
     const fixedDocuments: SimpleDocument[] = [];
     
     if (USE_FALLBACK) {
       // Local storage fallback
-      const allDocsKey = KV_CONFIG.DOCUMENT_LIST_KEY;
+      const allDocsKey = STORAGE_CONFIG.DOCUMENT_LIST_KEY;
       let allDocs = [];
       
       try {
@@ -652,7 +674,7 @@ export const storageService = {
           
           // Also update the individual document
           try {
-            const docKey = `${KV_CONFIG.DOCUMENT_PREFIX}:${doc.id}`;
+            const docKey = `${STORAGE_CONFIG.DOCUMENT_PREFIX}:${doc.id}`;
             localStorage.setItem(docKey, JSON.stringify(doc));
           } catch (error) {
             console.error(`Error updating document ${doc.id} in localStorage:`, error);
@@ -671,23 +693,28 @@ export const storageService = {
       // Update the loan documents list
       await this.updateLoanDocumentsList(loanId, fixedDocuments);
     } else {
-      // Vercel KV
+      // Redis
       // Get all documents without loanId
-      const docKeys = await kv.keys(`${KV_CONFIG.DOCUMENT_PREFIX}:*`);
+      const docKeys = await redis!.keys(`${STORAGE_CONFIG.DOCUMENT_PREFIX}:*`);
       
       for (const key of docKeys) {
-        const doc = await kv.get<SimpleDocument>(key);
-        if (doc && (!doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null')) {
-          // Update the document
-          doc.loanId = loanId;
-          await kv.set(key, doc);
-          
-          // Add to fixed documents list
-          fixedDocuments.push(doc);
-          
-          // Add to loan documents list
-          const loanDocsKey = `${KV_CONFIG.DOCUMENT_BY_LOAN_PREFIX}:${loanId}`;
-          await kv.sadd(loanDocsKey, doc.id);
+        const docStr = await redis!.get(key);
+        if (docStr) {
+          let doc = JSON.parse(docStr) as SimpleDocument;
+          if (!doc.loanId || doc.loanId === 'undefined' || doc.loanId === 'null') {
+            // Update the document
+            doc.loanId = loanId;
+            
+            // Store the updated document back to Redis
+            await redis!.set(key, JSON.stringify(doc));
+            
+            // Add to fixed documents list
+            fixedDocuments.push(doc);
+            
+            // Add to loan documents list
+            const loanDocsKey = `${STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX}:${loanId}`;
+            await redis!.sadd(loanDocsKey, doc.id);
+          }
         }
       }
     }
@@ -697,13 +724,13 @@ export const storageService = {
   
   // Helper method to update the loan documents list
   async updateLoanDocumentsList(loanId: string, documents: SimpleDocument[]): Promise<void> {
-    const USE_FALLBACK = KV_CONFIG.USE_FALLBACK || !isVercelKVConfigured();
+    const USE_FALLBACK = STORAGE_CONFIG.USE_FALLBACK || !isRedisConfigured();
     
     if (documents.length === 0) return;
     
     if (USE_FALLBACK) {
       // Add document IDs to loan-specific document list in localStorage
-      const loanDocsKey = `${KV_CONFIG.DOCUMENT_BY_LOAN_PREFIX}:${loanId}`;
+      const loanDocsKey = `${STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX}:${loanId}`;
       let existingIds: string[] = [];
       
       try {
@@ -725,15 +752,15 @@ export const storageService = {
         console.error(`Error saving document IDs for loan ${loanId} to localStorage:`, error);
       }
     } else {
-      // Add document IDs to loan-specific document list in Vercel KV
-      const loanDocsKey = `${KV_CONFIG.DOCUMENT_BY_LOAN_PREFIX}:${loanId}`;
+      // Add document IDs to loan-specific document list in Redis
+      const loanDocsKey = `${STORAGE_CONFIG.DOCUMENT_BY_LOAN_PREFIX}:${loanId}`;
       const docIds = documents.map(doc => doc.id);
       
       // Add all IDs to the set
       if (docIds.length > 0) {
         // Add IDs one by one to avoid spread operator issues
         for (const id of docIds) {
-          await kv.sadd(loanDocsKey, id);
+          await redis!.sadd(loanDocsKey, id);
         }
       }
     }

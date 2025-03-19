@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { simpleDocumentService, SimpleDocument } from "@/utilities/simplifiedDocumentService";
 import storageService from '@/services/storageService';
-import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
 import { OpenAI } from "openai";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
@@ -14,7 +14,7 @@ interface DiagnosticInfo {
   timestamp: string;
   storage: {
     mode: string;
-    kvConfigured: boolean;
+    redisConfigured: boolean;
     fallbackEnabled: boolean;
   };
   api: {
@@ -22,10 +22,9 @@ interface DiagnosticInfo {
     pinecone: string;
     pineconeIndex: string;
   };
-  vercelKV: {
+  redis: {
     url: string;
-    restUrl: string;
-    restToken: string;
+    configured: boolean;
   };
   documents: {
     count: number;
@@ -72,19 +71,18 @@ export async function GET(req: NextRequest) {
       environment: process.env.NODE_ENV || 'unknown',
       timestamp: new Date().toISOString(),
       storage: {
-        mode: KV_CONFIG.USE_FALLBACK ? 'localStorage Fallback' : (isVercelKVConfigured() ? 'vercelKV' : 'localStorage Fallback'),
-        kvConfigured: isVercelKVConfigured(),
-        fallbackEnabled: KV_CONFIG.USE_FALLBACK
+        mode: STORAGE_CONFIG.USE_FALLBACK ? 'localStorage Fallback' : (isRedisConfigured() ? 'redis' : 'localStorage Fallback'),
+        redisConfigured: isRedisConfigured(),
+        fallbackEnabled: STORAGE_CONFIG.USE_FALLBACK
       },
       api: {
         openai: !!process.env.OPENAI_API_KEY ? 'configured' : 'missing',
         pinecone: !!process.env.PINECONE_API_KEY ? 'configured' : 'missing',
         pineconeIndex: process.env.PINECONE_INDEX_NAME || PINECONE_INDEX_NAME
       },
-      vercelKV: {
-        url: !!process.env.VERCEL_KV_URL ? 'configured' : 'missing',
-        restUrl: !!process.env.VERCEL_KV_REST_API_URL ? 'configured' : 'missing',
-        restToken: !!process.env.VERCEL_KV_REST_API_TOKEN ? 'configured' : 'missing'
+      redis: {
+        url: !!process.env.REDIS_URL ? 'configured' : 'missing',
+        configured: isRedisConfigured()
       },
       documents: {
         count: 0,

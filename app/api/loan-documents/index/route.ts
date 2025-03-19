@@ -5,7 +5,7 @@ import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 import { simpleDocumentService, SimpleDocument } from "@/utilities/simplifiedDocumentService";
 import { indexDocumentsForLoan } from '@/utilities/loanDocumentService';
 import storageService from '@/services/storageService';
-import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
 
 // Maximum characters that can be safely sent to the embeddings API
 const MAX_EMBEDDING_CHARS = 8000;
@@ -95,8 +95,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
     }
     
-    // Get the storage mode for debug information
-    const storageMode = KV_CONFIG.USE_FALLBACK ? 'localStorage' : (isVercelKVConfigured() ? 'vercelKV' : 'localStorage');
+    // Storage mode for logging and debugging
+    const storageMode = STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage');
     
     // Get all documents for this loan
     const documents = await storageService.getDocumentsForLoan(loanId);
@@ -146,8 +146,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'No loan ID provided' }, { status: 400 });
     }
 
-    // Get the storage mode for debug information
-    const storageMode = KV_CONFIG.USE_FALLBACK ? 'localStorage' : (isVercelKVConfigured() ? 'vercelKV' : 'localStorage');
+    // Storage mode for logging and debugging
+    const storageMode = STORAGE_CONFIG.USE_FALLBACK ? 'localStorage' : (isRedisConfigured() ? 'redis' : 'localStorage');
     
     // Get all documents for this loan
     const documents = await storageService.getDocumentsForLoan(loanId);

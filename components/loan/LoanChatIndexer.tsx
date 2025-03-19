@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import storageService from '@/services/storageService';
-import { KV_CONFIG, isVercelKVConfigured } from '@/configuration/storageConfig';
+import { STORAGE_CONFIG, isRedisConfigured } from '@/configuration/storageConfig';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import LoanDocumentDebugTools from './LoanDocumentDebugTools';
 
@@ -30,13 +30,13 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
   const [migrationStats, setMigrationStats] = useState<{migrated: number, errors: number} | null>(null);
   
   // Storage configuration status
-  const [storageMode, setStorageMode] = useState<'localStorage' | 'vercelKV' | 'unknown'>('unknown');
+  const [storageMode, setStorageMode] = useState<'localStorage' | 'redis' | 'unknown'>('unknown');
   
   // Check which storage mode we're using
   useEffect(() => {
-    // Check Vercel KV configuration
-    if (isVercelKVConfigured() && !KV_CONFIG.USE_FALLBACK) {
-      setStorageMode('vercelKV');
+    // Check Redis configuration
+    if (isRedisConfigured() && !STORAGE_CONFIG.USE_FALLBACK) {
+      setStorageMode('redis');
     } else {
       setStorageMode('localStorage');
     }
@@ -223,37 +223,38 @@ export default function LoanChatIndexer({ loanId }: LoanChatIndexerProps) {
     }
   };
   
-  // Function to migrate data from localStorage to Vercel KV
-  const migrateToVercelKV = async () => {
-    if (storageMode !== 'vercelKV') {
-      setMessage('Cannot migrate to Vercel KV. Not configured.');
-      return;
-    }
-    
-    try {
+  // Function to migrate data from localStorage to Redis
+  const migrateToRedis = async () => {
+    if (storageMode !== 'redis') {
       setIsMigrating(true);
-      setIndexingStatus('indexing');
-      setProgress(10);
-      setMessage('Starting migration of documents from localStorage to Vercel KV...');
+      setMigrationStats(null);
       
-      // Call migration function
-      const stats = await storageService.migrateFromLocalStorage();
-      setMigrationStats(stats);
-      
-      setProgress(100);
-      
-      if (stats.errors === 0) {
-        setIndexingStatus('success');
-        setMessage(`Successfully migrated ${stats.migrated} documents to Vercel KV.`);
-      } else {
-        setIndexingStatus('error');
-        setMessage(`Migration completed with ${stats.errors} errors. ${stats.migrated} documents migrated successfully.`);
+      try {
+        const response = await fetch('/api/loan-documents/migrate', {
+          method: 'POST',
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          setMigrationStats(result);
+          
+          // Check for actual migration
+          if (result.migrated > 0) {
+            // Set storage mode to Redis
+            setStorageMode('redis');
+            
+            // Refresh diagnostics
+            runDiagnostics();
+          }
+        } else {
+          setMessage('Migration failed');
+        }
+      } catch (error) {
+        console.error('Error during migration:', error);
+        setMessage('Error during migration');
+      } finally {
+        setIsMigrating(false);
       }
-    } catch (error) {
-      setIndexingStatus('error');
-      setMessage(`Error during migration: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsMigrating(false);
     }
   };
 

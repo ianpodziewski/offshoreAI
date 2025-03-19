@@ -1,7 +1,7 @@
 // utilities/simplifiedDocumentService.ts
 import { v4 as uuidv4 } from 'uuid';
 import storageService from '@/services/storageService';
-import { isVercelKVConfigured, KV_CONFIG } from '@/configuration/storageConfig';
+import { isRedisConfigured, STORAGE_CONFIG } from '@/configuration/storageConfig';
 
 export interface SimpleDocument {
   id: string;
@@ -499,10 +499,15 @@ export const simpleDocumentService = {
   },
   
   // Sync documents with server storage
-  syncDocumentsToServer: async (loanId?: string): Promise<{success: boolean, syncedCount: number, errors: string[]}> => {
+  syncDocumentsToServer: async (loanId?: string): Promise<{
+    success: boolean;
+    message: string;
+    syncedCount: number;
+    errorCount: number;
+  }> => {
+    console.log(`Starting document sync for loan ${loanId || 'all'}...`);
+    
     try {
-      console.log(`🔄 Syncing documents to server storage${loanId ? ` for loan ID: ${loanId}` : ''}`);
-      
       // Get documents to sync (either for specific loan or all)
       const docsToSync = loanId 
         ? simpleDocumentService.getDocumentsForLoan(loanId)
@@ -510,14 +515,20 @@ export const simpleDocumentService = {
       
       if (docsToSync.length === 0) {
         console.log('No documents to sync');
-        return { success: true, syncedCount: 0, errors: [] };
+        return { 
+          success: true, 
+          message: 'No documents to sync',
+          syncedCount: 0, 
+          errorCount: 0 
+        };
       }
       
       console.log(`Syncing ${docsToSync.length} documents to server storage`);
       
       // Track results
       let syncedCount = 0;
-      const errors: string[] = [];
+      let errorCount = 0;
+      let errorMessages: string[] = [];
       
       // Sync each document
       for (const doc of docsToSync) {
@@ -542,23 +553,135 @@ export const simpleDocumentService = {
           console.log(`✅ Synced document ${doc.id} to server storage`);
         } catch (docError) {
           console.error(`Error syncing document ${doc.id}:`, docError);
-          errors.push(`Failed to sync document ${doc.id}: ${docError instanceof Error ? docError.message : 'Unknown error'}`);
+          errorCount++;
+          errorMessages.push(`Failed to sync document ${doc.id}: ${docError instanceof Error ? docError.message : 'Unknown error'}`);
         }
       }
       
+      const message = errorCount > 0 
+        ? `Sync completed with ${errorCount} errors. ${errorMessages.join('; ')}`
+        : `Successfully synced ${syncedCount} documents to server storage`;
+        
       console.log(`🔄 Sync complete. Synced ${syncedCount}/${docsToSync.length} documents to server storage.`);
       
       return {
-        success: syncedCount > 0,
+        success: errorCount === 0,
+        message,
         syncedCount,
-        errors
+        errorCount
       };
     } catch (error) {
+      const errorMessage = `Global sync error: ${error instanceof Error ? error.message : 'Unknown error'}`;
       console.error('Error syncing documents to server:', error);
       return { 
         success: false, 
+        message: errorMessage,
         syncedCount: 0, 
-        errors: [`Global sync error: ${error instanceof Error ? error.message : 'Unknown error'}`] 
+        errorCount: 1
+      };
+    }
+  },
+  
+  // Function to sync documents from server storage to localStorage
+  syncDocumentsFromServer: async (loanId?: string): Promise<{
+    success: boolean;
+    message: string;
+    syncedCount: number;
+    errorCount: number;
+  }> => {
+    console.log(`Starting document sync from server for loan ${loanId || 'all'}...`);
+    
+    try {
+      // Skip if server storage not configured
+      if (!isRedisConfigured() || STORAGE_CONFIG.USE_FALLBACK) {
+        return {
+          success: false,
+          message: "Server storage not configured or in fallback mode",
+          syncedCount: 0,
+          errorCount: 0
+        };
+      }
+      
+      // Get documents from server storage
+      const serverDocs = loanId 
+        ? await storageService.getDocumentsForLoan(loanId)
+        : (await storageService.getAllDocuments(0, 10000)).documents;
+      
+      if (serverDocs.length === 0) {
+        console.log('No documents found on server to sync');
+        return { 
+          success: true, 
+          message: 'No documents found on server to sync',
+          syncedCount: 0, 
+          errorCount: 0 
+        };
+      }
+      
+      console.log(`Syncing ${serverDocs.length} documents from server storage`);
+      
+      // Track results
+      let syncedCount = 0;
+      let errorCount = 0;
+      let errorMessages: string[] = [];
+      
+      // Get current documents in localStorage for comparison
+      const localDocs = simpleDocumentService.getAllDocuments();
+      const localDocIds = new Set(localDocs.map(doc => doc.id));
+      
+      // Sync each document
+      for (const doc of serverDocs) {
+        try {
+          // Add to localStorage if it doesn't exist or update it
+          if (!localDocIds.has(doc.id)) {
+            await simpleDocumentService.addDocumentDirectly(doc);
+          } else {
+            // If the document exists, we merge by keeping latest version
+            const localDoc = localDocs.find(d => d.id === doc.id);
+            if (localDoc) {
+              const serverDate = new Date(doc.dateUploaded);
+              const localDate = new Date(localDoc.dateUploaded);
+              
+              if (serverDate > localDate) {
+                // Server version is newer, update local
+                await simpleDocumentService.addDocumentDirectly(doc);
+              }
+            }
+          }
+          
+          // Always try to update the content in IndexedDB
+          if (doc.content) {
+            await storeContentInIndexedDB(doc.id, doc.content);
+          }
+          
+          syncedCount++;
+          console.log(`✅ Synced document ${doc.id} from server storage`);
+        } catch (docError) {
+          console.error(`Error syncing document ${doc.id} from server:`, docError);
+          errorCount++;
+          errorMessages.push(`Failed to sync document ${doc.id}: ${docError instanceof Error ? docError.message : 'Unknown error'}`);
+        }
+      }
+      
+      const message = errorCount > 0 
+        ? `Sync from server completed with ${errorCount} errors. ${errorMessages.join('; ')}`
+        : `Successfully synced ${syncedCount} documents from server storage`;
+        
+      console.log(`🔄 Sync from server complete. Synced ${syncedCount}/${serverDocs.length} documents.`);
+      
+      return {
+        success: errorCount === 0,
+        message,
+        syncedCount,
+        errorCount
+      };
+    } catch (error) {
+      const errorMessage = `Global sync error from server: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      console.error('Error syncing documents from server:', error);
+      return { 
+        success: false, 
+        message: errorMessage,
+        syncedCount: 0, 
+        errorCount: 1
       };
     }
   },
@@ -643,7 +766,7 @@ export const simpleDocumentService = {
       
       // After saving to localStorage, sync with server storage if configured
       try {
-        if (isVercelKVConfigured() && !KV_CONFIG.USE_FALLBACK) {
+        if (isRedisConfigured() && !STORAGE_CONFIG.USE_FALLBACK) {
           // Save directly to server storage - this includes the full content
           await storageService.saveDocument({
             ...document,
@@ -772,7 +895,7 @@ export const simpleDocumentService = {
       
       // After saving to localStorage, sync with server storage if configured
       try {
-        if (isVercelKVConfigured() && !KV_CONFIG.USE_FALLBACK) {
+        if (isRedisConfigured() && !STORAGE_CONFIG.USE_FALLBACK) {
           // Save directly to server storage - this includes the full content
           await storageService.saveDocument({
             ...newDoc,
@@ -1105,7 +1228,7 @@ export const simpleDocumentService = {
       console.error('❌ Error fixing document associations:', error);
       return [];
     }
-  }
+  },
 };
 
 // Try to migrate existing documents when the module is loaded
