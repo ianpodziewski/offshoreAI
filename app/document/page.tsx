@@ -55,7 +55,7 @@ function DocumentViewerContent() {
           if (doc.content) {
             let dataUrl = doc.content;
             
-            // If it's not a complete data URL, add the prefix
+            // If it's not a complete data URL add the prefix
             if (!dataUrl.startsWith('data:application/pdf')) {
               dataUrl = `data:application/pdf;base64,${dataUrl.replace(/^data:.*?;base64,/, '')}`;
             }
