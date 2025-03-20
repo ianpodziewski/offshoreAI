@@ -13,7 +13,7 @@ const LoanSidebar: React.FC<LoanSidebarProps> = ({ loan, activePage }) => {
   
   if (!loan) return null;
 
-  // Simplified navigation items
+  // Simplified nav items
   const navItems = [
     {
       name: 'Loan Data Points',
