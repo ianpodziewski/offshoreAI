@@ -17,6 +17,8 @@ import { OpenAI } from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
 import storageService from '@/services/storageService';
 import { STORAGE_CONFIG } from '@/configuration/storageConfig';
+import { documentDatabaseService } from '@/services/documentDatabaseService';
+import { databaseService } from '@/services/databaseService';
 
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
@@ -37,16 +39,21 @@ const LOAN_DOCUMENTS_PREFIX = 'loan-docs';
 const CHUNK_SIZE = 3500;
 const CHUNK_OVERLAP = 500;
 
+// Storage mode flags
+const USE_LOCAL_STORAGE = true;
+const USE_DATABASE = true;
+
 // Function to generate a random file size between 100KB and 10MB
 const getRandomFileSize = (): number => {
   return Math.floor(Math.random() * 9900000) + 100000; // 100KB to 10MB
 };
 
-// Function to format file size
+// Format file size into human-readable strings (KB, MB, etc)
 export const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return bytes + ' bytes';
-  else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  else return (bytes / 1048576).toFixed(1) + ' MB';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
 };
 
 // Generate fake document content
@@ -81,24 +88,19 @@ const generateDocumentContent = (docType: string, loan: LoanData): string => {
   }
 };
 
-// Helper function to check if localStorage is almost full
-// Returns true if we have less than 10% space remaining
+// Check if localStorage is getting full
 const isLocalStorageFull = (): boolean => {
   try {
-    const maxSize = 5 * 1024 * 1024; // Estimate: 5MB max for most browsers
-    let totalSize = 0;
-    
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      const value = localStorage.getItem(key);
-      totalSize += (key?.length || 0) + (value?.length || 0);
-    }
-    
-    const percentUsed = (totalSize / maxSize) * 100;
-    return percentUsed > 90; // More than 90% used
-  } catch (error) {
-    console.error('Error checking localStorage capacity:', error);
-    return true; // Assume full to be safe
+    const totalSize = localStorage.length > 0 
+      ? Object.keys(localStorage).map(key => key.length + (localStorage[key] || '').length).reduce((a, b) => a + b, 0)
+      : 0;
+    const maxSize = 5 * 1024 * 1024; // 5MB is a conservative estimate for localStorage
+    const usedPercentage = (totalSize / maxSize) * 100;
+    console.log(`LocalStorage usage: ${usedPercentage.toFixed(2)}% (${formatFileSize(totalSize)} of ~${formatFileSize(maxSize)})`);
+    return usedPercentage > 80; // Warning at 80% usage
+  } catch (e) {
+    console.error('Error checking localStorage size:', e);
+    return false;
   }
 };
 
@@ -111,13 +113,26 @@ const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
   return documents;
 };
 
-// Document service for managing loan documents
+// Initialize the database if needed
+const initializeDatabase = async (): Promise<void> => {
+  if (USE_DATABASE) {
+    try {
+      await databaseService.initialize();
+      console.log('Database initialized for document storage');
+    } catch (error) {
+      console.error('Failed to initialize database:', error);
+    }
+  }
+};
+
+// Export the loan document service
 export const loanDocumentService = {
   // Get all documents
   getAllDocuments: (): LoanDocument[] => {
     try {
-      const docsJson = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
-      return docsJson ? JSON.parse(docsJson) : [];
+      // Always check localStorage first
+      const docsFromStorage = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+      return docsFromStorage ? JSON.parse(docsFromStorage) : [];
     } catch (error) {
       console.error('Error getting all documents:', error);
       return [];
@@ -125,8 +140,28 @@ export const loanDocumentService = {
   },
   
   // Get documents for a specific loan
-  getDocumentsForLoan: (loanId: string): LoanDocument[] => {
+  getDocumentsForLoan: (loanId: string, includeContent = false): LoanDocument[] => {
     try {
+      // Check if the database is initialized and should be used
+      if (USE_DATABASE && databaseService['initialized']) {
+        try {
+          // Attempt to get documents from database
+          console.log(`Getting documents for loan ${loanId} from database`);
+          const docs = documentDatabaseService.getDocumentsForLoan(loanId, includeContent);
+          
+          // If we have results from the database, return them
+          if (docs && docs.length > 0) {
+            console.log(`Found ${docs.length} documents in database for loan ${loanId}`);
+            return docs;
+          }
+        } catch (dbError) {
+          console.error(`Error getting documents from database for loan ${loanId}:`, dbError);
+          // Fall through to localStorage if database retrieval fails
+        }
+      }
+      
+      // Fallback to localStorage
+      console.log(`Getting documents for loan ${loanId} from localStorage`);
       const allDocs = loanDocumentService.getAllDocuments();
       return allDocs.filter(doc => doc.loanId === loanId);
     } catch (error) {
@@ -148,9 +183,34 @@ export const loanDocumentService = {
   },
   
   // Get document by ID
-  getDocumentById: (docId: string): LoanDocument | null => {
-    const allDocs = loanDocumentService.getAllDocuments();
-    return allDocs.find(doc => doc.id === docId) || null;
+  getDocumentById: (docId: string, includeContent = false): LoanDocument | null => {
+    try {
+      // Check if the database is initialized and should be used
+      if (USE_DATABASE && databaseService['initialized']) {
+        try {
+          // Attempt to get document from database
+          console.log(`Getting document with ID ${docId} from database`);
+          const doc = documentDatabaseService.getDocumentById(docId, includeContent);
+          
+          // If we found the document in the database, return it
+          if (doc) {
+            console.log(`Found document ${docId} in database`);
+            return doc;
+          }
+        } catch (dbError) {
+          console.error(`Error getting document ${docId} from database:`, dbError);
+          // Fall through to localStorage if database retrieval fails
+        }
+      }
+      
+      // Fallback to localStorage
+      console.log(`Getting document with ID ${docId} from localStorage`);
+      const allDocs = loanDocumentService.getAllDocuments();
+      return allDocs.find(doc => doc.id === docId) || null;
+    } catch (error) {
+      console.error(`Error getting document with ID ${docId}:`, error);
+      return null;
+    }
   },
   
   // Add a document
@@ -202,41 +262,92 @@ export const loanDocumentService = {
   
   // Update a document
   updateDocument: async (documentId: string, updates: Partial<LoanDocument>): Promise<LoanDocument | null> => {
-    const allDocs = loanDocumentService.getAllDocuments();
-    const docIndex = allDocs.findIndex(doc => doc.id === documentId);
-    
-    if (docIndex === -1) return null;
-    
-    allDocs[docIndex] = { ...allDocs[docIndex], ...updates };
-    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
-    
-    return allDocs[docIndex];
+    try {
+      // Try to update in database if it's enabled and initialized
+      let updatedDbDoc = null;
+      if (USE_DATABASE && databaseService['initialized']) {
+        try {
+          console.log(`Attempting to update document ${documentId} in database`, updates);
+          updatedDbDoc = await documentDatabaseService.updateDocument(documentId, updates);
+          if (updatedDbDoc) {
+            console.log(`Successfully updated document ${documentId} in database`);
+            // If we updated successfully in the database, return that document
+            return updatedDbDoc;
+          } else {
+            console.warn(`Failed to update document ${documentId} in database`);
+          }
+        } catch (dbError) {
+          console.error(`Error updating document ${documentId} in database:`, dbError);
+          // Continue to localStorage update if database update fails
+        }
+      }
+      
+      // Always update in localStorage as well
+      const allDocs = loanDocumentService.getAllDocuments();
+      const docIndex = allDocs.findIndex(doc => doc.id === documentId);
+      
+      if (docIndex === -1) {
+        console.warn(`Document with ID ${documentId} not found in localStorage, cannot update`);
+        return updatedDbDoc; // Return db doc if we found it there
+      }
+      
+      allDocs[docIndex] = { ...allDocs[docIndex], ...updates };
+      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+      console.log(`Successfully updated document ${documentId} in localStorage`);
+      
+      return allDocs[docIndex];
+    } catch (error) {
+      console.error(`Error updating document ${documentId}:`, error);
+      return null;
+    }
   },
   
   // Delete a document
   deleteDocument: (documentId: string): boolean => {
     try {
       console.log(`Attempting to delete document: ${documentId}`);
+      
+      // Try to delete from database if it's enabled and initialized
+      let dbDeleteSuccess = false;
+      if (USE_DATABASE && databaseService['initialized']) {
+        try {
+          console.log(`Attempting to delete document ${documentId} from database`);
+          dbDeleteSuccess = documentDatabaseService.deleteDocument(documentId);
+          if (dbDeleteSuccess) {
+            console.log(`Successfully deleted document ${documentId} from database`);
+          } else {
+            console.warn(`Failed to delete document ${documentId} from database`);
+          }
+        } catch (dbError) {
+          console.error(`Error deleting document ${documentId} from database:`, dbError);
+          // Continue to localStorage deletion if database deletion fails
+        }
+      }
+      
+      // Always delete from localStorage as well
       const allDocs = loanDocumentService.getAllDocuments();
       const docToDelete = allDocs.find(doc => doc.id === documentId);
       
       if (!docToDelete) {
-        console.warn(`Document with ID ${documentId} not found, nothing to delete`);
-        return false;
+        console.warn(`Document with ID ${documentId} not found in localStorage, nothing to delete`);
+        // If we successfully deleted from the database, consider the operation successful
+        return dbDeleteSuccess;
       }
       
       const filteredDocs = allDocs.filter(doc => doc.id !== documentId);
       
       // If no documents were filtered out, return false
       if (filteredDocs.length === allDocs.length) {
-        console.warn(`Document with ID ${documentId} not found in array of length ${allDocs.length}`);
-        return false;
+        console.warn(`Document with ID ${documentId} not found in localStorage array of length ${allDocs.length}`);
+        // If we successfully deleted from the database, consider the operation successful
+        return dbDeleteSuccess;
       }
       
       // Save the filtered documents back to localStorage
       localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
-      console.log(`Successfully deleted document ${documentId}`);
+      console.log(`Successfully deleted document ${documentId} from localStorage`);
       
+      // The delete is successful if either database or localStorage deletion worked
       return true;
     } catch (error) {
       console.error(`Error deleting document ${documentId}:`, error);
@@ -523,10 +634,26 @@ export const loanDocumentService = {
         // Add to the list of fake documents
         fakeDocuments.push(fakeDocument);
         
-        // Save to localStorage
-        const allExistingDocs = loanDocumentService.getAllDocuments();
-        allExistingDocs.push(fakeDocument);
-        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
+        // Save to localStorage if enabled
+        if (USE_LOCAL_STORAGE) {
+          const allExistingDocs = loanDocumentService.getAllDocuments();
+          allExistingDocs.push(fakeDocument);
+          localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
+        }
+      }
+      
+      // Save to database if enabled
+      if (USE_DATABASE) {
+        try {
+          // Initialize database if not already initialized
+          await initializeDatabase();
+          
+          // Store documents in database
+          const insertedCount = documentDatabaseService.bulkInsertDocuments(fakeDocuments);
+          console.log(`Saved ${insertedCount} documents to SQLite database`);
+        } catch (dbError) {
+          console.error('Error saving documents to database:', dbError);
+        }
       }
       
       console.log(`Generated and stored ${fakeDocuments.length} fake documents for loan ${loanId}`);
