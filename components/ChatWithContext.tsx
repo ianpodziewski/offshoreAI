@@ -15,6 +15,7 @@ import { Button } from "../components/ui/button";
 import { Icons } from "../components/icons";
 import { DocumentList } from "../components/DocumentList";
 import { DisplayMessage, LoadingIndicator } from "@/types";
+import { SimpleDocument } from '@/utilities/simplifiedDocumentService';
 
 // Define MessageList component for displaying chat messages
 function MessageList({ 
@@ -52,21 +53,26 @@ export default function ChatWithContext() {
     clearMessages,
   } = useApp();
 
-  const [chatDocuments, setChatDocuments] = useState<any[]>([]);
+  const [chatDocuments, setChatDocuments] = useState<SimpleDocument[]>([]);
 
-  // Function to fetch and display relevant documents
-  const fetchRelevantDocuments = async () => {
-    // Simplified document fetching logic
-    console.log("Fetching relevant documents");
-    
-    // Simulate fetching documents
-    const mockDocuments = [
-      { id: 1, name: "Sample Document 1", content: "This is a sample document content." },
-      { id: 2, name: "Sample Document 2", content: "Another sample document for testing." }
-    ];
-    
-    setChatDocuments(mockDocuments);
-  };
+  // Load actual chat uploads instead of mock documents
+  useEffect(() => {
+    const loadChatDocuments = () => {
+      // Use the simpleDocumentService to get chat documents
+      const chatDocs = simpleDocumentService.getChatDocuments();
+      console.log("Found chat documents:", chatDocs.length);
+      setChatDocuments(chatDocs);
+    };
+
+    // Load documents initially
+    loadChatDocuments();
+
+    // Set up interval to refresh documents periodically (every 5 seconds)
+    const intervalId = setInterval(loadChatDocuments, 5000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Add a useEffect to incorporate the LENDER_GUIDELINES to the chat context
   useEffect(() => {
@@ -94,6 +100,12 @@ export default function ChatWithContext() {
               handleInputChange={handleInputChange}
               handleSubmit={handleSubmit}
               isLoading={isLoading}
+              onUploadComplete={async () => {
+                // Refresh documents when upload completes
+                const chatDocs = simpleDocumentService.getChatDocuments();
+                setChatDocuments(chatDocs);
+                return Promise.resolve();
+              }}
             />
           </div>
         </div>
@@ -102,26 +114,29 @@ export default function ChatWithContext() {
         <div className="lg:col-span-1 flex flex-col h-[calc(100vh-180px)] space-y-4">
           {/* Document section */}
           <Card className="flex-1 bg-gray-900 border-gray-800 shadow-lg overflow-hidden">
-            <div className="flex justify-between items-center p-4 border-b border-gray-800">
+            <div className="p-4 border-b border-gray-800">
               <h3 className="text-lg font-semibold">Documents</h3>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={fetchRelevantDocuments}
-                className="text-xs"
-              >
-                <Icons.refresh className="h-3 w-3 mr-1" />
-                Refresh
-              </Button>
             </div>
             <CardContent className="p-3 overflow-y-auto max-h-[calc(100vh-280px)]">
               {chatDocuments.length > 0 ? (
-                <DocumentList documents={chatDocuments} />
+                <div className="space-y-2">
+                  {chatDocuments.map((doc) => (
+                    <div 
+                      key={doc.id} 
+                      className="p-3 border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
+                    >
+                      <h4 className="font-medium text-sm mb-1">{doc.filename}</h4>
+                      <p className="text-xs text-gray-400 truncate">
+                        {doc.dateUploaded ? new Date(doc.dateUploaded).toLocaleString() : 'No date'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Icons.document className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">No documents yet</p>
-                  <p className="text-xs mt-1">Click refresh to load documents</p>
+                  <p className="text-xs mt-1">Upload files in the chat to see them here</p>
                 </div>
               )}
             </CardContent>
