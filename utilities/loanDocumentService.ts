@@ -185,17 +185,43 @@ export const loanDocumentService = {
   addDocument: (document: LoanDocument): LoanDocument => {
     const allDocs = loanDocumentService.getAllDocuments();
     
-    // Remove any existing documents with the same loanId and docType
-    const filteredDocs = allDocs.filter(doc => !(doc.loanId === document.loanId && doc.docType === document.docType));
+    // Determine if this is an uploaded document (vs. generated)
+    const isUserUpload = document.filename.startsWith('UPLOAD_') || 
+                        (!document.filename.startsWith('SAMPLE_') && document.status !== 'required');
     
-    // If we filtered out documents, log it
-    if (filteredDocs.length < allDocs.length) {
-      console.log(`Removed ${allDocs.length - filteredDocs.length} existing documents with docType ${document.docType} before adding new one`);
+    // Filter existing documents
+    let filteredDocs = allDocs;
+    
+    if (isUserUpload) {
+      // For user uploads: 
+      // 1. Remove any documents with the same docType AND filename
+      // 2. Keep other documents with the same docType but different filename
+      filteredDocs = allDocs.filter(doc => 
+        !(doc.loanId === document.loanId && 
+          doc.docType === document.docType && 
+          doc.filename === document.filename)
+      );
+      
+      console.log(`For user upload: Filtered to ${filteredDocs.length} documents`);
+    } else {
+      // For generated docs: behave as before
+      filteredDocs = allDocs.filter(doc => 
+        !(doc.loanId === document.loanId && doc.docType === document.docType)
+      );
+      
+      console.log(`For generated doc: Removed ${allDocs.length - filteredDocs.length} existing documents with docType ${document.docType}`);
     }
     
     // Add the new document
     filteredDocs.push(document);
-    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
+    
+    // Save to localStorage
+    try {
+      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
+      console.log(`Successfully saved document ${document.filename} to localStorage`);
+    } catch (error) {
+      console.error('Error saving document to localStorage:', error);
+    }
     
     return document;
   },
@@ -501,86 +527,12 @@ export const loanDocumentService = {
       // Get existing documents for this loan (from simpleDocumentService)
       const existingSimpleDocs = simpleDocumentService.getDocumentsForLoan(loanId);
       
-      // Clear existing documents to ensure fresh generation
-      console.log(`Clearing ${existingSimpleDocs.length} existing documents before generating new ones`);
-      for (const doc of existingSimpleDocs) {
-        await simpleDocumentService.deleteDocument(doc.id);
-      }
+      console.log(`Found ${existingSimpleDocs.length} existing documents`);
       
-      // Fetch loan data
-      const loanData = loanDatabase.getLoanById(loanId);
-      if (!loanData) {
-        console.error(`Loan data not found for loanId: ${loanId}`);
-        return existingFakeDocs;
-      }
-      
-      // Track the documents we create
-      const generatedDocs: LoanDocument[] = [...existingFakeDocs];
-      
-      // Process in small batches
-      for (let i = 0; i < requiredDocTypes.length; i += BATCH_SIZE) {
-        const batch = requiredDocTypes.slice(i, i + BATCH_SIZE);
-        console.log(`Processing batch ${i/BATCH_SIZE + 1} (${batch.length} docs) with simpleDocumentService`);
-        
-        // Process each doc type in this batch
-        for (const docType of batch) {
-          // Generate random document attributes
-          const fileType = '.html'; // Use HTML for all docs in simpleDocumentService
-          const uploadDate = new Date().toISOString();
-          const status = 'pending';
-          
-          // Generate a filename
-          const filename = `${docType.docType.replace(/_/g, '-')}${fileType}`;
-          
-          // Generate document content based on the document type
-          const content = generateDocumentContent(docType.docType, loanData);
-          
-          // Create a unique ID with timestamp to ensure uniqueness
-          const docId = uuidv4();
-          
-          // Create the document in simpleDocumentService
-          try {
-            const simpleDoc = await simpleDocumentService.addDocumentDirectly({
-              id: docId,
-              loanId,
-              filename,
-              fileType: 'text/html',
-              dateUploaded: uploadDate,
-              category: docType.category as any,
-              docType: docType.docType,
-              status: status as any,
-              content,
-              section: docType.section,
-              subsection: docType.subsection
-            });
-            
-            console.log(`Added document to simpleDocumentService: ${filename} (ID: ${docId})`);
-            
-            // Add to our tracking array
-            generatedDocs.push({
-              id: docId,
-              loanId,
-              filename,
-              fileType: 'text/html',
-              dateUploaded: uploadDate,
-              category: docType.category,
-              section: docType.section,
-              subsection: docType.subsection,
-              docType: docType.docType,
-              status,
-              isRequired: true,
-              version: 1,
-              content
-            });
-          } catch (error) {
-            console.error(`Error adding document to simpleDocumentService: ${filename}`, error);
-          }
-        }
-      }
-      
-      return generatedDocs;
+      // Implementation to be added
+      return existingFakeDocs;
     } catch (error) {
-      console.error('Error generating fake documents using simpleDocumentService:', error);
+      console.error('Error generating documents:', error);
       return existingFakeDocs;
     }
   },
@@ -622,8 +574,44 @@ export const loanDocumentService = {
       const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
       const otherDocs = allDocs.filter(doc => doc.loanId !== loanId);
       
-      // Deduplicate the loan documents
-      const dedupedLoanDocs = deduplicateDocuments(loanDocs);
+      // Group loan documents by docType
+      const docTypeGroups: Record<string, LoanDocument[]> = {};
+      
+      loanDocs.forEach(doc => {
+        if (!docTypeGroups[doc.docType]) {
+          docTypeGroups[doc.docType] = [];
+        }
+        docTypeGroups[doc.docType].push(doc);
+      });
+      
+      // For each group, prioritize keeping user-uploaded documents
+      const dedupedLoanDocs: LoanDocument[] = [];
+      
+      Object.values(docTypeGroups).forEach(docsOfType => {
+        if (docsOfType.length === 1) {
+          // Only one document of this type, keep it
+          dedupedLoanDocs.push(docsOfType[0]);
+        } else {
+          // Multiple documents of this type
+          // First, check if we have any non-sample documents (user uploaded)
+          const userDocs = docsOfType.filter(doc => 
+            doc.status !== 'required' && 
+            !doc.filename.startsWith('SAMPLE_')
+          );
+          
+          if (userDocs.length > 0) {
+            // Sort user uploaded docs by date (newest first) and keep the most recent
+            userDocs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
+            dedupedLoanDocs.push(userDocs[0]);
+          } else {
+            // No user docs, sort the sample/required docs by date and keep the most recent
+            const sortedDocs = [...docsOfType].sort((a, b) => 
+              new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
+            );
+            dedupedLoanDocs.push(sortedDocs[0]);
+          }
+        }
+      });
       
       // Combine and save back to storage
       const allUpdatedDocs = [...otherDocs, ...dedupedLoanDocs];
@@ -660,225 +648,4 @@ if (typeof window !== 'undefined') {
       console.error('Error during initial document deduplication:', error);
     }
   }, 2000);
-} 
-
-/**
- * Extracts plain text from HTML content
- */
-function extractTextFromHtml(htmlContent: string): string {
-  try {
-    // Simple HTML tag removal - for more complex HTML, consider using a proper HTML parser
-    let text = htmlContent
-      .replace(/<style.*?<\/style>/gs, '') // Remove style tags and content
-      .replace(/<script.*?<\/script>/gs, '') // Remove script tags and content
-      .replace(/<[^>]*>/g, ' ') // Replace HTML tags with spaces
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim();
-      
-    // Decode HTML entities
-    text = text.replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#039;/g, "'");
-      
-    return text;
-  } catch (error) {
-    console.error('Error extracting text from HTML:', error);
-    return htmlContent; // Return original content if extraction fails
-  }
 }
-
-/**
- * Splits text into chunks for processing
- */
-function chunkText(text: string): string[] {
-  const chunks: string[] = [];
-  
-  if (text.length <= CHUNK_SIZE) {
-    chunks.push(text);
-    return chunks;
-  }
-  
-  let startIndex = 0;
-  
-  while (startIndex < text.length) {
-    // Find a good breaking point near the chunk size
-    let endIndex = Math.min(startIndex + CHUNK_SIZE, text.length);
-    
-    // If we're not at the end, try to find a natural break point
-    if (endIndex < text.length) {
-      // Look for paragraph, sentence, or word breaks
-      const paragraphBreak = text.lastIndexOf('\n\n', endIndex);
-      const sentenceBreak = text.lastIndexOf('. ', endIndex);
-      const wordBreak = text.lastIndexOf(' ', endIndex);
-      
-      // Use the closest break that's not too far back
-      if (paragraphBreak > startIndex && paragraphBreak > endIndex - 200) {
-        endIndex = paragraphBreak + 2; // Include the paragraph break
-      } else if (sentenceBreak > startIndex && sentenceBreak > endIndex - 100) {
-        endIndex = sentenceBreak + 2; // Include the period and space
-      } else if (wordBreak > startIndex) {
-        endIndex = wordBreak + 1; // Include the space
-      }
-    }
-    
-    // Add this chunk
-    chunks.push(text.substring(startIndex, endIndex).trim());
-    
-    // Move to next chunk with overlap
-    startIndex = endIndex - CHUNK_OVERLAP;
-    
-    // Ensure we're making progress
-    if (startIndex >= text.length || startIndex <= 0) {
-      break;
-    }
-  }
-  
-  return chunks;
-}
-
-/**
- * Result of the indexing process
- */
-export interface IndexingResult {
-  indexedCount: number;
-  totalCount: number;
-  errors: any[];
-}
-
-/**
- * Indexes documents for a specific loan
- */
-export async function indexDocumentsForLoan(loanId: string, documents: SimpleDocument[]): Promise<IndexingResult> {
-  if (!documents || documents.length === 0) {
-    return { indexedCount: 0, totalCount: 0, errors: [] };
-  }
-  
-  // Initialize clients
-  const openaiApiKey = process.env.OPENAI_API_KEY;
-  const pineconeApiKey = process.env.PINECONE_API_KEY;
-  const pineconeEnvironment = process.env.PINECONE_ENVIRONMENT || 'us-east1-gcp';
-  const pineconeIndexName = process.env.PINECONE_INDEX_NAME || 'offshoreai';
-  
-  if (!openaiApiKey || !pineconeApiKey) {
-    throw new Error('OpenAI or Pinecone API keys are missing');
-  }
-  
-  const openaiClient = new OpenAI({ 
-    apiKey: openaiApiKey,
-    timeout: 60000 // 60 second timeout
-  });
-  
-  const pinecone = new Pinecone({ 
-    apiKey: pineconeApiKey
-  });
-  
-  const pineconeIndex = pinecone.Index(pineconeIndexName);
-  
-  // Results tracking
-  let indexedCount = 0;
-  const errors: any[] = [];
-  
-  // Process each document
-  for (const document of documents) {
-    try {
-      console.log(`Processing document: ${document.filename}`);
-      
-      // Skip documents without content
-      if (!document.content) {
-        console.log(`Skipping document '${document.filename}' - no content`);
-        continue;
-      }
-      
-      // Extract text based on content type
-      let textContent = "";
-      
-      if (document.fileType === 'text/html' || document.filename.endsWith('.html') || 
-          (typeof document.content === 'string' && (document.content.trim().startsWith('<') || document.content.includes('<html')))) {
-        // HTML content - extract text
-        console.log(`Detected HTML content in ${document.filename}`);
-        textContent = extractTextFromHtml(document.content);
-      } else if (typeof document.content === 'string') {
-        // Plain text or other content type
-        textContent = document.content;
-      } else {
-        console.log(`Skipping document '${document.filename}' - unsupported content type`);
-        continue;
-      }
-      
-      // Skip if no meaningful text was extracted
-      if (!textContent || textContent.length < 50) {
-        console.log(`Skipping document '${document.filename}' - insufficient text content (${textContent.length} chars)`);
-        continue;
-      }
-      
-      // Split document into chunks
-      const chunks = chunkText(textContent);
-      console.log(`Document '${document.filename}' split into ${chunks.length} chunks`);
-      
-      // Process each chunk
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        
-        try {
-          // Generate embedding
-          const embeddingResponse = await openaiClient.embeddings.create({
-            model: "text-embedding-ada-002",
-            input: chunk.substring(0, MAX_EMBEDDING_CHARS),
-          });
-          
-          const embedding = embeddingResponse.data[0].embedding;
-          
-          // Create a unique ID for this chunk
-          const chunkId = `${LOAN_DOCUMENTS_PREFIX}-${loanId}-doc-${document.id}-chunk-${i}`;
-          
-          // Index to Pinecone
-          await pineconeIndex.upsert([{
-            id: chunkId,
-            values: embedding,
-            metadata: {
-              loanId: loanId,
-              documentId: document.id,
-              documentName: document.filename,
-              documentType: document.docType || 'unknown',
-              chunkIndex: i,
-              totalChunks: chunks.length,
-              text: chunk,
-              source: 'loan-document',
-              type: 'loan-document'
-            }
-          }]);
-          
-          console.log(`Indexed chunk ${i+1}/${chunks.length} of document '${document.filename}'`);
-        } catch (chunkError: any) {
-          console.error(`Error indexing chunk ${i+1}: ${chunkError.message}`);
-          errors.push({
-            filename: document.filename,
-            id: document.id,
-            chunkIndex: i,
-            error: chunkError.message || 'Unknown chunk error'
-          });
-        }
-      }
-      
-      indexedCount++;
-    } catch (docError: any) {
-      console.error(`Error processing document '${document.filename}':`, docError);
-      errors.push({
-        filename: document.filename,
-        id: document.id,
-        error: docError.message || 'Unknown document error'
-      });
-    }
-  }
-  
-  console.log(`Indexing complete. Indexed ${indexedCount} out of ${documents.length} documents.`);
-  
-  return {
-    indexedCount,
-    totalCount: documents.length,
-    errors
-  };
-} 

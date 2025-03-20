@@ -195,9 +195,16 @@ export default function LoanDocumentsPage() {
   const handleDocumentUploaded = (document: any) => {
     console.log('Document to be uploaded:', document);
     
+    // Ensure uploaded files have a distinct naming pattern
+    let filename = document.filename;
+    if (!filename.startsWith('UPLOAD_')) {
+      filename = `UPLOAD_${filename}`;
+    }
+    
     // Create document with the required structure
     const newDoc = loanDocumentService.addDocument({
       ...document,
+      filename,
       // Make sure the status is set to 'pending' for a newly uploaded document
       status: 'pending',
       // Set the file upload date to now
@@ -216,6 +223,12 @@ export default function LoanDocumentsPage() {
     // Add the new document to the existing documents array
     const updatedDocuments = [...documents, newDoc];
     setDocuments(updatedDocuments);
+    
+    // Force reloading the document list from localStorage to ensure sync
+    setTimeout(() => {
+      const refreshedDocs = loanDocumentService.getDocumentsForLoan(loanId);
+      setDocuments(refreshedDocs);
+    }, 100);
     
     console.log('Updated documents list:', updatedDocuments);
     
