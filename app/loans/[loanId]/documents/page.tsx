@@ -107,7 +107,7 @@ const documentViewerStyles = `
 export default function LoanDocumentsPage() {
   const params = useParams();
   const router = useRouter();
-  const loanId = params.loanId as string;
+  const loanId = params?.loanId as string || '';
   
   const [loan, setLoan] = useState<any>(null);
   const [documents, setDocuments] = useState<LoanDocument[]>([]);
@@ -131,48 +131,66 @@ export default function LoanDocumentsPage() {
   }, [loanId]);
   
   // Function to load documents
-  const loadDocuments = useCallback(() => {
+  const loadDocuments = useCallback(async () => {
     if (!loanId) return;
     
     console.log('Loading documents for loan:', loanId);
     
-    // Get the documents
-    const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
-    console.log('Documents retrieved from localStorage:', loanDocs.length);
-    
-    // Log document details
-    if (loanDocs.length > 0) {
-      console.log('Document details:');
-      loanDocs.forEach(doc => {
-        console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status}, id: ${doc.id})`);
-      });
-    }
-    
-    // Set documents
-    setDocuments(loanDocs);
-    
-    // Update completion status if loan type is available
-    if (loan?.loanType) {
-      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-      setCompletionStatus(status);
+    try {
+      // Get the documents - use await since getDocumentsForLoan is now async
+      const loanDocs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
+      console.log('Documents retrieved from localStorage:', loanDocs.length);
+      
+      // Log document details
+      if (loanDocs.length > 0) {
+        console.log('Document details:');
+        loanDocs.forEach((doc: LoanDocument) => {
+          console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status}, id: ${doc.id})`);
+        });
+      }
+      
+      // Set documents
+      setDocuments(loanDocs);
+      
+      // Update completion status if loan type is available
+      if (loan?.loanType) {
+        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+        setCompletionStatus(status);
+      }
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      // Set empty documents array in case of error
+      setDocuments([]);
     }
   }, [loanId, loan]);
   
-  // Load documents on initialization
+  // Load documents on initialization - must use async/await properly with useEffect
   useEffect(() => {
     if (loanId) {
-      loadDocuments();
+      // Create an async function inside useEffect
+      const fetchDocuments = async () => {
+        await loadDocuments();
+      };
+      
+      // Call the async function
+      fetchDocuments();
     }
   }, [loanId, loadDocuments]);
   
-  // Initialize documents if none exist
+  // Initialize documents if none exist - must also handle async
   useEffect(() => {
     if (loanId && loan?.loanType && documents.length === 0) {
-      // Only initialize if no documents exist
-      const placeholderDocs = loanDocumentService.initializeDocumentsForLoan(loanId, loan.loanType);
+      // Create an async function inside useEffect
+      const initializeAndLoadDocuments = async () => {
+        // Only initialize if no documents exist
+        const placeholderDocs = loanDocumentService.initializeDocumentsForLoan(loanId, loan.loanType);
+        
+        // Reload all documents - await the async function
+        await loadDocuments();
+      };
       
-      // Reload all documents
-      loadDocuments();
+      // Call the async function
+      initializeAndLoadDocuments();
     }
   }, [loanId, loan, documents.length, loadDocuments]);
   
@@ -330,7 +348,7 @@ export default function LoanDocumentsPage() {
                         // loanDocumentService.deduplicateLoanDocuments(loanId);
                         
                         // Load the documents
-                        const dedupedDocs = loanDocumentService.getDocumentsForLoan(loanId);
+                        const dedupedDocs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
                         
                         // Log the deduplicated docs to help with debugging
                         console.log('Deduplicated documents after generation:', dedupedDocs);
@@ -378,7 +396,7 @@ export default function LoanDocumentsPage() {
                       alert(`Generated ${totalGenerated} sample documents across all loans. Documents are stored in both localStorage and Redis for chatbot access.`);
                       
                       // Refresh documents for current loan
-                      const docs = loanDocumentService.getDocumentsForLoan(loanId);
+                      const docs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
                       setDocuments(docs);
                       
                       // Update completion status for current loan
