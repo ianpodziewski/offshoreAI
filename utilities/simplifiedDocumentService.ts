@@ -360,7 +360,23 @@ export const simpleDocumentService = {
   
   // Delete a document
   deleteDocument: (docId: string): boolean => {
-    return clientDocumentService.deleteDocumentSync(docId);
+    try {
+      console.log(`Attempting to delete document: ${docId}`);
+      // Also try to delete content from IndexedDB if available
+      try {
+        deleteContentFromIndexedDB(docId)
+          .then(() => console.log(`Deleted document content from IndexedDB: ${docId}`))
+          .catch(err => console.warn(`Could not delete content from IndexedDB: ${err}`));
+      } catch (err) {
+        console.warn(`Error attempting to delete from IndexedDB: ${err}`);
+      }
+      
+      // Delete from client service
+      return clientDocumentService.deleteDocumentSync(docId);
+    } catch (error) {
+      console.error(`Error deleting document ${docId}:`, error);
+      return false;
+    }
   },
   
   // Get chat documents

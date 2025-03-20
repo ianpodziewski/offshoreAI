@@ -196,9 +196,12 @@ export default function LoanDocumentsPage() {
       const success = loanDocumentService.deleteDocument(idToDelete);
       
       if (success) {
-        // Filter out the document with this ID from the local state
-        const updatedDocuments = documents.filter(doc => doc.id !== idToDelete);
-        setDocuments(updatedDocuments);
+        console.log(`Successfully deleted document ${idToDelete}`);
+        
+        // Immediately update the UI by filtering out the deleted document
+        setDocuments(prevDocuments => 
+          prevDocuments.filter(doc => doc.id !== idToDelete)
+        );
         
         // Update completion status
         if (loan?.loanType) {
@@ -206,7 +209,11 @@ export default function LoanDocumentsPage() {
           setCompletionStatus(status);
         }
       }
+      return;
     }
+    
+    // For regular view actions...
+    // Add any document viewing logic here
   };
   
   // Handle document upload completion

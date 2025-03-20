@@ -194,14 +194,25 @@ export const clientDocumentService = {
    * Delete a document by ID - SYNC (uses localStorage for compatibility)
    */
   deleteDocumentSync: (docId: string): boolean => {
+    console.log(`Deleting document ${docId} from localStorage`);
     const allDocs = getDocumentsFromLocalStorage();
+    
+    // Check if document exists
+    const docToDelete = allDocs.find(doc => doc.id === docId);
+    if (!docToDelete) {
+      console.warn(`Document ${docId} not found in localStorage`);
+      return false;
+    }
+    
     const filteredDocs = allDocs.filter(doc => doc.id !== docId);
     
     if (filteredDocs.length === allDocs.length) {
+      console.warn(`Failed to filter out document ${docId}`);
       return false;
     }
     
     saveDocumentsToLocalStorage(filteredDocs);
+    console.log(`Successfully deleted document ${docId} from localStorage`);
     return true;
   },
   

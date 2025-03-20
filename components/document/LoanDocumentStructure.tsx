@@ -153,13 +153,8 @@ export function LoanDocumentStructure({
     
     // Show confirmation dialog
     if (window.confirm("Are you sure you want to delete this document?")) {
-      // Filter out the document with the given ID
-      const updatedDocuments = uploadedDocuments.filter(doc => doc.id !== documentId);
-      
-      // Update the parent component with the new documents array
+      // Call the parent component's handler with the ID to delete
       if (onViewDocument) {
-        // We're using onViewDocument as a handler to pass the ID to the parent
-        // The parent component will need to handle the delete operation
         onViewDocument(`delete_${documentId}`);
       }
     }

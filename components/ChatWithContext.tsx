@@ -7,7 +7,7 @@ import ChatContainer from "@/components/ChatContainer";
 import useApp from "../hooks/use-app";
 import ChatHeader from "../components/chat/header";
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { FileText, Eye, ExternalLink, ChevronRight } from 'lucide-react';
+import { FileText, Eye, ExternalLink, ChevronRight, X } from 'lucide-react';
 import Link from 'next/link';
 import { simpleDocumentService } from '@/utilities/simplifiedDocumentService';
 import LayoutWrapper from '@/app/layout-wrapper';
@@ -73,8 +73,8 @@ export default function ChatWithContext() {
     // Load documents initially
     loadChatDocuments();
 
-    // Set up interval to refresh documents periodically (every 5 seconds)
-    const intervalId = setInterval(loadChatDocuments, 5000);
+    // Set up interval to refresh documents periodically (every 2 seconds)
+    const intervalId = setInterval(loadChatDocuments, 2000);
 
     // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
@@ -129,7 +129,26 @@ export default function ChatWithContext() {
                       key={doc.id} 
                       className="p-3 border border-gray-700 rounded-lg hover:bg-gray-800 transition-colors"
                     >
-                      <h4 className="font-medium text-sm mb-1">{doc.filename}</h4>
+                      <div className="flex justify-between items-center">
+                        <h4 className="font-medium text-sm mb-1">{doc.filename}</h4>
+                        <button
+                          onClick={() => {
+                            // Show confirmation dialog
+                            if (window.confirm("Are you sure you want to delete this document?")) {
+                              // Delete the document
+                              simpleDocumentService.deleteDocument(doc.id);
+                              // Update the UI by filtering out the deleted document
+                              setChatDocuments(prevDocs => 
+                                prevDocs.filter(document => document.id !== doc.id)
+                              );
+                            }
+                          }}
+                          className="text-red-400 hover:text-red-600 transition-colors p-1 rounded-full hover:bg-red-100/10"
+                          title="Delete document"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
                       <p className="text-xs text-gray-400 truncate">
                         {doc.dateUploaded ? new Date(doc.dateUploaded).toLocaleString() : 'No date'}
                       </p>

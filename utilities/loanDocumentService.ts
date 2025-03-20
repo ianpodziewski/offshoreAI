@@ -215,13 +215,33 @@ export const loanDocumentService = {
   
   // Delete a document
   deleteDocument: (documentId: string): boolean => {
-    const allDocs = loanDocumentService.getAllDocuments();
-    const filteredDocs = allDocs.filter(doc => doc.id !== documentId);
-    
-    if (filteredDocs.length === allDocs.length) return false;
-    
-    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
-    return true;
+    try {
+      console.log(`Attempting to delete document: ${documentId}`);
+      const allDocs = loanDocumentService.getAllDocuments();
+      const docToDelete = allDocs.find(doc => doc.id === documentId);
+      
+      if (!docToDelete) {
+        console.warn(`Document with ID ${documentId} not found, nothing to delete`);
+        return false;
+      }
+      
+      const filteredDocs = allDocs.filter(doc => doc.id !== documentId);
+      
+      // If no documents were filtered out, return false
+      if (filteredDocs.length === allDocs.length) {
+        console.warn(`Document with ID ${documentId} not found in array of length ${allDocs.length}`);
+        return false;
+      }
+      
+      // Save the filtered documents back to localStorage
+      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
+      console.log(`Successfully deleted document ${documentId}`);
+      
+      return true;
+    } catch (error) {
+      console.error(`Error deleting document ${documentId}:`, error);
+      return false;
+    }
   },
   
   // Update document status
