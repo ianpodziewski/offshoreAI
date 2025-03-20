@@ -282,6 +282,7 @@ export function getRequiredDocuments(loanType: string): {
   subsection: string; 
   docType: string; 
   label: string;
+  isRequired: boolean;
 }[] {
   const allDocs = getAllDocumentTypes();
   let requiredDocs = allDocs.filter(doc => doc.isRequired);

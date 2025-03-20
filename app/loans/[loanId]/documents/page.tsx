@@ -7,11 +7,28 @@ import { Tooltip } from '@/components/Tooltip';
 import { Button } from '@/components/Button';
 import { DocumentUploadForm } from '@/components/DocumentUploadForm';
 import { DocumentViewer } from '@/components/DocumentViewer';
-import { LoanDocument, DocumentCategory, DocumentStatus } from '@/utilities/loanDocumentStructure';
+import { DocumentSocketGroup } from '@/components/DocumentSocketGroup';
+import { 
+  LoanDocument, 
+  DocumentCategory, 
+  DocumentStatus, 
+  getAllDocumentTypes,
+  getRequiredDocuments 
+} from '@/utilities/loanDocumentStructure';
 import { documentService } from '@/utilities/documentService';
 import { loanDatabase } from '@/utilities/loanDatabase';
 import { useLoanData } from '@/hooks/useLoanData';
 import { useToast } from '@/hooks/useToast';
+
+// Define the DocumentType interface to match what's expected in DocumentSocketGroup
+interface DocumentType {
+  docType: string;
+  label: string;
+  category: string;
+  section: string;
+  subsection: string;
+  isRequired: boolean;
+}
 
 export default function DocumentsPage() {
   const params = useParams();
@@ -25,6 +42,7 @@ export default function DocumentsPage() {
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'sockets'>('sockets');
   const [categories, setCategories] = useState<{
     [key in DocumentCategory]: {
       total: number;
@@ -98,6 +116,10 @@ export default function DocumentsPage() {
     loadDocuments(); // Reload documents after upload
   };
 
+  const handleToggleViewMode = () => {
+    setViewMode(viewMode === 'list' ? 'sockets' : 'list');
+  };
+
   const handleGenerateSampleDocuments = async () => {
     try {
       if (!loan) {
@@ -169,6 +191,42 @@ export default function DocumentsPage() {
     }
   };
 
+  // Organize document types by category and section
+  const getOrganizedDocumentTypes = () => {
+    if (!loan) return [];
+    
+    // Get all document types for this loan type
+    const allDocTypes = getRequiredDocuments(loan.loanType);
+    
+    // Group by category and section
+    const grouped = allDocTypes.reduce((acc, docType) => {
+      const key = `${docType.category}|${docType.section}`;
+      if (!acc[key]) {
+        acc[key] = {
+          category: docType.category,
+          section: docType.section,
+          title: `${docType.category.charAt(0).toUpperCase() + docType.category.slice(1)} - ${docType.section.replace(/_/g, ' ')}`,
+          docTypes: []
+        };
+      }
+      acc[key].docTypes.push(docType as DocumentType);
+      return acc;
+    }, {} as Record<string, {
+      category: string;
+      section: string;
+      title: string;
+      docTypes: DocumentType[];
+    }>);
+    
+    // Sort by category and section
+    return Object.values(grouped).sort((a, b) => {
+      if (a.category !== b.category) {
+        return a.category.localeCompare(b.category);
+      }
+      return a.section.localeCompare(b.section);
+    });
+  };
+
   useEffect(() => {
     // Initialize documents when the loan data is loaded
     if (loan && !loanLoading) {
@@ -183,6 +241,8 @@ export default function DocumentsPage() {
   if (loanError || !loan) {
     return <div className="p-6 text-red-500">Error loading loan: {loanError || 'Loan not found'}</div>;
   }
+
+  const organizedDocTypes = getOrganizedDocumentTypes();
 
   return (
     <div className="p-6">
@@ -206,7 +266,16 @@ export default function DocumentsPage() {
 
       <div className="mb-6">
         <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-2">Document Completion Status</h2>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold">Document Completion Status</h2>
+            <Button 
+              onClick={handleToggleViewMode} 
+              variant="outline" 
+              size="sm"
+            >
+              {viewMode === 'list' ? 'Socket View' : 'List View'}
+            </Button>
+          </div>
           
           <div className="flex items-center mb-4">
             <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -249,51 +318,70 @@ export default function DocumentsPage() {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
-      ) : documents.length === 0 ? (
+      ) : documents.length === 0 && viewMode === 'list' ? (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-8 rounded text-center">
           <p className="mb-4">No documents found for this loan.</p>
           <p>Click "Initialize Placeholders" to create document placeholders or "Generate Sample Documents" to create sample documents.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {documents.map((document) => (
-            <DocumentCard
-              key={document.id}
-              document={document}
-              onClick={() => handleViewDocument(document)}
-              onStatusChange={async (status: DocumentStatus) => {
-                try {
-                  const success = await documentService.updateDocumentStatus(document.id, status);
-                  if (success) {
-                    loadDocuments();
-                    showToast('Success', 'Document status updated', 'success');
-                  } else {
-                    showToast('Error', 'Failed to update document status', 'error');
-                  }
-                } catch (err) {
-                  console.error('Error updating document status:', err);
-                  showToast('Error', 'An error occurred while updating document status', 'error');
-                }
-              }}
-              onDelete={async () => {
-                if (window.confirm('Are you sure you want to delete this document?')) {
-                  try {
-                    const success = await documentService.deleteDocument(document.id);
-                    if (success) {
-                      loadDocuments();
-                      showToast('Success', 'Document deleted', 'success');
-                    } else {
-                      showToast('Error', 'Failed to delete document', 'error');
+        <>
+          {viewMode === 'list' ? (
+            // List view of documents
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {documents.map((document) => (
+                <DocumentCard
+                  key={document.id}
+                  document={document}
+                  onClick={() => handleViewDocument(document)}
+                  onStatusChange={async (status: DocumentStatus) => {
+                    try {
+                      const success = await documentService.updateDocumentStatus(document.id, status);
+                      if (success) {
+                        loadDocuments();
+                        showToast('Success', 'Document status updated', 'success');
+                      } else {
+                        showToast('Error', 'Failed to update document status', 'error');
+                      }
+                    } catch (err) {
+                      console.error('Error updating document status:', err);
+                      showToast('Error', 'An error occurred while updating document status', 'error');
                     }
-                  } catch (err) {
-                    console.error('Error deleting document:', err);
-                    showToast('Error', 'An error occurred while deleting the document', 'error');
-                  }
-                }
-              }}
-            />
-          ))}
-        </div>
+                  }}
+                  onDelete={async () => {
+                    if (window.confirm('Are you sure you want to delete this document?')) {
+                      try {
+                        const success = await documentService.deleteDocument(document.id);
+                        if (success) {
+                          loadDocuments();
+                          showToast('Success', 'Document deleted', 'success');
+                        } else {
+                          showToast('Error', 'Failed to delete document', 'error');
+                        }
+                      } catch (err) {
+                        console.error('Error deleting document:', err);
+                        showToast('Error', 'An error occurred while deleting the document', 'error');
+                      }
+                    }
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            // Socket view of documents
+            <div className="space-y-8">
+              {organizedDocTypes.map((group) => (
+                <DocumentSocketGroup
+                  key={`${group.category}|${group.section}`}
+                  title={group.title}
+                  docTypes={group.docTypes}
+                  documents={documents}
+                  onUpload={handleUploadDocument}
+                  onViewDocument={handleViewDocument}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {viewingDocument && selectedDocument && (
