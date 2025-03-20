@@ -3,22 +3,21 @@ const { loanDocumentService } = require('../utilities/loanDocumentService');
 const { databaseService } = require('../services/databaseService');
 const { documentDatabaseService } = require('../services/documentDatabaseService');
 const { v4: uuidv4 } = require('uuid');
-// Import type from the LoanDocument interface but use it only for TypeScript typings
-// @ts-ignore
-const { LoanDocument } = require('../utilities/loanDocumentStructure');
+// Import type from the LoanDocument interface for TypeScript typings
+import { LoanDocument, DocumentStatus } from '../utilities/loanDocumentStructure';
 
 // Test constants
 const TEST_LOAN_ID = `test-loan-${Math.floor(Math.random() * 100)}`;
 const TEST_DOC_TYPE = 'loan_application';
 
 // Create a sample document
-function createSampleDocument() {
+function createSampleDocument(): LoanDocument {
   return {
     id: uuidv4(),
     loanId: TEST_LOAN_ID,
     filename: `SAMPLE_document-${Math.floor(Math.random() * 10000)}.html`,
     docType: TEST_DOC_TYPE,
-    status: 'pending',
+    status: 'pending' as DocumentStatus,
     dateUploaded: new Date().toISOString(),
     isRequired: true,
     version: 1,
@@ -65,7 +64,7 @@ async function testLoanDocumentServiceWithDB() {
     console.log('\n4. Getting documents for loan...');
     const loanDocs = loanDocumentService.getDocumentsForLoan(TEST_LOAN_ID);
     console.log(`Found ${loanDocs.length} documents for loan ${TEST_LOAN_ID}`);
-    loanDocs.forEach(doc => {
+    loanDocs.forEach((doc: LoanDocument) => {
       console.log(`- ${doc.id}: ${doc.filename} (${doc.docType})`);
     });
     
