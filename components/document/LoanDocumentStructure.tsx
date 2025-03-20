@@ -70,13 +70,20 @@ export function LoanDocumentStructure({
   // Check if a document has been uploaded
   const isDocumentUploaded = (docType: string) => {
     // Check if there's at least one non-required document with this docType
-    return uploadedDocuments.some(doc => doc.docType === docType && doc.status !== 'required');
+    // Or a document with SAMPLE_PERSISTENT_ prefix
+    return uploadedDocuments.some(doc => 
+      doc.docType === docType && 
+      (doc.status !== 'required' || doc.filename.startsWith('SAMPLE_PERSISTENT_'))
+    );
   };
   
   // Get document status if uploaded
   const getDocumentStatus = (docType: string): DocumentStatus => {
-    // Get the most recent document of this type
-    const docs = uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required');
+    // Get the most recent document of this type - include SAMPLE_PERSISTENT_ prefixed docs
+    const docs = uploadedDocuments.filter(doc => 
+      doc.docType === docType && 
+      (doc.status !== 'required' || doc.filename.startsWith('SAMPLE_PERSISTENT_'))
+    );
     if (docs.length > 0) {
       // Sort by date uploaded (most recent first)
       docs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
@@ -87,8 +94,11 @@ export function LoanDocumentStructure({
   
   // Get document ID if uploaded
   const getDocumentId = (docType: string) => {
-    // Get the most recent document of this type
-    const docs = uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required');
+    // Get the most recent document of this type - include SAMPLE_PERSISTENT_ prefixed docs
+    const docs = uploadedDocuments.filter(doc => 
+      doc.docType === docType && 
+      (doc.status !== 'required' || doc.filename.startsWith('SAMPLE_PERSISTENT_'))
+    );
     if (docs.length > 0) {
       // Sort by date uploaded (most recent first)
       docs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
@@ -99,8 +109,11 @@ export function LoanDocumentStructure({
   
   // Get document if uploaded
   const getDocument = (docType: string) => {
-    // Get the most recent document of this type
-    const docs = uploadedDocuments.filter(doc => doc.docType === docType && doc.status !== 'required');
+    // Get the most recent document of this type - include SAMPLE_PERSISTENT_ prefixed docs
+    const docs = uploadedDocuments.filter(doc => 
+      doc.docType === docType && 
+      (doc.status !== 'required' || doc.filename.startsWith('SAMPLE_PERSISTENT_'))
+    );
     if (docs.length > 0) {
       // Sort by date uploaded (most recent first)
       docs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
@@ -114,7 +127,10 @@ export function LoanDocumentStructure({
     // First deduplicate documents by ID (in case there are multiple documents with same ID)
     const uniqueDocsByID = new Map();
     uploadedDocuments
-      .filter(doc => doc.docType === docType && doc.status !== 'required')
+      .filter(doc => 
+        doc.docType === docType && 
+        (doc.status !== 'required' || doc.filename.startsWith('SAMPLE_PERSISTENT_'))
+      )
       .forEach(doc => {
         uniqueDocsByID.set(doc.id, doc);
       });

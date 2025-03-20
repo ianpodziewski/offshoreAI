@@ -485,10 +485,11 @@ export const loanDocumentService = {
           }
         }
         
+        // Ensure we never have 'required' status for generated documents
         const status = statuses[statusIndex];
         
-        // Generate a filename - Using SAMPLE_ prefix as requested, but with PERSISTENT marker
-        const filename = `SAMPLE_PERSISTENT_${docType.docType.replace(/_/g, '-')}${fileType}`;
+        // Generate a filename - Using SAMPLE_ prefix as requested
+        const filename = `SAMPLE_${docType.docType.replace(/_/g, '-')}${fileType}`;
         
         // Generate document content based on the document type
         const content = generateDocumentContent(docType.docType, loanData);
