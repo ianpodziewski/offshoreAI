@@ -230,7 +230,47 @@ export const loanDocumentService = {
     try {
       // Always check localStorage first
       const docsFromStorage = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
-      return docsFromStorage ? JSON.parse(docsFromStorage) : [];
+      
+      if (!docsFromStorage) {
+        return [];
+      }
+      
+      try {
+        // Parse the storage data
+        const parsedDocs = JSON.parse(docsFromStorage);
+        
+        // Validate that parsedDocs is an array
+        if (!Array.isArray(parsedDocs)) {
+          console.error('Invalid document data in localStorage: not an array');
+          // Reset localStorage to prevent future errors
+          localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, '[]');
+          return [];
+        }
+        
+        // Filter out any null or undefined values, and validate each document
+        const validDocs = parsedDocs.filter(doc => {
+          // Basic validation - check if it's an object with at least an id and loanId
+          return doc && 
+                 typeof doc === 'object' && 
+                 doc.id && 
+                 typeof doc.id === 'string' && 
+                 doc.loanId && 
+                 typeof doc.loanId === 'string';
+        });
+        
+        // If we filtered out any documents, update localStorage
+        if (validDocs.length < parsedDocs.length) {
+          console.warn(`Filtered out ${parsedDocs.length - validDocs.length} invalid documents from localStorage`);
+          localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(validDocs));
+        }
+        
+        return validDocs;
+      } catch (parseError) {
+        console.error('Error parsing document data from localStorage:', parseError);
+        // Reset localStorage to prevent future errors
+        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, '[]');
+        return [];
+      }
     } catch (error) {
       console.error('Error getting all documents:', error);
       return [];
@@ -240,6 +280,11 @@ export const loanDocumentService = {
   // Get documents for a specific loan
   getDocumentsForLoan: async (loanId: string, includeContent = false): Promise<LoanDocument[]> => {
     try {
+      if (!loanId) {
+        console.error('Cannot get documents: missing loanId');
+        return [];
+      }
+      
       // Check if the database is available and should be used
       let dbAvailable = false;
       
@@ -253,10 +298,23 @@ export const loanDocumentService = {
           console.log(`Getting documents for loan ${loanId} from database`);
           const docs = await documentDatabaseService.getDocumentsForLoan(loanId, includeContent);
           
-          // If we have results from the database, return them
-          if (docs && docs.length > 0) {
+          // If we have results from the database, return them after validation
+          if (docs && Array.isArray(docs) && docs.length > 0) {
             console.log(`Found ${docs.length} documents in database for loan ${loanId}`);
-            return docs;
+            // Additional validation to ensure all documents have required fields
+            const validDocs = docs.filter(doc => 
+              doc && 
+              typeof doc === 'object' && 
+              doc.id && 
+              typeof doc.id === 'string' && 
+              doc.loanId === loanId
+            );
+            
+            if (validDocs.length < docs.length) {
+              console.warn(`Filtered out ${docs.length - validDocs.length} invalid documents from database results`);
+            }
+            
+            return validDocs;
           }
         } catch (dbError) {
           console.error(`Error getting documents from database for loan ${loanId}:`, dbError);
@@ -267,7 +325,13 @@ export const loanDocumentService = {
       // Fallback to localStorage
       console.log(`Getting documents for loan ${loanId} from localStorage`);
       const allDocs = loanDocumentService.getAllDocuments();
-      return allDocs.filter(doc => doc.loanId === loanId);
+      
+      // We already validated documents in getAllDocuments, but double-check the loanId match
+      const validLoanDocs = allDocs.filter(doc => 
+        doc && doc.loanId === loanId
+      );
+      
+      return validLoanDocs;
     } catch (error) {
       console.error(`Error getting documents for loan ${loanId}:`, error);
       return [];
@@ -575,26 +639,87 @@ export const loanDocumentService = {
     byCategory: Record<DocumentCategory, { total: number; completed: number; percentage: number }>;
   } => {
     try {
+      if (!loanId || !loanType) {
+        console.error('Cannot get document completion status: missing loanId or loanType');
+        return {
+          total: 0,
+          completed: 0,
+          percentage: 0,
+          byCategory: {
+            borrower: { total: 0, completed: 0, percentage: 0 },
+            property: { total: 0, completed: 0, percentage: 0 },
+            closing: { total: 0, completed: 0, percentage: 0 },
+            servicing: { total: 0, completed: 0, percentage: 0 },
+            misc: { total: 0, completed: 0, percentage: 0 }
+          }
+        };
+      }
+      
       // Get all required document types for this loan type
       const requiredDocTypes = getRequiredDocuments(loanType);
       
-      // Get existing documents for this loan
-      const existingDocs = loanDocumentService.getDocumentsForLoan(loanId);
+      // Make sure requiredDocTypes is valid
+      if (!Array.isArray(requiredDocTypes)) {
+        console.error(`Invalid requiredDocTypes for loan type ${loanType}: not an array`);
+        return {
+          total: 0,
+          completed: 0,
+          percentage: 0,
+          byCategory: {
+            borrower: { total: 0, completed: 0, percentage: 0 },
+            property: { total: 0, completed: 0, percentage: 0 },
+            closing: { total: 0, completed: 0, percentage: 0 },
+            servicing: { total: 0, completed: 0, percentage: 0 },
+            misc: { total: 0, completed: 0, percentage: 0 }
+          }
+        };
+      }
+      
+      // Safely get existing documents for this loan
+      let existingDocs: LoanDocument[] = [];
+      try {
+        // Use a synchronous approach to avoid awaiting in this method
+        // This is important because getDocumentCompletionStatus is not async
+        const allDocs = loanDocumentService.getAllDocuments();
+        existingDocs = allDocs.filter(doc => 
+          doc && typeof doc === 'object' && doc.loanId === loanId
+        );
+      } catch (docsError) {
+        console.error(`Error getting existing documents: ${docsError}`);
+        existingDocs = [];
+      }
       
       // Count total required document types (sockets)
       const total = requiredDocTypes.length;
       
+      // Make sure existingDocs is an array 
+      if (!Array.isArray(existingDocs)) {
+        console.error('Invalid existingDocs: not an array');
+        existingDocs = [];
+      }
+      
       // Get unique docTypes that have at least one document (status not 'required')
-      // This counts each document socket only once, regardless of how many documents it contains
-      const uniqueCompletedDocTypes = new Set(
-        existingDocs
-          .filter(doc => doc.status !== 'required')
-          .map(doc => doc.docType)
-      );
+      // Use try/catch to handle any potential errors during filtering
+      let uniqueCompletedDocTypesArray: string[] = [];
+      try {
+        // This counts each document socket only once, regardless of how many documents it contains
+        const validDocs = existingDocs.filter(doc => 
+          doc && doc.status && doc.status !== 'required' && doc.docType
+        );
+        
+        const uniqueCompletedDocTypes = new Set(
+          validDocs.map(doc => doc.docType)
+        );
+        
+        uniqueCompletedDocTypesArray = [...uniqueCompletedDocTypes];
+      } catch (filterError) {
+        console.error(`Error filtering completed documents: ${filterError}`);
+        uniqueCompletedDocTypesArray = [];
+      }
       
       // Count completed document sockets (those with at least one document)
-      const completed = [...uniqueCompletedDocTypes].filter(docType => 
-        requiredDocTypes.some(rt => rt.docType === docType)
+      const completed = uniqueCompletedDocTypesArray.filter(docType => 
+        requiredDocTypes.some(rt => rt && rt.docType === docType)
       ).length;
       
       // Calculate completion percentage
@@ -606,28 +731,44 @@ export const loanDocumentService = {
       // Initialize categories
       const categories: DocumentCategory[] = ['borrower', 'property', 'closing', 'servicing', 'misc'];
       categories.forEach(category => {
-        const categoryRequiredDocs = requiredDocTypes.filter(doc => doc.category === category);
-        const categoryTotal = categoryRequiredDocs.length;
-        
-        // Get unique docTypes in this category that have at least one document
-        const categoryCompletedDocTypes = new Set(
-          existingDocs
-            .filter(doc => doc.category === category && doc.status !== 'required')
-            .map(doc => doc.docType)
-        );
-        
-        // Count document sockets that have at least one document
-        const categoryCompleted = [...categoryCompletedDocTypes].filter(docType => 
-          categoryRequiredDocs.some(rt => rt.docType === docType)
-        ).length;
-        
-        const categoryPercentage = categoryTotal > 0 ? Math.round((categoryCompleted / categoryTotal) * 100) : 0;
-        
-        byCategory[category] = {
-          total: categoryTotal,
-          completed: categoryCompleted,
-          percentage: categoryPercentage
-        };
+        try {
+          const categoryRequiredDocs = requiredDocTypes.filter(doc => doc && doc.category === category);
+          const categoryTotal = categoryRequiredDocs.length;
+          
+          // Get unique docTypes in this category that have at least one document
+          // Use try/catch to handle any potential errors during filtering
+          let categoryCompletedArray: string[] = [];
+          try {
+            const categoryDocs = existingDocs.filter(doc => 
+              doc && doc.category === category && doc.status && doc.status !== 'required' && doc.docType
+            );
+            
+            const categoryCompletedDocTypes = new Set(
+              categoryDocs.map(doc => doc.docType)
+            );
+            
+            categoryCompletedArray = [...categoryCompletedDocTypes];
+          } catch (categoryFilterError) {
+            console.error(`Error filtering category ${category} documents: ${categoryFilterError}`);
+            categoryCompletedArray = [];
+          }
+          
+          // Count document sockets that have at least one document
+          const categoryCompleted = categoryCompletedArray.filter(docType => 
+            categoryRequiredDocs.some(rt => rt && rt.docType === docType)
+          ).length;
+          
+          const categoryPercentage = categoryTotal > 0 ? Math.round((categoryCompleted / categoryTotal) * 100) : 0;
+          
+          byCategory[category] = {
+            total: categoryTotal,
+            completed: categoryCompleted,
+            percentage: categoryPercentage
+          };
+        } catch (categoryError) {
+          console.error(`Error processing category ${category}: ${categoryError}`);
+          byCategory[category] = { total: 0, completed: 0, percentage: 0 };
+        }
       });
       
       return {
@@ -656,6 +797,11 @@ export const loanDocumentService = {
   // Generate fake documents for a loan
   generateFakeDocuments: async (loanId: string, loanType: string): Promise<LoanDocument[]> => {
     try {
+      if (!loanId || !loanType) {
+        console.error('Cannot generate fake documents: missing loanId or loanType');
+        return [];
+      }
+      
       // First get the loan data - needed for document generation
       const loan = loanDatabase.getLoanById(loanId);
       
@@ -669,44 +815,92 @@ export const loanDocumentService = {
       // Get all required document types for this loan type
       const requiredDocTypes = getRequiredDocuments(loanType);
       
+      // Validate required doc types
+      if (!Array.isArray(requiredDocTypes) || requiredDocTypes.length === 0) {
+        console.error(`No required document types found for loan type ${loanType}`);
+        return [];
+      }
+      
       // Create an array of fake documents
       const fakeDocuments: LoanDocument[] = [];
       
       // For each document type, create a fake document
       for (const docType of requiredDocTypes) {
-        // Create a unique ID for the document
-        const docId = uuidv4();
-        
-        // Generate fake file size
-        const fileSize = getRandomFileSize();
-        
-        // Create the document with initial data
-        const fakeDocument: LoanDocument = createDocument({
-          id: docId,
-          loanId,
-          docType: docType.docType,
-          filename: `SAMPLE_${docType.docType}-${Math.floor(Math.random() * 10000)}.html`,
-          category: docType.category as DocumentCategory,
-          section: docType.section,
-          subsection: docType.subsection || '',
+        try {
+          // Validate docType object
+          if (!docType || typeof docType !== 'object' || !docType.docType) {
+            console.warn('Skipping invalid document type:', docType);
+            continue;
+          }
+          
+          // Create a unique ID for the document
+          const docId = uuidv4();
+          
+          // Generate fake file size
+          const fileSize = getRandomFileSize();
+          
+          // Generate content first - if this fails, we can skip this document
+          let content: string;
+          try {
+            content = generateDocumentContent(docType.docType, loan);
+            if (!content) {
+              console.warn(`No content generated for document type ${docType.docType}, skipping`);
+              continue;
+            }
+          } catch (contentError) {
+            console.error(`Error generating content for document type ${docType.docType}:`, contentError);
+            continue;
+          }
+          
           // Use a random status from the allowed fake status list
-          status: FAKE_DOCUMENT_STATUSES[Math.floor(Math.random() * FAKE_DOCUMENT_STATUSES.length)],
-          dateUploaded: new Date().toISOString(),
-          fileType: '.html', // Standardize on HTML for simpler development
-          fileSize,
-          content: generateDocumentContent(docType.docType, loan),
-          isRequired: true,
-          version: 1
-        });
-        
-        // Add to the fake documents array
-        fakeDocuments.push(fakeDocument);
-        
-        // Save to localStorage if enabled
-        if (USE_LOCAL_STORAGE) {
-          const allExistingDocs = loanDocumentService.getAllDocuments();
-          allExistingDocs.push(fakeDocument);
-          localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
+          const randomStatus = FAKE_DOCUMENT_STATUSES[Math.floor(Math.random() * FAKE_DOCUMENT_STATUSES.length)];
+          
+          // Create the document with initial data
+          const documentData = {
+            id: docId,
+            loanId,
+            docType: docType.docType,
+            filename: `SAMPLE_${docType.docType}-${Math.floor(Math.random() * 10000)}.html`,
+            category: docType.category as DocumentCategory,
+            section: docType.section,
+            subsection: docType.subsection || '',
+            status: randomStatus,
+            dateUploaded: new Date().toISOString(),
+            fileType: '.html', // Standardize on HTML for simpler development
+            fileSize,
+            content,
+            isRequired: true,
+            version: 1
+          };
+          
+          // Create the document using our createDocument function
+          const fakeDocument = createDocument(documentData);
+          
+          if (!fakeDocument) {
+            console.warn(`Failed to create document for type ${docType.docType}, skipping`);
+            continue;
+          }
+          
+          // Add to the fake documents array
+          fakeDocuments.push(fakeDocument);
+          
+          // Save to localStorage if enabled
+          if (USE_LOCAL_STORAGE) {
+            try {
+              const allExistingDocs = loanDocumentService.getAllDocuments();
+              if (Array.isArray(allExistingDocs)) {
+                allExistingDocs.push(fakeDocument);
+                localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
+              } else {
+                console.error('Invalid existing documents from localStorage, not saving this document');
+              }
+            } catch (storageError) {
+              console.error('Error saving document to localStorage:', storageError);
+            }
+          }
+        } catch (docError) {
+          console.error(`Error creating document for type ${docType?.docType || 'unknown'}:`, docError);
+          // Continue to next document
         }
       }
       
@@ -717,7 +911,7 @@ export const loanDocumentService = {
           const dbInitialized = await initializeDatabase();
           
           if (dbInitialized && documentDatabaseService) {
-            const insertedCount = documentDatabaseService.bulkInsertDocuments(fakeDocuments);
+            const insertedCount = await documentDatabaseService.bulkInsertDocuments?.(fakeDocuments) || 0;
             console.log(`Saved ${insertedCount} documents to SQLite database`);
           } else {
             console.log('Database not available for storing documents');

@@ -343,34 +343,90 @@ export function getRequiredDocuments(loanType: string): {
 
 // Helper function to create a new document
 export function createDocument(
-  loanId: string,
-  docType: string,
-  filename: string,
-  content: string,
+  documentOrLoanId: string | Partial<LoanDocument>,
+  docType?: string,
+  filename?: string,
+  content?: string,
   status: DocumentStatus = 'pending'
 ): LoanDocument | null {
-  // Find the document type in our structure
-  const docTypeInfo = getAllDocumentTypes().find(dt => dt.docType === docType);
-  
-  if (!docTypeInfo) {
-    console.error(`Document type ${docType} not found in structure`);
+  try {
+    // Handle both object and individual parameters formats for backward compatibility
+    let loanId: string;
+    let actualDocType: string;
+    let actualFilename: string;
+    let actualContent: string | undefined;
+    let actualStatus: DocumentStatus;
+    
+    // Check if first parameter is an object (new format)
+    if (typeof documentOrLoanId === 'object' && documentOrLoanId !== null) {
+      const doc = documentOrLoanId as Partial<LoanDocument>;
+      loanId = doc.loanId || '';
+      actualDocType = doc.docType || '';
+      actualFilename = doc.filename || '';
+      actualContent = doc.content;
+      actualStatus = doc.status || status;
+    } else {
+      // Old format with individual parameters
+      loanId = documentOrLoanId as string;
+      actualDocType = docType || '';
+      actualFilename = filename || '';
+      actualContent = content;
+      actualStatus = status;
+    }
+    
+    // Validate required fields
+    if (!loanId) {
+      console.error('Cannot create document: missing loanId');
+      return null;
+    }
+    
+    if (!actualDocType) {
+      console.error('Cannot create document: missing docType');
+      return null;
+    }
+    
+    // Find the document type in our structure
+    const docTypeInfo = getAllDocumentTypes().find(dt => dt.docType === actualDocType);
+    
+    if (!docTypeInfo) {
+      console.error(`Document type ${actualDocType} not found in structure`);
+      return null;
+    }
+    
+    // Create the document with valid data
+    const document: LoanDocument = {
+      id: (typeof documentOrLoanId === 'object' && documentOrLoanId.id) ? documentOrLoanId.id : uuidv4(),
+      loanId,
+      filename: actualFilename,
+      dateUploaded: new Date().toISOString(),
+      category: docTypeInfo.category,
+      section: docTypeInfo.section,
+      subsection: docTypeInfo.subsection || '',
+      docType: actualDocType,
+      status: actualStatus,
+      isRequired: docTypeInfo.isRequired,
+      version: 1
+    };
+    
+    // Add optional fields if provided
+    if (actualContent !== undefined) {
+      document.content = actualContent;
+    }
+    
+    // If object form was used, copy any other properties that may have been provided
+    if (typeof documentOrLoanId === 'object') {
+      if (documentOrLoanId.fileType) document.fileType = documentOrLoanId.fileType;
+      if (documentOrLoanId.fileSize) document.fileSize = documentOrLoanId.fileSize;
+      if (documentOrLoanId.notes) document.notes = documentOrLoanId.notes;
+      if (documentOrLoanId.assignedTo) document.assignedTo = documentOrLoanId.assignedTo;
+      if (documentOrLoanId.expirationDate) document.expirationDate = documentOrLoanId.expirationDate;
+    }
+    
+    return document;
+  } catch (error) {
+    console.error('Error creating document:', error);
     return null;
   }
-  
-  return {
-    id: uuidv4(),
-    loanId,
-    filename,
-    dateUploaded: new Date().toISOString(),
-    category: docTypeInfo.category,
-    section: docTypeInfo.section,
-    subsection: docTypeInfo.subsection,
-    docType,
-    status,
-    content,
-    isRequired: docTypeInfo.isRequired,
-    version: 1
-  };
 }
 
 // Export the document service
