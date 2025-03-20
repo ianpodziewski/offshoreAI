@@ -133,16 +133,20 @@ export default function LoanDocumentsPage() {
   // Load documents
   useEffect(() => {
     if (loanId) {
-      // Deduplicate documents for this loan before loading them
+      // First ensure documents are deduplicated to avoid duplicates
       loanDocumentService.deduplicateLoanDocuments(loanId);
       
-      // Now get the deduplicated documents
+      // Get the deduplicated documents
       const docs = loanDocumentService.getDocumentsForLoan(loanId);
-      setDocuments(docs);
       
-      if (loan?.loanType) {
-        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-        setCompletionStatus(status);
+      // Only set documents if we have some - don't override with empty array
+      if (docs.length > 0) {
+        setDocuments(docs);
+        
+        if (loan?.loanType) {
+          const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+          setCompletionStatus(status);
+        }
       }
     }
   }, [loanId, loan]);
@@ -150,8 +154,12 @@ export default function LoanDocumentsPage() {
   // Initialize documents if none exist
   useEffect(() => {
     if (loanId && loan?.loanType && documents.length === 0) {
+      // Only initialize if no documents exist
       const placeholderDocs = loanDocumentService.initializeDocumentsForLoan(loanId, loan.loanType);
-      setDocuments(placeholderDocs);
+      
+      // Get all documents for this loan, including both placeholders and any that might already exist
+      const allLoanDocs = loanDocumentService.getDocumentsForLoan(loanId);
+      setDocuments(allLoanDocs);
       
       const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
       setCompletionStatus(status);
@@ -326,6 +334,11 @@ export default function LoanDocumentsPage() {
                         
                         // Load the deduplicated documents
                         const dedupedDocs = loanDocumentService.getDocumentsForLoan(loanId);
+                        
+                        // Log the deduplicated docs to help with debugging
+                        console.log('Deduplicated documents after generation:', dedupedDocs);
+                        
+                        // Set the documents and ensure local state is updated
                         setDocuments(dedupedDocs);
                         
                         // Update completion status
@@ -339,7 +352,7 @@ export default function LoanDocumentsPage() {
                                            (!process.env.REDIS_URL || window.localStorage.getItem('USE_FALLBACK') === 'true') ? 
                                            'localStorage only' : 'localStorage and Redis';
                         
-                        alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored in ${storageMode}. The chatbot will access them when properly configured.`);
+                        alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored in ${storageMode} and will persist across page refreshes.`);
                       }
                     } catch (error) {
                       console.error('Error generating fake documents:', error);

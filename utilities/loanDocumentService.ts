@@ -185,15 +185,17 @@ export const loanDocumentService = {
   addDocument: (document: LoanDocument): LoanDocument => {
     const allDocs = loanDocumentService.getAllDocuments();
     
-    // Determine if this is an uploaded document (vs. generated)
-    const isUserUpload = document.filename.startsWith('UPLOAD_') || 
-                        (!document.filename.startsWith('SAMPLE_') && document.status !== 'required');
+    // Determine if this is an uploaded document or a persistent generated document
+    // Modified logic to handle both UPLOAD_ prefixes and SAMPLE_ with PERSISTENT marker
+    const isPersistentDoc = document.filename.startsWith('UPLOAD_') || 
+                           (document.filename.startsWith('SAMPLE_PERSISTENT_')) ||
+                           (!document.filename.startsWith('SAMPLE_') && document.status !== 'required');
     
     // Filter existing documents
     let filteredDocs = allDocs;
     
-    if (isUserUpload) {
-      // For user uploads and generated docs with UPLOAD_ prefix: 
+    if (isPersistentDoc) {
+      // For user uploads and persistent generated docs: 
       // 1. Remove any documents with the same docType AND filename
       // 2. Keep other documents with the same docType but different filename
       filteredDocs = allDocs.filter(doc => 
@@ -202,14 +204,14 @@ export const loanDocumentService = {
           doc.filename === document.filename)
       );
       
-      console.log(`For user upload: Filtered to ${filteredDocs.length} documents`);
+      console.log(`For persistent document: Filtered to ${filteredDocs.length} documents`);
     } else {
-      // For other generated docs: behave as before
+      // For temporary generated docs: replace any with the same docType
       filteredDocs = allDocs.filter(doc => 
         !(doc.loanId === document.loanId && doc.docType === document.docType)
       );
       
-      console.log(`For generated doc: Removed ${allDocs.length - filteredDocs.length} existing documents with docType ${document.docType}`);
+      console.log(`For temporary doc: Removed ${allDocs.length - filteredDocs.length} existing documents with docType ${document.docType}`);
     }
     
     // Add the new document
@@ -293,39 +295,64 @@ export const loanDocumentService = {
   // Initialize documents for a new loan
   initializeDocumentsForLoan: (loanId: string, loanType: string): LoanDocument[] => {
     try {
+      console.log(`Initializing documents for loan ${loanId} with type ${loanType}`);
+      
       // Get all required document types for this loan type
       const requiredDocTypes = getRequiredDocuments(loanType);
       
-      // Create placeholder documents for each required type
-      const placeholderDocs = requiredDocTypes.map(docType => ({
-        id: uuidv4(),
-        loanId,
-        filename: `SAMPLE_${docType.label}.html`,
-        dateUploaded: new Date().toISOString(),
-        category: docType.category,
-        section: docType.section,
-        subsection: docType.subsection,
-        docType: docType.docType,
-        status: 'required' as DocumentStatus,
-        isRequired: true,
-        version: 1
-      }));
-      
       // Get existing documents from storage
       const existingDocs = loanDocumentService.getAllDocuments();
+      const existingLoanDocs = existingDocs.filter(doc => doc.loanId === loanId);
       
-      // Filter out any documents that already exist for this loan
-      const uniqueDocs = placeholderDocs.filter(newDoc => 
+      // Create placeholder documents only for docTypes that don't have any persistent documents
+      const placeholderDocs: LoanDocument[] = [];
+      
+      for (const docType of requiredDocTypes) {
+        // Check if there's already a persistent document for this docType
+        const hasExistingDocument = existingLoanDocs.some(doc => 
+          doc.docType === docType.docType && 
+          (
+            doc.status !== 'required' || 
+            doc.filename.startsWith('UPLOAD_') || 
+            doc.filename.startsWith('SAMPLE_PERSISTENT_')
+          )
+        );
+        
+        // If no existing document, create a placeholder
+        if (!hasExistingDocument) {
+          placeholderDocs.push({
+            id: uuidv4(),
+            loanId,
+            filename: `SAMPLE_${docType.label}.html`,
+            dateUploaded: new Date().toISOString(),
+            category: docType.category,
+            section: docType.section,
+            subsection: docType.subsection,
+            docType: docType.docType,
+            status: 'required' as DocumentStatus,
+            isRequired: true,
+            version: 1
+          });
+        }
+      }
+      
+      // Filter out any exact duplicates that already exist
+      const nonDuplicateDocs = placeholderDocs.filter(newDoc => 
         !existingDocs.some(existingDoc => 
           existingDoc.loanId === loanId && 
-          existingDoc.docType === newDoc.docType
+          existingDoc.docType === newDoc.docType &&
+          existingDoc.status === newDoc.status
         )
       );
       
-      // Save the combined documents
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...existingDocs, ...uniqueDocs]));
+      console.log(`Created ${nonDuplicateDocs.length} new placeholder documents out of ${requiredDocTypes.length} required document types`);
       
-      return uniqueDocs;
+      // Save the combined documents
+      if (nonDuplicateDocs.length > 0) {
+        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...existingDocs, ...nonDuplicateDocs]));
+      }
+      
+      return nonDuplicateDocs;
     } catch (error) {
       console.error('Error initializing documents for loan:', error);
       return [];
@@ -460,8 +487,8 @@ export const loanDocumentService = {
         
         const status = statuses[statusIndex];
         
-        // Generate a filename - Add UPLOAD_ prefix to make it persist like uploaded files
-        const filename = `UPLOAD_GENERATED_${docType.docType.replace(/_/g, '-')}${fileType}`;
+        // Generate a filename - Using SAMPLE_ prefix as requested, but with PERSISTENT marker
+        const filename = `SAMPLE_PERSISTENT_${docType.docType.replace(/_/g, '-')}${fileType}`;
         
         // Generate document content based on the document type
         const content = generateDocumentContent(docType.docType, loanData);
@@ -584,7 +611,7 @@ export const loanDocumentService = {
         docTypeGroups[doc.docType].push(doc);
       });
       
-      // For each group, prioritize keeping user-uploaded documents and those with UPLOAD_ prefix
+      // For each group, prioritize keeping user-uploaded documents and persistent generated documents
       const dedupedLoanDocs: LoanDocument[] = [];
       
       Object.values(docTypeGroups).forEach(docsOfType => {
@@ -593,18 +620,20 @@ export const loanDocumentService = {
           dedupedLoanDocs.push(docsOfType[0]);
         } else {
           // Multiple documents of this type
-          // First, check if we have any non-sample documents (user uploaded or generated with UPLOAD_ prefix)
-          const userDocs = docsOfType.filter(doc => 
+          // First, check if we have any persistent documents (user uploaded or specially marked generated)
+          const persistentDocs = docsOfType.filter(doc => 
             doc.status !== 'required' && 
-            (doc.filename.startsWith('UPLOAD_') || !doc.filename.startsWith('SAMPLE_'))
+            (doc.filename.startsWith('UPLOAD_') || 
+             doc.filename.startsWith('SAMPLE_PERSISTENT_') || 
+             (!doc.filename.startsWith('SAMPLE_')))
           );
           
-          if (userDocs.length > 0) {
-            // Sort user uploaded docs by date (newest first) and keep the most recent
-            userDocs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
-            dedupedLoanDocs.push(userDocs[0]);
+          if (persistentDocs.length > 0) {
+            // Sort persistent docs by date (newest first) and keep the most recent
+            persistentDocs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
+            dedupedLoanDocs.push(persistentDocs[0]);
           } else {
-            // No user docs, sort the sample/required docs by date and keep the most recent
+            // No persistent docs, sort the sample/required docs by date and keep the most recent
             const sortedDocs = [...docsOfType].sort((a, b) => 
               new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
             );
