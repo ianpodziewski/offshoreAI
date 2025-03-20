@@ -146,32 +146,6 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleInitializePlaceholders = async () => {
-    try {
-      if (!loan) {
-        showToast('Error', 'Loan data not available', 'error');
-        return;
-      }
-
-      showToast('Info', 'Initializing document placeholders...', 'info');
-
-      // Initialize placeholder documents
-      const placeholders = await documentService.initializeDocumentsForLoan(loanId, loan.loanType);
-      
-      if (placeholders.length === 0) {
-        showToast('Info', 'No new document placeholders needed', 'info');
-      } else {
-        showToast('Success', `Created ${placeholders.length} document placeholders`, 'success');
-      }
-
-      // Reload documents
-      loadDocuments();
-    } catch (err) {
-      console.error('Error initializing document placeholders:', err);
-      showToast('Error', 'Failed to initialize document placeholders', 'error');
-    }
-  };
-
   const handleDeleteAllDocuments = async () => {
     try {
       if (window.confirm('Are you sure you want to delete all documents? This action cannot be undone.')) {
@@ -252,9 +226,6 @@ export default function DocumentsPage() {
           <Button onClick={handleUploadDocument} variant="primary" size="sm">
             Upload Document
           </Button>
-          <Button onClick={handleInitializePlaceholders} variant="outline" size="sm">
-            Initialize Placeholders
-          </Button>
           <Button onClick={handleGenerateSampleDocuments} variant="outline" size="sm">
             Generate Sample Documents
           </Button>
@@ -321,7 +292,7 @@ export default function DocumentsPage() {
       ) : documents.length === 0 && viewMode === 'list' ? (
         <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-8 rounded text-center">
           <p className="mb-4">No documents found for this loan.</p>
-          <p>Click "Initialize Placeholders" to create document placeholders or "Generate Sample Documents" to create sample documents.</p>
+          <p>Click "Generate Sample Documents" to create sample documents for this loan.</p>
         </div>
       ) : (
         <>
