@@ -133,20 +133,30 @@ export default function LoanDocumentsPage() {
   // Load documents
   useEffect(() => {
     if (loanId) {
+      console.log('Loading documents for loan:', loanId);
+      
       // First ensure documents are deduplicated to avoid duplicates
       loanDocumentService.deduplicateLoanDocuments(loanId);
       
       // Get the deduplicated documents
       const docs = loanDocumentService.getDocumentsForLoan(loanId);
+      console.log('Documents retrieved from localStorage:', docs);
       
-      // Only set documents if we have some - don't override with empty array
+      // Log document names and statuses to debug
       if (docs.length > 0) {
-        setDocuments(docs);
-        
-        if (loan?.loanType) {
-          const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-          setCompletionStatus(status);
-        }
+        console.log('Document details:');
+        docs.forEach(doc => {
+          console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status})`);
+        });
+      }
+      
+      // Always set documents from localStorage, even if empty
+      console.log('Setting documents state with', docs.length, 'documents');
+      setDocuments(docs);
+      
+      if (loan?.loanType) {
+        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+        setCompletionStatus(status);
       }
     }
   }, [loanId, loan]);

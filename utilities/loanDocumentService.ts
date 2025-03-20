@@ -314,7 +314,8 @@ export const loanDocumentService = {
           (
             doc.status !== 'required' || 
             doc.filename.startsWith('UPLOAD_') || 
-            doc.filename.startsWith('SAMPLE_PERSISTENT_')
+            doc.filename.startsWith('SAMPLE_PERSISTENT_') ||
+            doc.filename.startsWith('SAMPLE_')
           )
         );
         
@@ -486,7 +487,8 @@ export const loanDocumentService = {
         }
         
         // Ensure we never have 'required' status for generated documents
-        const status = statuses[statusIndex];
+        // Force to 'pending' to ensure it's treated as persistent
+        const status: DocumentStatus = 'pending';
         
         // Generate a filename - Using SAMPLE_ prefix as requested
         const filename = `SAMPLE_${docType.docType.replace(/_/g, '-')}${fileType}`;
@@ -626,6 +628,7 @@ export const loanDocumentService = {
             doc.status !== 'required' && 
             (doc.filename.startsWith('UPLOAD_') || 
              doc.filename.startsWith('SAMPLE_PERSISTENT_') || 
+             doc.filename.startsWith('SAMPLE_') ||
              (!doc.filename.startsWith('SAMPLE_')))
           );
           
