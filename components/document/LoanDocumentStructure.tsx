@@ -198,31 +198,15 @@ export function LoanDocumentStructure({
                       height: 100%;
                       overflow: hidden;
                     }
-                    #pdf-container {
+                    iframe {
                       width: 100%;
                       height: 100%;
-                      display: flex;
-                      flex-direction: column;
-                    }
-                    .header {
-                      background: #f0f0f0;
-                      padding: 10px;
-                      text-align: center;
-                      border-bottom: 1px solid #ccc;
-                    }
-                    iframe {
-                      flex: 1;
                       border: none;
                     }
                   </style>
                 </head>
                 <body>
-                  <div id="pdf-container">
-                    <div class="header">
-                      <h2>${document.filename}</h2>
-                    </div>
-                    <iframe src="${document.content}" width="100%" height="100%"></iframe>
-                  </div>
+                  <iframe src="${document.content}" width="100%" height="100%"></iframe>
                 </body>
               </html>
             `);
