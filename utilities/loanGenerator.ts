@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { loanDocumentService } from './loanDocumentService';
+import { documentService } from './documentService';
 
 export type LoanStatus = 'pending' | 'approved' | 'in_review' | 'rejected' | 'closed' | 'funded' | 'default';
 export type LoanType = 'fix_and_flip' | 'rental_brrrr' | 'bridge' | 'construction' | 'commercial';

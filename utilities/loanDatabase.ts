@@ -1,6 +1,6 @@
 // utilities/loanDatabase.ts
 import { LoanData, generateLoan, generateLoans } from './loanGenerator';
-import { loanDocumentService } from './loanDocumentService';
+import { documentService } from './documentService';
 
 const STORAGE_KEY = 'simulated_loans_db';
 const DEFAULT_LOAN_COUNT = 9;
@@ -15,7 +15,7 @@ export const loanDatabase = {
       
       // Don't generate documents automatically during initialization
       // initialLoans.forEach(loan => {
-      //   loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
+      //   documentService.generateSampleDocuments(loan.id, loan.loanType);
       // });
       
       console.log(`Initialized loan database with ${DEFAULT_LOAN_COUNT} loans`);
@@ -42,7 +42,7 @@ export const loanDatabase = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(loans));
 
     // Don't generate documents automatically for new loans
-    // loanDocumentService.generateFakeDocuments(newLoan.id, newLoan.loanType);
+    // documentService.generateSampleDocuments(newLoan.id, newLoan.loanType);
 
     return newLoan;
   },
@@ -82,9 +82,9 @@ export const loanDatabase = {
     if (typeof localStorage !== 'undefined') {
       const clearPromises = [];
       
-      // Clear document database using the loanDocumentService
+      // Clear document database using the documentService
       try {
-        loanDocumentService.clearAllDocuments();
+        await documentService.clearAllDocuments();
         console.log('Cleared document service storage');
       } catch (error) {
         console.warn('Error clearing document service:', error);
@@ -139,7 +139,7 @@ export const loanDatabase = {
     
     // Don't generate documents automatically during reset
     // initialLoans.forEach(loan => {
-    //   loanDocumentService.generateFakeDocuments(loan.id, loan.loanType);
+    //   documentService.generateSampleDocuments(loan.id, loan.loanType);
     // });
     
     console.log('Database reset complete');

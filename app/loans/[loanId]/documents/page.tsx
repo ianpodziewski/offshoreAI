@@ -1,660 +1,321 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { 
-  FileText, 
-  Upload, 
-  FolderOpen, 
-  CheckCircle, 
-  AlertCircle,
-  RefreshCw,
-  ArrowLeft,
-  X
-} from 'lucide-react';
-import { LoanDocumentStructure } from '@/components/document/LoanDocumentStructure';
-import { DocumentUploader } from '@/components/document/DocumentUploader';
-import { loanDocumentService } from '@/utilities/loanDocumentService';
-import { DocumentCategory, LoanDocument, DocumentStatus } from '@/utilities/loanDocumentStructure';
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
+import { DocumentCard } from '@/components/DocumentCard';
+import { Tooltip } from '@/components/Tooltip';
+import { Button } from '@/components/Button';
+import { DocumentUploadForm } from '@/components/DocumentUploadForm';
+import { DocumentViewer } from '@/components/DocumentViewer';
+import { LoanDocument, DocumentCategory, DocumentStatus } from '@/utilities/loanDocumentStructure';
+import { documentService } from '@/utilities/documentService';
 import { loanDatabase } from '@/utilities/loanDatabase';
-import LayoutWrapper from '@/app/layout-wrapper';
-import LoanSidebar from '@/components/loan/LoanSidebar';
+import { useLoanData } from '@/hooks/useLoanData';
+import { useToast } from '@/hooks/useToast';
 
-// Global styles for document viewer
-const documentViewerStyles = `
-  .document-content .document {
-    font-family: Arial, sans-serif;
-    color: #333;
-    line-height: 1.6;
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 30px;
-    background-color: white;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    border-radius: 8px;
-  }
-  .document-content .document-header {
-    text-align: center;
-    margin-bottom: 30px;
-    border-bottom: 2px solid #1e5a9a;
-    padding-bottom: 20px;
-  }
-  .document-content .document-title {
-    font-size: 24px;
-    font-weight: bold;
-    color: #1e5a9a;
-    margin-bottom: 8px;
-  }
-  .document-content .document-subtitle {
-    color: #666;
-    font-size: 15px;
-  }
-  .document-content .document-section {
-    margin-bottom: 25px;
-  }
-  .document-content .section-title {
-    font-size: 18px;
-    font-weight: bold;
-    color: #1e5a9a;
-    margin-bottom: 15px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #eee;
-  }
-  .document-content .signature-section {
-    margin-top: 40px;
-  }
-  .document-content .signature-line {
-    border-bottom: 1px solid #999;
-    width: 250px;
-    display: inline-block;
-    margin-top: 30px;
-  }
-  .document-content table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-  }
-  .document-content th, .document-content td {
-    padding: 10px 15px;
-    text-align: left;
-    border-bottom: 1px solid #eee;
-  }
-  .document-content th {
-    background-color: #f8f9fa;
-    font-weight: bold;
-    width: 35%;
-  }
-  .document-content td {
-    width: 65%;
-  }
-  .document-content .info-table {
-    border: 1px solid #eee;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-`;
-
-export default function LoanDocumentsPage() {
+export default function DocumentsPage() {
   const params = useParams();
-  const router = useRouter();
-  const loanId = params?.loanId as string || '';
+  const loanId = params?.loanId as string;
+  const { loan, error: loanError, loading: loanLoading } = useLoanData(loanId);
+  const { showToast } = useToast();
   
-  const [loan, setLoan] = useState<any>(null);
   const [documents, setDocuments] = useState<LoanDocument[]>([]);
-  const [completionStatus, setCompletionStatus] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<DocumentCategory>('borrower');
-  const [isUploaderOpen, setIsUploaderOpen] = useState(false);
-  const [uploadConfig, setUploadConfig] = useState<{
-    category?: DocumentCategory;
-    section?: string;
-    docType?: string;
-  }>({});
+  const [selectedDocument, setSelectedDocument] = useState<LoanDocument | null>(null);
+  const [viewingDocument, setViewingDocument] = useState(false);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<{
+    [key in DocumentCategory]: {
+      total: number;
+      completed: number;
+      percentage: number;
+    };
+  }>({
+    borrower: { total: 0, completed: 0, percentage: 0 },
+    property: { total: 0, completed: 0, percentage: 0 },
+    closing: { total: 0, completed: 0, percentage: 0 },
+    servicing: { total: 0, completed: 0, percentage: 0 },
+    misc: { total: 0, completed: 0, percentage: 0 },
+  });
+  const [completionStatus, setCompletionStatus] = useState({
+    total: 0,
+    completed: 0,
+    percentage: 0,
+  });
   
-  // Load loan data
-  useEffect(() => {
-    if (loanId) {
-      const loanData = loanDatabase.getLoanById(loanId);
-      if (loanData) {
-        setLoan(loanData);
-      }
-    }
-  }, [loanId]);
-  
-  // Function to load documents with robust error handling
-  const loadDocuments = useCallback(async () => {
+  const loadDocuments = async () => {
     try {
-      console.log(`Loading documents for loan: ${loanId}`);
-      
-      if (!loanId) {
-        console.error('Cannot load documents: missing loanId');
-        setDocuments([]);
+      setLoading(true);
+      setError(null);
+
+      // Ensure loan data is loaded
+      if (!loan) {
+        console.error('Cannot load documents: Loan data not available');
+        setError('Loan data not available');
         return;
       }
-      
-      // Get loan data if needed
-      let currentLoan = loan;
-      if (!currentLoan) {
-        try {
-          currentLoan = loanDatabase.getLoanById(loanId as string);
-        } catch (loanError) {
-          console.error('Error getting loan data:', loanError);
-        }
-      }
-      
-      // Get documents for this loan
-      let loanDocs: LoanDocument[] = [];
-      try {
-        loanDocs = await loanDocumentService.getDocumentsForLoan(loanId as string);
-        
-        // Validate that we got an array back
-        if (!Array.isArray(loanDocs)) {
-          console.error('getDocumentsForLoan did not return an array');
-          loanDocs = [];
-        }
-        
-        console.log(`Documents retrieved from localStorage: ${loanDocs.length}`);
-        
-        // Log document details for debugging if there are documents
-        if (loanDocs.length > 0) {
-          console.log('Document details:');
-          loanDocs.forEach(doc => {
-            console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status}, id: ${doc.id})`);
-          });
-        }
-      } catch (docsError) {
-        console.error('Error retrieving documents:', docsError);
-        loanDocs = [];
-      }
-      
-      // Set documents
-      setDocuments(loanDocs);
-      
-      // Update completion status if loan type is available
-      if (currentLoan?.loanType) {
-        try {
-          const status = loanDocumentService.getDocumentCompletionStatus(loanId as string, currentLoan.loanType);
-          setCompletionStatus(status);
-        } catch (statusError) {
-          console.error('Error getting document completion status:', statusError);
-          // Set default completion status
-          setCompletionStatus({
-            total: 0,
-            completed: 0,
-            percentage: 0,
-            byCategory: {
-              borrower: { total: 0, completed: 0, percentage: 0 },
-              property: { total: 0, completed: 0, percentage: 0 },
-              closing: { total: 0, completed: 0, percentage: 0 },
-              servicing: { total: 0, completed: 0, percentage: 0 },
-              misc: { total: 0, completed: 0, percentage: 0 }
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error loading documents:', error);
-      // Set empty documents array in case of error
-      setDocuments([]);
-    }
-  }, [loanId, loan]);
-  
-  // Load documents on initialization - must use async/await properly with useEffect
-  useEffect(() => {
-    if (loanId) {
-      // Create an async function inside useEffect
-      const fetchDocuments = async () => {
-        await loadDocuments();
-      };
-      
-      // Call the async function
-      fetchDocuments();
-    }
-  }, [loanId, loadDocuments]);
-  
-  // Initialize documents if none exist - must also handle async
-  useEffect(() => {
-    if (loanId && loan?.loanType && documents.length === 0) {
-      // Create an async function inside useEffect
-      const initializeAndLoadDocuments = async () => {
-        try {
-          console.log(`Initializing documents for loan ${loanId} with type ${loan.loanType}`);
-          
-          // Only initialize if no documents exist
-          const placeholderDocs = loanDocumentService.initializeDocumentsForLoan(loanId, loan.loanType);
-          
-          if (Array.isArray(placeholderDocs) && placeholderDocs.length > 0) {
-            console.log(`Created ${placeholderDocs.length} placeholder documents`);
-          } else {
-            console.log('No new placeholder documents needed or created');
-          }
-          
-          // Reload all documents - await the async function
-          await loadDocuments();
-        } catch (error) {
-          console.error('Error initializing documents:', error);
-        }
-      };
-      
-      // Call the async function
-      initializeAndLoadDocuments();
-    }
-  }, [loanId, loan?.loanType, documents.length, loadDocuments]);
-  
-  // Handle document upload
-  const handleUploadDocument = (category: string, section: string, docType: string) => {
-    setUploadConfig({
-      category: category as DocumentCategory,
-      section,
-      docType
-    });
-    setIsUploaderOpen(true);
-  };
-  
-  // Handle document view
-  const handleViewDocument = (documentId: string) => {
-    console.log(`handleViewDocument called with: ${documentId}`);
-    
-    // Check if this is a delete action
-    if (documentId.startsWith('delete_')) {
-      const idToDelete = documentId.replace('delete_', '');
-      console.log(`Document deletion triggered for ID: ${idToDelete}`);
-      
-      // We don't need to do anything here, as the deletion has already occurred in LoanDocumentStructure
-      // Just reload the documents to refresh the UI
-      loadDocuments();
-      return;
-    }
-    
-    // For regular view actions...
-    console.log(`Regular view for document: ${documentId}`);
-    // Add any document viewing logic here
-  };
-  
-  // Handle document upload completion
-  const handleDocumentUploaded = (document: any) => {
-    console.log('Document to be uploaded:', document);
-    
-    // Ensure uploaded files have a distinct naming pattern
-    let filename = document.filename;
-    if (!filename.startsWith('UPLOAD_')) {
-      filename = `UPLOAD_${filename}`;
-    }
-    
-    // Create document with the required structure
-    const newDoc = loanDocumentService.addDocument({
-      ...document,
-      filename,
-      // Make sure the status is set to 'pending' for a newly uploaded document
-      status: 'pending',
-      // Set the file upload date to now
-      dateUploaded: new Date().toISOString(),
-      // Make sure we have the correct subsection field 
-      subsection: document.section || '',
-      // For PDFs, we might not have content rendered, so we'll store the base64 data
-      content: document.content || '',
-      // Default to required if not specified
-      isRequired: document.isRequired ?? true
-    });
-    
-    console.log('Document added:', newDoc);
-    
-    // Add the document to UI immediately
-    setDocuments(prevDocs => [...prevDocs, newDoc]);
-    
-    // Reload documents to ensure UI is in sync with storage
-    setTimeout(loadDocuments, 100);
-    
-    // Close the uploader
-    setIsUploaderOpen(false);
-  };
-  
-  // Handle document status change
-  const handleDocumentStatusChange = async (documentId: string, newStatus: string) => {
-    // Update UI first for responsiveness
-    const updatedDocuments = documents.map(doc => {
-      if (doc.id === documentId) {
-        return {
-          ...doc,
-          status: newStatus as DocumentStatus
-        };
-      }
-      return doc;
-    });
-    
-    // Update state
-    setDocuments(updatedDocuments as LoanDocument[]);
-    
-    try {
-      // Update document in the database
-      await loanDocumentService.updateDocumentStatus(documentId, newStatus as DocumentStatus);
-      
-      // Update completion status
-      if (loan?.loanType) {
-        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-        setCompletionStatus(status);
-      }
-    } catch (error) {
-      console.error('Error updating document status:', error);
-      // Revert UI state if update failed
-      setDocuments(documents);
-    }
-  };
-  
-  // Filter documents by category
-  const getFilteredDocuments = (category: DocumentCategory) => {
-    return documents.filter(doc => doc.category === category);
-  };
-  
-  // Render loading state
-  if (!loan) {
-    return (
-      <LayoutWrapper>
-        <div className="flex items-center justify-center h-96">
-          <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </LayoutWrapper>
-    );
-  }
-  
-  return (
-    <LayoutWrapper>
-      <style jsx global>{documentViewerStyles}</style>
-      <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="mb-6">
-          <button
-            onClick={() => router.push(`/loans/${loanId}`)}
-            className="flex items-center text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={16} className="mr-2" />
-            Back to Loan Overview
-          </button>
-          <h1 className="text-3xl font-bold mt-4 text-white">
-            #{loanId}
-          </h1>
-          <p className="text-lg mt-1 text-gray-400">
-            {loan.propertyAddress}
-          </p>
-        </div>
 
-        <div className="flex flex-col-reverse lg:flex-row gap-6">
-          {/* Main Content */}
-          <div className="w-full lg:w-3/4 space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                {/* Removing the Document Management text as requested */}
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={async () => {
-                    try {
-                      console.log(`Generating sample documents for loan ${loanId} with type ${loan.loanType}`);
-                      
-                      // Validate required data before proceeding
-                      if (!loanId || !loan?.loanType) {
-                        alert('Cannot generate documents: Missing loan ID or loan type');
-                        return;
-                      }
-                      
-                      // Generate the documents
-                      const fakeDocuments = await loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
-                      
-                      // Check if documents were generated
-                      if (Array.isArray(fakeDocuments) && fakeDocuments.length > 0) {
-                        // After document generation - no deduplication
-                        // loanDocumentService.deduplicateLoanDocuments(loanId);
-                        
-                        try {
-                          // Load the documents
-                          const dedupedDocs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
-                          
-                          // Ensure we got a valid array back
-                          if (Array.isArray(dedupedDocs)) {
-                            // Log the deduplicated docs to help with debugging
-                            console.log('Documents after generation:', dedupedDocs);
-                            
-                            // Set the documents and ensure local state is updated
-                            setDocuments(dedupedDocs);
-                            
-                            // Update completion status
-                            if (loan?.loanType) {
-                              try {
-                                const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-                                setCompletionStatus(status);
-                              } catch (statusError) {
-                                console.error('Error updating completion status:', statusError);
-                                // Don't block the UI update if status calculation fails
-                              }
-                            }
-                            
-                            // Show success message (modified to be more accurate about storage depending on Redis availability)
-                            const storageMode = typeof window !== 'undefined' && 
-                                              (!process.env.REDIS_URL || window.localStorage.getItem('USE_FALLBACK') === 'true') ? 
-                                              'localStorage only' : 'localStorage and Redis';
-                            
-                            alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored in ${storageMode} and will persist across page refreshes.`);
-                          } else {
-                            console.error('Invalid documents array returned after generation');
-                            alert('There was an issue loading the generated documents. Please try again or refresh the page.');
-                          }
-                        } catch (loadError) {
-                          console.error('Error loading documents after generation:', loadError);
-                          alert('Documents were generated but there was an error loading them. Please refresh the page to see the new documents.');
-                        }
-                      } else {
-                        console.error('No documents were generated or invalid response');
-                        alert('No documents were generated. Please check the console for details.');
-                      }
-                    } catch (error) {
-                      console.error('Error generating fake documents:', error);
-                      alert('There was an error generating sample documents. Please check the console for details.');
-                    }
-                  }} 
-                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"
-                  title="Generate sample documents for this loan"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate Sample Documents
-                </Button>
-                <Button 
-                  onClick={async () => {
-                    try {
-                      console.log('Generating sample documents for all loans');
-                      const totalGenerated = await loanDocumentService.generateFakeDocumentsForAllLoans();
-                      
-                      // Get all loans and deduplicate their documents
-                      const loans = loanDatabase.getLoans();
-                      for (const loan of loans) {
-                        loanDocumentService.deduplicateLoanDocuments(loan.id);
-                      }
-                      
-                      // Update success message to include Redis information
-                      alert(`Generated ${totalGenerated} sample documents across all loans. Documents are stored in both localStorage and Redis for chatbot access.`);
-                      
-                      // Refresh documents for current loan
-                      const docs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
-                      setDocuments(docs);
-                      
-                      // Update completion status for current loan
-                      const currentLoan = loanDatabase.getLoanById(loanId);
-                      if (currentLoan?.loanType) {
-                        const status = loanDocumentService.getDocumentCompletionStatus(loanId, currentLoan.loanType);
-                        setCompletionStatus(status);
-                      }
-                    } catch (error) {
-                      console.error('Error generating fake documents for all loans:', error);
-                      alert('There was an error generating sample documents for all loans. Please check the console for details.');
-                    }
-                  }} 
-                  className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white"
-                  title="Generate sample documents for all loans in the system"
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Generate For All Loans
-                </Button>
-                <Button onClick={() => setIsUploaderOpen(true)} className="bg-[#1A2234] hover:bg-[#1A2234]/90 border border-gray-800 text-white">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Add Document
-                </Button>
-              </div>
-            </div>
-            
-            {/* Document Completion Status */}
-            {completionStatus && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <Card className="bg-[#1A2234] border-gray-800">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-white">Overall Progress</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm text-gray-300">
-                        <span>{completionStatus.completed} of {completionStatus.total} documents</span>
-                        <span className="font-medium">{completionStatus.percentage}%</span>
-                      </div>
-                      <Progress value={completionStatus.percentage} className="h-2 bg-gray-700" />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                {Object.entries(completionStatus.byCategory)
-                  .filter(([category]) => category !== 'misc') // Filter out the Miscellaneous card
-                  .map(([category, data]: [string, any]) => (
-                  <Card key={category} className="bg-[#1A2234] border-gray-800">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg capitalize text-white">{category}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm text-gray-300">
-                          <span>{data.completed} of {data.total}</span>
-                          <span className="font-medium">{data.percentage}%</span>
-                        </div>
-                        <Progress value={data.percentage} className="h-2 bg-gray-700" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-            
-            {/* Document Tabs */}
-            <Tabs 
-              defaultValue="borrower" 
-              onValueChange={(value) => setActiveTab(value as DocumentCategory)}
-              className="bg-[#1A2234] p-4 rounded-lg border border-gray-800"
-            >
-              <div className="flex justify-center mb-4">
-                <TabsList className="grid grid-cols-4 bg-[#0A0F1A] p-1 rounded-lg h-[52px] w-full max-w-3xl">
-                  <TabsTrigger 
-                    value="borrower" 
-                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Borrower
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="property" 
-                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
-                  >
-                    <FolderOpen className="h-4 w-4 mr-2" />
-                    Property
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="closing" 
-                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Closing
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="servicing" 
-                    className="text-base px-4 py-2 rounded-md data-[state=active]:bg-[#243156] data-[state=active]:text-blue-300 data-[state=active]:shadow-none transition-all h-full flex items-center justify-center"
-                  >
-                    <AlertCircle className="h-4 w-4 mr-2" />
-                    Servicing
-                  </TabsTrigger>
-                </TabsList>
-              </div>
-              
-              <TabsContent value="borrower">
-                <LoanDocumentStructure
-                  loanId={loanId}
-                  loanType={loan.loanType}
-                  uploadedDocuments={documents}
-                  onUploadDocument={handleUploadDocument}
-                  onViewDocument={handleViewDocument}
-                  onStatusChange={handleDocumentStatusChange}
-                  category="borrower"
-                />
-              </TabsContent>
-              
-              <TabsContent value="property">
-                <LoanDocumentStructure
-                  loanId={loanId}
-                  loanType={loan.loanType}
-                  uploadedDocuments={documents}
-                  onUploadDocument={handleUploadDocument}
-                  onViewDocument={handleViewDocument}
-                  onStatusChange={handleDocumentStatusChange}
-                  category="property"
-                />
-              </TabsContent>
-              
-              <TabsContent value="closing">
-                <LoanDocumentStructure
-                  loanId={loanId}
-                  loanType={loan.loanType}
-                  uploadedDocuments={documents}
-                  onUploadDocument={handleUploadDocument}
-                  onViewDocument={handleViewDocument}
-                  onStatusChange={handleDocumentStatusChange}
-                  category="closing"
-                />
-              </TabsContent>
-              
-              <TabsContent value="servicing">
-                <LoanDocumentStructure
-                  loanId={loanId}
-                  loanType={loan.loanType}
-                  uploadedDocuments={documents}
-                  onUploadDocument={handleUploadDocument}
-                  onViewDocument={handleViewDocument}
-                  onStatusChange={handleDocumentStatusChange}
-                  category="servicing"
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
+      // Load documents from service
+      const docs = await documentService.getDocumentsForLoan(loanId);
+      setDocuments(docs || []);
+
+      // Get document completion status
+      const status = await documentService.getDocumentCompletionStatus(loanId, loan.loanType);
+      
+      // Update state
+      setCompletionStatus({
+        total: status.total,
+        completed: status.completed,
+        percentage: status.percentage,
+      });
+      
+      setCategories(status.byCategory);
+    } catch (err) {
+      console.error('Error loading documents:', err);
+      setError('Failed to load documents. Please try refreshing the page.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewDocument = (document: LoanDocument) => {
+    setSelectedDocument(document);
+    setViewingDocument(true);
+  };
+
+  const handleUploadDocument = () => {
+    setUploadingDocument(true);
+  };
+
+  const handleCloseViewer = () => {
+    setViewingDocument(false);
+    setSelectedDocument(null);
+  };
+
+  const handleCloseUpload = () => {
+    setUploadingDocument(false);
+    loadDocuments(); // Reload documents after upload
+  };
+
+  const handleGenerateSampleDocuments = async () => {
+    try {
+      if (!loan) {
+        showToast('Error', 'Loan data not available', 'error');
+        return;
+      }
+
+      showToast('Info', 'Generating sample documents...', 'info');
+
+      // Generate sample documents
+      const generatedDocs = await documentService.generateSampleDocuments(loanId, loan.loanType);
+      
+      if (generatedDocs.length === 0) {
+        showToast('Warning', 'No documents were generated', 'warning');
+      } else {
+        showToast('Success', `Generated ${generatedDocs.length} sample documents`, 'success');
+      }
+
+      // Reload documents
+      loadDocuments();
+    } catch (err) {
+      console.error('Error generating sample documents:', err);
+      showToast('Error', 'Failed to generate sample documents', 'error');
+    }
+  };
+
+  const handleInitializePlaceholders = async () => {
+    try {
+      if (!loan) {
+        showToast('Error', 'Loan data not available', 'error');
+        return;
+      }
+
+      showToast('Info', 'Initializing document placeholders...', 'info');
+
+      // Initialize placeholder documents
+      const placeholders = await documentService.initializeDocumentsForLoan(loanId, loan.loanType);
+      
+      if (placeholders.length === 0) {
+        showToast('Info', 'No new document placeholders needed', 'info');
+      } else {
+        showToast('Success', `Created ${placeholders.length} document placeholders`, 'success');
+      }
+
+      // Reload documents
+      loadDocuments();
+    } catch (err) {
+      console.error('Error initializing document placeholders:', err);
+      showToast('Error', 'Failed to initialize document placeholders', 'error');
+    }
+  };
+
+  const handleDeleteAllDocuments = async () => {
+    try {
+      if (window.confirm('Are you sure you want to delete all documents? This action cannot be undone.')) {
+        showToast('Info', 'Deleting all documents...', 'info');
+        
+        // Delete all documents for this loan
+        await documentService.clearAllDocuments();
+        
+        showToast('Success', 'All documents have been deleted', 'success');
+        
+        // Reload documents
+        loadDocuments();
+      }
+    } catch (err) {
+      console.error('Error deleting documents:', err);
+      showToast('Error', 'Failed to delete documents', 'error');
+    }
+  };
+
+  useEffect(() => {
+    // Initialize documents when the loan data is loaded
+    if (loan && !loanLoading) {
+      loadDocuments();
+    }
+  }, [loan, loanLoading]);
+
+  if (loanLoading) {
+    return <div className="p-6">Loading loan data...</div>;
+  }
+
+  if (loanError || !loan) {
+    return <div className="p-6 text-red-500">Error loading loan: {loanError || 'Loan not found'}</div>;
+  }
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Loan Documents</h1>
+        <div className="flex gap-2">
+          <Button onClick={handleUploadDocument} variant="primary" size="sm">
+            Upload Document
+          </Button>
+          <Button onClick={handleInitializePlaceholders} variant="outline" size="sm">
+            Initialize Placeholders
+          </Button>
+          <Button onClick={handleGenerateSampleDocuments} variant="outline" size="sm">
+            Generate Sample Documents
+          </Button>
+          <Button onClick={handleDeleteAllDocuments} variant="danger" size="sm">
+            Delete All Documents
+          </Button>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-2">Document Completion Status</h2>
           
-          {/* Sidebar */}
-          <div className="w-full lg:w-1/4">
-            <LoanSidebar loan={loan} activePage="documents" />
+          <div className="flex items-center mb-4">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-blue-600 h-2.5 rounded-full"
+                style={{ width: `${completionStatus.percentage}%` }}
+              ></div>
+            </div>
+            <span className="ml-2 text-sm font-medium">
+              {completionStatus.completed} of {completionStatus.total} ({completionStatus.percentage}%)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {Object.entries(categories).map(([category, status]) => (
+              <div key={category} className="bg-gray-50 p-3 rounded">
+                <div className="flex justify-between mb-1">
+                  <span className="text-sm font-medium capitalize">{category}</span>
+                  <span className="text-xs">
+                    {status.completed}/{status.total}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                  <div
+                    className="bg-blue-600 h-1.5 rounded-full"
+                    style={{ width: `${status.percentage}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        
-        {/* Document Uploader Modal */}
-        {isUploaderOpen && (
-          <DocumentUploader
-            loanId={loanId}
-            isOpen={isUploaderOpen}
-            category={uploadConfig.category}
-            section={uploadConfig.section}
-            docType={uploadConfig.docType}
-            onClose={() => setIsUploaderOpen(false)}
-            onUpload={handleDocumentUploaded}
-          />
-        )}
       </div>
-    </LayoutWrapper>
+
+      {loading ? (
+        <div className="flex justify-center p-12">
+          <div className="spinner"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      ) : documents.length === 0 ? (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-8 rounded text-center">
+          <p className="mb-4">No documents found for this loan.</p>
+          <p>Click "Initialize Placeholders" to create document placeholders or "Generate Sample Documents" to create sample documents.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {documents.map((document) => (
+            <DocumentCard
+              key={document.id}
+              document={document}
+              onClick={() => handleViewDocument(document)}
+              onStatusChange={async (status: DocumentStatus) => {
+                try {
+                  const success = await documentService.updateDocumentStatus(document.id, status);
+                  if (success) {
+                    loadDocuments();
+                    showToast('Success', 'Document status updated', 'success');
+                  } else {
+                    showToast('Error', 'Failed to update document status', 'error');
+                  }
+                } catch (err) {
+                  console.error('Error updating document status:', err);
+                  showToast('Error', 'An error occurred while updating document status', 'error');
+                }
+              }}
+              onDelete={async () => {
+                if (window.confirm('Are you sure you want to delete this document?')) {
+                  try {
+                    const success = await documentService.deleteDocument(document.id);
+                    if (success) {
+                      loadDocuments();
+                      showToast('Success', 'Document deleted', 'success');
+                    } else {
+                      showToast('Error', 'Failed to delete document', 'error');
+                    }
+                  } catch (err) {
+                    console.error('Error deleting document:', err);
+                    showToast('Error', 'An error occurred while deleting the document', 'error');
+                  }
+                }
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {viewingDocument && selectedDocument && (
+        <DocumentViewer document={selectedDocument} onClose={handleCloseViewer} />
+      )}
+
+      {uploadingDocument && (
+        <DocumentUploadForm
+          loanId={loanId}
+          onClose={handleCloseUpload}
+          onSubmit={async (document: LoanDocument) => {
+            try {
+              await documentService.addDocument(document);
+              showToast('Success', 'Document uploaded successfully', 'success');
+              handleCloseUpload();
+            } catch (err) {
+              console.error('Error uploading document:', err);
+              showToast('Error', 'Failed to upload document', 'error');
+            }
+          }}
+        />
+      )}
+    </div>
   );
 } 
