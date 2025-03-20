@@ -63,7 +63,11 @@ export default function ChatWithContext() {
       // Use the simpleDocumentService to get chat documents
       const chatDocs = simpleDocumentService.getChatDocuments();
       console.log("Found chat documents:", chatDocs.length);
-      setChatDocuments(chatDocs);
+      // Sort documents by date uploaded (newest first)
+      const sortedDocs = [...chatDocs].sort((a, b) => 
+        new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
+      );
+      setChatDocuments(sortedDocs);
     };
 
     // Load documents initially
@@ -99,7 +103,11 @@ export default function ChatWithContext() {
               onUploadComplete={async () => {
                 // Refresh documents when upload completes
                 const chatDocs = simpleDocumentService.getChatDocuments();
-                setChatDocuments(chatDocs);
+                // Sort documents by date uploaded (newest first)
+                const sortedDocs = [...chatDocs].sort((a, b) => 
+                  new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
+                );
+                setChatDocuments(sortedDocs);
                 return Promise.resolve();
               }}
             />

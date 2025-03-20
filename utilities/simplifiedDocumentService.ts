@@ -402,10 +402,10 @@ export const simpleDocumentService = {
     }
   },
   
-  // Add a dedicated method to clean up duplicate documents for a specific loan
+  // Add a dedicated method for loan documents - no longer deduplicates, just returns documents
   deduplicateLoanDocuments: async (loanId: string): Promise<SimpleDocument[]> => {
     try {
-      console.log(`Deduplicating documents for loan ${loanId}`);
+      console.log(`Getting documents for loan ${loanId} (deduplication removed)`);
       
       // Get all documents
       const allDocs = simpleDocumentService.getAllDocuments();
@@ -413,63 +413,10 @@ export const simpleDocumentService = {
       // Get documents for this loan
       const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
       
-      // Group documents by docType
-      const docsByType: Record<string, SimpleDocument[]> = {};
-      
-      // Organize documents by type
-      loanDocs.forEach(doc => {
-        if (!docsByType[doc.docType]) {
-          docsByType[doc.docType] = [];
-        }
-        docsByType[doc.docType].push(doc);
-      });
-      
-      let dupsRemoved = 0;
-      const docsToKeep: SimpleDocument[] = [];
-      const docsToDelete: string[] = [];
-      
-      // For each document type
-      for (const docType in docsByType) {
-        const docsOfThisType = docsByType[docType];
-        
-        // If we have more than one document of this type
-        if (docsOfThisType.length > 1) {
-          // Sort by date uploaded (newest first)
-          docsOfThisType.sort((a, b) => 
-            new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
-          );
-          
-          // Keep the newest one
-          const newestDoc = docsOfThisType[0];
-          docsToKeep.push(newestDoc);
-          
-          // Mark all others for deletion
-          for (let i = 1; i < docsOfThisType.length; i++) {
-            docsToDelete.push(docsOfThisType[i].id);
-            dupsRemoved++;
-          }
-        } else {
-          // Just one document of this type, keep it
-          docsToKeep.push(docsOfThisType[0]);
-        }
-      }
-      
-      // Delete duplicate documents
-      for (const docId of docsToDelete) {
-        try {
-          await simpleDocumentService.deleteDocument(docId);
-          console.log(`Deleted duplicate document ${docId}`);
-        } catch (error) {
-          console.error(`Failed to delete duplicate document ${docId}:`, error);
-        }
-      }
-      
-      console.log(`Removed ${dupsRemoved} duplicate documents for loan ${loanId}`);
-      
-      // Return the deduplicated documents
-      return docsToKeep;
+      // Return all documents without deduplication
+      return loanDocs;
     } catch (error) {
-      console.error('Error deduplicating loan documents:', error);
+      console.error('Error getting loan documents:', error);
       return [];
     }
   },
@@ -626,10 +573,10 @@ export const simpleDocumentService = {
       // Get all existing documents
       const allDocs = simpleDocumentService.getAllDocuments();
       
-      // Find ALL matching documents of this type for the loan
-      // Skip this for chat uploads - we want to keep multiple chat documents
+      // For chat uploads, we never filter out existing documents - we want to keep all chat documents
+      // For other document types, find matching documents that might need to be replaced
       const existingDocs = loanId === 'chat-uploads' 
-        ? [] // Empty array for chat uploads to avoid deleting previous uploads
+        ? [] // Empty array for chat uploads to keep all previous uploads
         : allDocs.filter(doc => 
             doc.loanId === loanId && 
             (doc.docType === docType || doc.filename === file.name)
@@ -875,116 +822,60 @@ export const simpleDocumentService = {
     }
   },
   
-  // Add a helper function to migrate existing documents to IndexedDB
-  migrateToIndexedDB: async (): Promise<void> => {
+  // Migration function
+  migrateExistingDocuments: async (): Promise<boolean> => {
     try {
-      console.log('Starting migration of document contents to IndexedDB...');
-      const allDocs = simpleDocumentService.getAllDocuments();
-      
-      // Deduplicate documents by loanId and docType - keep the most recent version
-      const deduplicatedDocs: SimpleDocument[] = [];
-      const seenKeys = new Set<string>();
-      
-      // First sort documents by dateUploaded (newest first)
-      const sortedDocs = [...allDocs].sort((a, b) => {
-        return new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime();
-      });
-      
-      // Then keep only the first occurrence of each loanId+docType combination
-      for (const doc of sortedDocs) {
-        const key = `${doc.loanId}|${doc.docType}`;
-        if (!seenKeys.has(key)) {
-          deduplicatedDocs.push(doc);
-          seenKeys.add(key);
-        } else {
-          console.log(`Skipping duplicate document: ${doc.filename} (ID: ${doc.id})`);
-        }
+      // Check if migration has already been done
+      const isMigrated = localStorage.getItem('documents_migrated') === 'true';
+      if (isMigrated) {
+        console.log('Documents have already been migrated, skipping migration.');
+        return true;
       }
       
-      console.log(`Removed ${allDocs.length - deduplicatedDocs.length} duplicate documents`);
+      console.log('Starting document migration...');
+      // Get all storage items
+      const allDocs = simpleDocumentService.getAllDocuments();
       
-      // Only migrate documents that have actual content (not placeholders)
-      const docsToMigrate = deduplicatedDocs.filter(doc => 
-        doc.content && 
-        !doc.content.includes('[Content stored in IndexedDB]')
-      );
+      if (allDocs.length === 0) {
+        console.log('No documents found to migrate.');
+        localStorage.setItem('documents_migrated', 'true');
+        return true;
+      }
       
-      console.log(`Found ${docsToMigrate.length} documents to migrate to IndexedDB`);
+      console.log(`Found ${allDocs.length} documents to process.`);
       
-      // Create metadata-only versions for localStorage
-      const metadataDocs = deduplicatedDocs.map(doc => ({
+      // No deduplication, just keep all documents
+      console.log(`Migration complete. Kept all ${allDocs.length} documents.`);
+      
+      // Save the migrated documents back to localStorage (metadata only)
+      const metadataDocs = allDocs.map(doc => ({
         ...doc,
-        content: compressContent(doc.content)
+        content: doc.content.length > 1000 ? doc.content.substring(0, 1000) + '...' : doc.content
       }));
       
-      // Store deduplicated metadata in localStorage
+      // Store documents in localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(metadataDocs));
+      localStorage.setItem('documents_migrated', 'true');
       
-      // Migrate content to IndexedDB
-      for (const doc of docsToMigrate) {
-        try {
-          await storeContentInIndexedDB(doc.id, doc.content);
-          console.log(`Migrated document ${doc.id} to IndexedDB`);
-        } catch (error) {
-          console.error(`Failed to migrate document ${doc.id}:`, error);
-        }
-      }
-      
-      console.log('Migration to IndexedDB complete!');
+      return true;
     } catch (error) {
-      console.error('Error during migration to IndexedDB:', error);
+      console.error('Error during document migration:', error);
+      return false;
     }
   },
-  
-  /**
-   * Fix document associations by ensuring all documents have the correct loanId
-   * This function can help when documents are visible in the UI but not found by the indexing process
-   */
-  fixDocumentAssociations: (loanId: string): SimpleDocument[] => {
+
+  // Initialize storage
+  initializeStorage: async (): Promise<void> => {
     try {
-      console.log(`🔧 Attempting to fix document associations for loan ${loanId}`);
-      const allDocs = simpleDocumentService.getAllDocuments();
+      // Initialize IndexedDB
+      await getDB();
       
-      // Find documents with missing or incorrect loanId
-      const unassociatedDocs = allDocs.filter(doc => 
-        // Documents with no loanId
-        !doc.loanId || 
-        // Documents with empty string loanId 
-        doc.loanId === '' ||
-        // Documents with 'undefined' as string
-        doc.loanId === 'undefined'
-      );
+      // Migrate existing documents if needed
+      await simpleDocumentService.migrateExistingDocuments();
       
-      console.log(`🔍 Found ${unassociatedDocs.length} documents with missing loanId`);
-      
-      if (unassociatedDocs.length === 0) {
-        console.log('👍 No documents need fixing');
-        return [];
-      }
-      
-      // Fix the documents by assigning the loanId
-      const fixedDocs: SimpleDocument[] = [];
-      const updatedAllDocs = [...allDocs];
-      
-      for (const doc of unassociatedDocs) {
-        const docIndex = updatedAllDocs.findIndex(d => d.id === doc.id);
-        if (docIndex !== -1) {
-          updatedAllDocs[docIndex] = {
-            ...updatedAllDocs[docIndex],
-            loanId: loanId
-          };
-          fixedDocs.push(updatedAllDocs[docIndex]);
-        }
-      }
-      
-      // Save the updated documents
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedAllDocs));
-      
-      console.log(`✅ Fixed ${fixedDocs.length} documents by associating them with loan ${loanId}`);
-      return fixedDocs;
-    } catch (error) {
-      console.error('❌ Error fixing document associations:', error);
-      return [];
+      console.log('Document storage initialized');
+    } catch (error: unknown) {
+      console.error('Error initializing document storage:', error);
     }
   },
 };
@@ -995,61 +886,25 @@ if (typeof window !== 'undefined') {
   if (!localStorage.getItem('indexeddb_migration_done')) {
     // Set a timeout to allow the app to load first
     setTimeout(() => {
-      simpleDocumentService.migrateToIndexedDB()
+      simpleDocumentService.migrateExistingDocuments()
         .then(() => {
           localStorage.setItem('indexeddb_migration_done', 'true');
-          console.log('IndexedDB migration completed and marked as done');
+          console.log('Document migration completed and marked as done');
         })
-        .catch(error => {
-          console.error('Error completing IndexedDB migration:', error);
+        .catch((error: unknown) => {
+          console.error('Error completing document migration:', error);
         });
     }, 3000);
   }
   
-  // Deduplicate documents on application load
-  // This helps clean up any duplicates that might have been created
-  setTimeout(async () => {
-    try {
-      console.log("Starting automatic document deduplication on app load...");
-      
-      // Get all documents
-      const allDocs = simpleDocumentService.getAllDocuments();
-      
-      // Group documents by loanId
-      const docsByLoan: Record<string, SimpleDocument[]> = {};
-      
-      allDocs.forEach(doc => {
-        if (!docsByLoan[doc.loanId]) {
-          docsByLoan[doc.loanId] = [];
-        }
-        docsByLoan[doc.loanId].push(doc);
-      });
-      
-      // Deduplicate documents for each loan
-      let totalLoans = 0;
-      let totalDupsDeduplicated = 0;
-      
-      for (const loanId in docsByLoan) {
-        if (docsByLoan[loanId].length > 1) {
-          totalLoans++;
-          const dedupedDocs = await simpleDocumentService.deduplicateLoanDocuments(loanId);
-          const dupsRemoved = docsByLoan[loanId].length - dedupedDocs.length;
-          totalDupsDeduplicated += dupsRemoved;
-          
-          if (dupsRemoved > 0) {
-            console.log(`Removed ${dupsRemoved} duplicates from loan ${loanId}`);
-          }
-        }
-      }
-      
-      console.log(`Automatic deduplication complete. Processed ${totalLoans} loans and removed ${totalDupsDeduplicated} duplicate documents.`);
-      
-      // Mark that we've done initial deduplication
-      localStorage.setItem('docs_deduplicated', 'true');
-    } catch (error) {
-      console.error("Error during automatic document deduplication:", error);
-    }
-  }, 5000);
+  // Initialize storage when the application loads
+  simpleDocumentService.initializeStorage()
+    .then(() => {
+      console.log('Document storage initialized successfully');
+    })
+    .catch((error: unknown) => {
+      console.error('Failed to initialize document storage:', error);
+    });
 }
 
 // Update document methods that need both storage types

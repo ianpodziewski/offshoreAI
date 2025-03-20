@@ -261,66 +261,14 @@ export const storageService = {
   },
   
   /**
-   * Deduplicate documents for a loan by type
+   * Get documents for a loan without deduplication
+   * @param loanId Loan ID
    */
   deduplicateLoanDocuments: async (loanId: string): Promise<SimpleDocument[]> => {
     try {
-      console.log(`Deduplicating documents for loan ${loanId}`);
-      
-      if (!isBrowser) {
-        console.warn('Cannot use localStorage in server environment');
-        return [];
-      }
-      
-      // Get all documents for this loan
-      const allDocs = storageService.getAllDocumentsSync();
-      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
-      
-      // Group documents by docType
-      const docsByType: Record<string, SimpleDocument[]> = {};
-      
-      // Organize documents by type
-      loanDocs.forEach(doc => {
-        if (!docsByType[doc.docType]) {
-          docsByType[doc.docType] = [];
-        }
-        docsByType[doc.docType].push(doc);
-      });
-      
-      let dupsRemoved = 0;
-      const docsToKeep: SimpleDocument[] = [];
-      
-      // For each document type
-      for (const docType in docsByType) {
-        const docsOfThisType = docsByType[docType];
-        
-        // If we have more than one document of this type
-        if (docsOfThisType.length > 1) {
-          // Sort by date uploaded (newest first)
-          docsOfThisType.sort((a, b) => 
-            new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
-          );
-          
-          // Keep the newest one
-          const newestDoc = docsOfThisType[0];
-          docsToKeep.push(newestDoc);
-          
-          // Delete all others
-          for (let i = 1; i < docsOfThisType.length; i++) {
-            const docToRemove = docsOfThisType[i];
-            await storageService.deleteDocument(docToRemove.id);
-            dupsRemoved++;
-          }
-        } else {
-          // Just one document of this type, keep it
-          docsToKeep.push(docsOfThisType[0]);
-        }
-      }
-      
-      console.log(`Deduplication complete. Removed ${dupsRemoved} duplicate documents.`);
-      return docsToKeep;
+      return storageService.getDocumentsForLoan(loanId);
     } catch (error) {
-      console.error(`Error deduplicating loan documents for ${loanId}:`, error);
+      console.error('Error getting loan documents:', error);
       return [];
     }
   },

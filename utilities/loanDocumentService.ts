@@ -105,38 +105,10 @@ const isLocalStorageFull = (): boolean => {
 // Batch size for generating fake documents
 const BATCH_SIZE = 5;
 
-// Helper function to deduplicate documents by docType
+// Helper function that no longer deduplicates documents - just returns them
 const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
-  // Group by docType
-  const docTypeGroups: Record<string, LoanDocument[]> = {};
-  
-  documents.forEach(doc => {
-    if (!docTypeGroups[doc.docType]) {
-      docTypeGroups[doc.docType] = [];
-    }
-    docTypeGroups[doc.docType].push(doc);
-  });
-  
-  // For each group, keep only the latest document by dateUploaded
-  const result: LoanDocument[] = [];
-  
-  Object.values(docTypeGroups).forEach(docsOfType => {
-    if (docsOfType.length === 1) {
-      // Only one document of this type, keep it
-      result.push(docsOfType[0]);
-    } else {
-      // Multiple documents, sort by dateUploaded descending and keep the first one
-      const sortedDocs = [...docsOfType].sort((a, b) => {
-        const dateA = new Date(a.dateUploaded).getTime();
-        const dateB = new Date(b.dateUploaded).getTime();
-        return dateB - dateA; // Descending order
-      });
-      
-      result.push(sortedDocs[0]);
-    }
-  });
-  
-  return result;
+  // Return documents without deduplication
+  return documents;
 };
 
 // Document service for managing loan documents
@@ -592,68 +564,22 @@ export const loanDocumentService = {
     localStorage.removeItem(LOAN_DOCUMENTS_STORAGE_KEY);
   },
 
-  // Deduplicate documents for a specific loan
+  // Get documents for a specific loan - no longer deduplicates
   deduplicateLoanDocuments: (loanId: string): LoanDocument[] => {
     try {
-      console.log(`Deduplicating documents for loan ${loanId}`);
+      console.log(`Getting documents for loan ${loanId} (deduplication removed)`);
       
-      // Get all documents
-      const allDocs = loanDocumentService.getAllDocuments();
+      // Get all documents from localStorage
+      const storedDocs = localStorage.getItem('loan_documents') || '[]';
+      const allDocuments: LoanDocument[] = JSON.parse(storedDocs);
       
-      // Split into current loan docs and other loan docs
-      const loanDocs = allDocs.filter(doc => doc.loanId === loanId);
-      const otherDocs = allDocs.filter(doc => doc.loanId !== loanId);
+      // Filter for the specific loan
+      const loanDocuments = allDocuments.filter(doc => doc.loanId === loanId);
       
-      // Group loan documents by docType
-      const docTypeGroups: Record<string, LoanDocument[]> = {};
-      
-      loanDocs.forEach(doc => {
-        if (!docTypeGroups[doc.docType]) {
-          docTypeGroups[doc.docType] = [];
-        }
-        docTypeGroups[doc.docType].push(doc);
-      });
-      
-      // For each group, prioritize keeping user-uploaded documents and persistent generated documents
-      const dedupedLoanDocs: LoanDocument[] = [];
-      
-      Object.values(docTypeGroups).forEach(docsOfType => {
-        if (docsOfType.length === 1) {
-          // Only one document of this type, keep it
-          dedupedLoanDocs.push(docsOfType[0]);
-        } else {
-          // Multiple documents of this type
-          // First, check if we have any persistent documents (user uploaded or specially marked generated)
-          const persistentDocs = docsOfType.filter(doc => 
-            doc.status !== 'required' && 
-            (doc.filename.startsWith('UPLOAD_') || 
-             doc.filename.startsWith('SAMPLE_PERSISTENT_') || 
-             doc.filename.startsWith('SAMPLE_') ||
-             (!doc.filename.startsWith('SAMPLE_')))
-          );
-          
-          if (persistentDocs.length > 0) {
-            // Sort persistent docs by date (newest first) and keep the most recent
-            persistentDocs.sort((a, b) => new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime());
-            dedupedLoanDocs.push(persistentDocs[0]);
-          } else {
-            // No persistent docs, sort the sample/required docs by date and keep the most recent
-            const sortedDocs = [...docsOfType].sort((a, b) => 
-              new Date(b.dateUploaded).getTime() - new Date(a.dateUploaded).getTime()
-            );
-            dedupedLoanDocs.push(sortedDocs[0]);
-          }
-        }
-      });
-      
-      // Combine and save back to storage
-      const allUpdatedDocs = [...otherDocs, ...dedupedLoanDocs];
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allUpdatedDocs));
-      
-      console.log(`Deduplication complete. Removed ${loanDocs.length - dedupedLoanDocs.length} duplicate documents.`);
-      return dedupedLoanDocs;
+      // Return without deduplication
+      return loanDocuments;
     } catch (error) {
-      console.error('Error deduplicating loan documents:', error);
+      console.error('Error getting loan documents:', error);
       return [];
     }
   }

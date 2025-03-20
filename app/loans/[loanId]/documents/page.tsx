@@ -135,24 +135,24 @@ export default function LoanDocumentsPage() {
     if (loanId) {
       console.log('Loading documents for loan:', loanId);
       
-      // First ensure documents are deduplicated to avoid duplicates
-      loanDocumentService.deduplicateLoanDocuments(loanId);
+      // First ensure we have the documents without deduplication
+      // loanDocumentService.deduplicateLoanDocuments(loanId);
       
-      // Get the deduplicated documents
-      const docs = loanDocumentService.getDocumentsForLoan(loanId);
-      console.log('Documents retrieved from localStorage:', docs);
+      // Get the documents
+      const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
+      console.log('Documents retrieved from localStorage:', loanDocs);
       
       // Log document names and statuses to debug
-      if (docs.length > 0) {
+      if (loanDocs.length > 0) {
         console.log('Document details:');
-        docs.forEach(doc => {
+        loanDocs.forEach(doc => {
           console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status})`);
         });
       }
       
       // Always set documents from localStorage, even if empty
-      console.log('Setting documents state with', docs.length, 'documents');
-      setDocuments(docs);
+      console.log('Setting documents state with', loanDocs.length, 'documents');
+      setDocuments(loanDocs);
       
       if (loan?.loanType) {
         const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
@@ -339,10 +339,10 @@ export default function LoanDocumentsPage() {
                       console.log(`Generating sample documents for loan ${loanId} with type ${loan.loanType}`);
                       const fakeDocuments = await loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
                       if (fakeDocuments.length > 0) {
-                        // Deduplicate documents after generation
-                        loanDocumentService.deduplicateLoanDocuments(loanId);
+                        // After document generation - no deduplication
+                        // loanDocumentService.deduplicateLoanDocuments(loanId);
                         
-                        // Load the deduplicated documents
+                        // Load the documents
                         const dedupedDocs = loanDocumentService.getDocumentsForLoan(loanId);
                         
                         // Log the deduplicated docs to help with debugging
