@@ -1,3 +1,5 @@
+// services/databaseService.ts
+'use server';
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -35,25 +37,39 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.databaseService = void 0;
-// services/databaseService.ts
-var better_sqlite3_1 = __importDefault(require("better-sqlite3"));
-var fs_1 = __importDefault(require("fs"));
-var path_1 = __importDefault(require("path"));
+// Dynamically import dependencies to prevent client-side bundling
+var Database;
+var fs;
+var path;
+// Check if we're in a Node.js environment
+var isServer = typeof window === 'undefined';
+// Import database dependencies only on the server side
+if (isServer) {
+    // Dynamic imports to avoid client-side bundling issues
+    try {
+        Database = require('better-sqlite3');
+        fs = require('fs');
+        path = require('path');
+    }
+    catch (error) {
+        console.warn('Server-side dependencies could not be loaded:', error);
+    }
+}
+// Import configuration (this is safe as it's just static data)
 var databaseConfig_1 = require("../configuration/databaseConfig");
 /**
  * Database service for SQLite operations
  * This service provides connection management and basic database operations
+ * It only operates on the server-side
  */
 var DatabaseService = /** @class */ (function () {
     // Private constructor for singleton pattern
     function DatabaseService() {
-        this.db = null;
+        this.db = null; // Using 'any' instead of Database.Database to avoid client-side type errors
         this.initialized = false;
+        this.isServerSide = isServer;
     }
     /**
      * Get the singleton instance of the database service
@@ -65,8 +81,16 @@ var DatabaseService = /** @class */ (function () {
         return DatabaseService.instance;
     };
     /**
+     * Check if we're in a server environment where database operations can be performed
+     * @returns Whether the current environment supports database operations
+     */
+    DatabaseService.prototype.isEnvironmentSupported = function () {
+        return this.isServerSide && !!Database && !!fs && !!path;
+    };
+    /**
      * Initialize the database, creating it if it doesn't exist
      * This should be called before any database operations
+     * Does nothing on the client side
      */
     DatabaseService.prototype.initialize = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -74,15 +98,22 @@ var DatabaseService = /** @class */ (function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (this.initialized) {
+                        // Skip initialization if already initialized or not on server side
+                        if (this.initialized || !this.isEnvironmentSupported()) {
+                            if (!this.isServerSide) {
+                                console.log('Database initialization skipped (client-side environment)');
+                            }
                             return [2 /*return*/];
                         }
                         _a.label = 1;
                     case 1:
-                        _a.trys.push([1, 3, , 4]);
-                        dbDir = path_1.default.dirname(databaseConfig_1.DATABASE_CONFIG.dbFilePath);
-                        if (!fs_1.default.existsSync(dbDir)) {
-                            fs_1.default.mkdirSync(dbDir, { recursive: true });
+                        _a.trys.push([1, 5, , 6]);
+                        // Ensure the data directory exists
+                        if (path && fs) {
+                            dbDir = path.dirname(databaseConfig_1.DATABASE_CONFIG.dbFilePath);
+                            if (!fs.existsSync(dbDir)) {
+                                fs.mkdirSync(dbDir, { recursive: true });
+                            }
                         }
                         dbOptions = {
                             readonly: databaseConfig_1.DATABASE_CONFIG.sqliteOptions.readonly,
@@ -92,8 +123,8 @@ var DatabaseService = /** @class */ (function () {
                         if (process.env.NODE_ENV === 'development') {
                             dbOptions.verbose = console.log;
                         }
-                        // Create database connection
-                        this.db = new better_sqlite3_1.default(databaseConfig_1.DATABASE_CONFIG.dbFilePath, dbOptions);
+                        if (!Database) return [3 /*break*/, 3];
+                        this.db = new Database(databaseConfig_1.DATABASE_CONFIG.dbFilePath, dbOptions);
                         // Enable foreign keys support
                         this.db.pragma('foreign_keys = ON');
                         // Use Write-Ahead Logging for better concurrency if configured
@@ -108,11 +139,13 @@ var DatabaseService = /** @class */ (function () {
                         this.initialized = true;
                         console.log("Database initialized at ".concat(databaseConfig_1.DATABASE_CONFIG.dbFilePath));
                         return [3 /*break*/, 4];
-                    case 3:
+                    case 3: throw new Error('Database module not available');
+                    case 4: return [3 /*break*/, 6];
+                    case 5:
                         error_1 = _a.sent();
                         console.error('Failed to initialize database:', error_1);
                         throw error_1;
-                    case 4: return [2 /*return*/];
+                    case 6: return [2 /*return*/];
                 }
             });
         });
@@ -123,8 +156,8 @@ var DatabaseService = /** @class */ (function () {
     DatabaseService.prototype.initializeSchema = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
-                if (!this.db) {
-                    throw new Error('Database not initialized');
+                if (!this.db || !this.isEnvironmentSupported()) {
+                    throw new Error('Database not initialized or environment not supported');
                 }
                 // Create loan_documents table if it doesn't exist
                 this.db.exec("\n      CREATE TABLE IF NOT EXISTS ".concat(databaseConfig_1.DB_TABLES.DOCUMENTS, " (\n        id TEXT PRIMARY KEY,\n        loan_id TEXT NOT NULL,\n        filename TEXT NOT NULL,\n        doc_type TEXT NOT NULL,\n        category TEXT NOT NULL,\n        section TEXT NOT NULL,\n        subsection TEXT NOT NULL,\n        status TEXT NOT NULL,\n        date_uploaded TEXT NOT NULL,\n        file_type TEXT,\n        file_size INTEGER,\n        is_required INTEGER NOT NULL,\n        version INTEGER DEFAULT 1,\n        notes TEXT,\n        expiration_date TEXT\n      )\n    "));
@@ -139,8 +172,12 @@ var DatabaseService = /** @class */ (function () {
     /**
      * Get the database instance
      * @returns The database instance
+     * @throws Error if not initialized or not in a server environment
      */
     DatabaseService.prototype.getDatabase = function () {
+        if (!this.isEnvironmentSupported()) {
+            throw new Error('Database operations are only supported on the server side');
+        }
         if (!this.db || !this.initialized) {
             throw new Error('Database not initialized. Call initialize() first.');
         }
@@ -149,8 +186,12 @@ var DatabaseService = /** @class */ (function () {
     /**
      * Close the database connection
      * This should be called when shutting down the application
+     * Does nothing on the client side
      */
     DatabaseService.prototype.close = function () {
+        if (!this.isEnvironmentSupported()) {
+            return;
+        }
         if (this.db) {
             this.db.close();
             this.db = null;
@@ -162,32 +203,44 @@ var DatabaseService = /** @class */ (function () {
      * Run a database backup
      * @param backupName Optional name for the backup file
      * @returns Path to the backup file
+     * @throws Error if not initialized or not in a server environment
      */
     DatabaseService.prototype.backup = function (backupName) {
         return __awaiter(this, void 0, void 0, function () {
             var timestamp, backupFilename, backupPath;
             return __generator(this, function (_a) {
+                if (!this.isEnvironmentSupported()) {
+                    throw new Error('Database operations are only supported on the server side');
+                }
                 if (!this.db || !this.initialized) {
                     throw new Error('Database not initialized. Call initialize() first.');
                 }
                 // Ensure backup directory exists
-                if (!fs_1.default.existsSync(databaseConfig_1.DATABASE_CONFIG.backupDir)) {
-                    fs_1.default.mkdirSync(databaseConfig_1.DATABASE_CONFIG.backupDir, { recursive: true });
+                if (fs && path) {
+                    if (!fs.existsSync(databaseConfig_1.DATABASE_CONFIG.backupDir)) {
+                        fs.mkdirSync(databaseConfig_1.DATABASE_CONFIG.backupDir, { recursive: true });
+                    }
                 }
-                timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                backupFilename = backupName
-                    ? "".concat(backupName, "-").concat(timestamp, ".db")
-                    : "backup-".concat(timestamp, ".db");
-                backupPath = path_1.default.join(databaseConfig_1.DATABASE_CONFIG.backupDir, backupFilename);
-                // Perform backup
-                try {
-                    this.db.backup(backupPath);
-                    console.log("Database backed up to ".concat(backupPath));
-                    return [2 /*return*/, backupPath];
+                // Generate backup filename
+                if (path) {
+                    timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    backupFilename = backupName
+                        ? "".concat(backupName, "-").concat(timestamp, ".db")
+                        : "backup-".concat(timestamp, ".db");
+                    backupPath = path.join(databaseConfig_1.DATABASE_CONFIG.backupDir, backupFilename);
+                    // Perform backup
+                    try {
+                        this.db.backup(backupPath);
+                        console.log("Database backed up to ".concat(backupPath));
+                        return [2 /*return*/, backupPath];
+                    }
+                    catch (error) {
+                        console.error('Database backup failed:', error);
+                        throw error;
+                    }
                 }
-                catch (error) {
-                    console.error('Database backup failed:', error);
-                    throw error;
+                else {
+                    throw new Error('Path module not available for backup operation');
                 }
                 return [2 /*return*/];
             });

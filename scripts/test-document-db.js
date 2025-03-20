@@ -110,8 +110,7 @@ function testDocumentDatabaseService() {
                     console.log("Count: ".concat(docCount, " documents for loan ").concat(sampleDoc2.loanId));
                     // Test update document
                     console.log('\nUpdating document...');
-                    updateResult = documentDatabaseService_1.documentDatabaseService.updateDocument({
-                        id: docId1,
+                    updateResult = documentDatabaseService_1.documentDatabaseService.updateDocument(docId1, {
                         status: 'approved',
                         notes: 'Updated test document notes'
                     });

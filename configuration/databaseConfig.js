@@ -1,14 +1,38 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DB_TABLES = exports.DATABASE_CONFIG = void 0;
-var path_1 = __importDefault(require("path"));
+// Make path module usage conditional based on environment
+var pathModule;
+// Check if we're in a Node.js environment
+var isServer = typeof window === 'undefined';
+// Import path module only on the server side
+if (isServer) {
+    try {
+        pathModule = require('path');
+    }
+    catch (error) {
+        console.warn('Path module could not be loaded:', error);
+    }
+}
+/**
+ * Get a safe path join function that works in both server and client environments
+ */
+var safePathJoin = function () {
+    var parts = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        parts[_i] = arguments[_i];
+    }
+    if (isServer && pathModule) {
+        return pathModule.join.apply(pathModule, parts);
+    }
+    // Simple fallback path join for client side
+    return parts.join('/').replace(/\/+/g, '/');
+};
 // Database configuration
 exports.DATABASE_CONFIG = {
     // Database file path - uses the data directory in the project root
-    dbFilePath: process.env.SQLITE_DB_PATH || path_1.default.join(process.cwd(), 'data', 'loans.db'),
+    dbFilePath: process.env.SQLITE_DB_PATH ||
+        (isServer ? safePathJoin(process.cwd(), 'data', 'loans.db') : '/data/loans.db'),
     // Connection pool settings
     pool: {
         min: 1,
@@ -24,7 +48,9 @@ exports.DATABASE_CONFIG = {
         timeout: 5000, // Timeout in milliseconds for busy connections
     },
     // Location for database backups
-    backupDir: path_1.default.join(process.cwd(), 'data', 'backups')
+    backupDir: isServer ?
+        safePathJoin(process.cwd(), 'data', 'backups') :
+        '/data/backups'
 };
 // Table names
 exports.DB_TABLES = {

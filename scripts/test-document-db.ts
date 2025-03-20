@@ -74,8 +74,7 @@ async function testDocumentDatabaseService() {
     
     // Test update document
     console.log('\nUpdating document...');
-    const updateResult = documentDatabaseService.updateDocument({
-      id: docId1,
+    const updateResult = documentDatabaseService.updateDocument(docId1, {
       status: 'approved' as DocumentStatus,
       notes: 'Updated test document notes'
     });

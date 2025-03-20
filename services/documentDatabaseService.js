@@ -1,10 +1,25 @@
+'use server';
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.documentDatabaseService = exports.DocumentDatabaseService = void 0;
 var databaseService_1 = require("./databaseService");
 var databaseConfig_1 = require("../configuration/databaseConfig");
+// Check if we're in a Node.js environment
+var isServer = typeof window === 'undefined';
 /**
  * Service for database operations related to loan documents
+ * Safely handles both server and client environments
  */
 var DocumentDatabaseService = /** @class */ (function () {
     // Private constructor for singleton pattern
@@ -20,11 +35,23 @@ var DocumentDatabaseService = /** @class */ (function () {
         return DocumentDatabaseService.instance;
     };
     /**
+     * Check if the environment supports database operations
+     * @returns Whether database operations are supported
+     */
+    DocumentDatabaseService.prototype.isEnvironmentSupported = function () {
+        return isServer && databaseService_1.databaseService.isEnvironmentSupported();
+    };
+    /**
      * Insert a document into the database
      * @param document The document to insert
      * @returns The inserted document ID
+     * @throws Error if the environment doesn't support database operations
      */
     DocumentDatabaseService.prototype.insertDocument = function (document) {
+        if (!this.isEnvironmentSupported()) {
+            console.warn('Document insertion attempted on client-side, operation skipped');
+            return document.id;
+        }
         var db = databaseService_1.databaseService.getDatabase();
         try {
             // Begin transaction
@@ -68,10 +95,30 @@ var DocumentDatabaseService = /** @class */ (function () {
     };
     /**
      * Update a document in the database
-     * @param document The document to update
+     * @param idOrDocument Document ID to update or document object with id
+     * @param updates Document fields to update (optional if first parameter is document)
      * @returns Whether the update was successful
+     * @throws Error if the environment doesn't support database operations
      */
-    DocumentDatabaseService.prototype.updateDocument = function (document) {
+    DocumentDatabaseService.prototype.updateDocument = function (idOrDocument, updates) {
+        if (!this.isEnvironmentSupported()) {
+            console.warn('Document update attempted on client-side, operation skipped');
+            return false;
+        }
+        var document;
+        // Handle both calling conventions: updateDocument(id, updates) and updateDocument(document)
+        if (typeof idOrDocument === 'string' && updates) {
+            // New style: (id, updates)
+            document = __assign(__assign({}, updates), { id: idOrDocument });
+        }
+        else if (typeof idOrDocument === 'object' && idOrDocument.id) {
+            // Old style: (document)
+            document = idOrDocument;
+        }
+        else {
+            console.error('Invalid parameters for updateDocument');
+            return false;
+        }
         var db = databaseService_1.databaseService.getDatabase();
         try {
             // Begin transaction
@@ -175,8 +222,13 @@ var DocumentDatabaseService = /** @class */ (function () {
      * Delete a document from the database
      * @param documentId The ID of the document to delete
      * @returns Whether the deletion was successful
+     * @throws Error if the environment doesn't support database operations
      */
     DocumentDatabaseService.prototype.deleteDocument = function (documentId) {
+        if (!this.isEnvironmentSupported()) {
+            console.warn('Document deletion attempted on client-side, operation skipped');
+            return false;
+        }
         var db = databaseService_1.databaseService.getDatabase();
         try {
             // With CASCADE enabled, this will also delete the content
@@ -194,9 +246,14 @@ var DocumentDatabaseService = /** @class */ (function () {
      * @param documentId The ID of the document to retrieve
      * @param includeContent Whether to include the document content
      * @returns The document, or null if not found
+     * @throws Error if the environment doesn't support database operations
      */
     DocumentDatabaseService.prototype.getDocumentById = function (documentId, includeContent) {
         if (includeContent === void 0) { includeContent = false; }
+        if (!this.isEnvironmentSupported()) {
+            console.warn('Document retrieval attempted on client-side, operation skipped');
+            return null;
+        }
         var db = databaseService_1.databaseService.getDatabase();
         try {
             // Get document metadata
@@ -225,9 +282,14 @@ var DocumentDatabaseService = /** @class */ (function () {
      * @param loanId The loan ID
      * @param includeContent Whether to include document content
      * @returns Array of documents
+     * @throws Error if the environment doesn't support database operations
      */
     DocumentDatabaseService.prototype.getDocumentsForLoan = function (loanId, includeContent) {
         if (includeContent === void 0) { includeContent = false; }
+        if (!this.isEnvironmentSupported()) {
+            console.warn('Document retrieval for loan attempted on client-side, operation skipped');
+            return [];
+        }
         var db = databaseService_1.databaseService.getDatabase();
         try {
             // Get document metadata
@@ -257,8 +319,13 @@ var DocumentDatabaseService = /** @class */ (function () {
      * Bulk insert multiple documents
      * @param documents Array of documents to insert
      * @returns Number of documents inserted
+     * @throws Error if the environment doesn't support database operations
      */
     DocumentDatabaseService.prototype.bulkInsertDocuments = function (documents) {
+        if (!this.isEnvironmentSupported()) {
+            console.warn('Bulk document insertion attempted on client-side, operation skipped');
+            return 0;
+        }
         var db = databaseService_1.databaseService.getDatabase();
         try {
             // Begin transaction
@@ -310,8 +377,13 @@ var DocumentDatabaseService = /** @class */ (function () {
      * Count documents for a loan
      * @param loanId The loan ID
      * @returns Number of documents
+     * @throws Error if the environment doesn't support database operations
      */
     DocumentDatabaseService.prototype.countDocumentsForLoan = function (loanId) {
+        if (!this.isEnvironmentSupported()) {
+            console.warn('Document count attempted on client-side, operation skipped');
+            return 0;
+        }
         var db = databaseService_1.databaseService.getDatabase();
         try {
             var result = db.prepare("\n        SELECT COUNT(*) AS count\n        FROM ".concat(databaseConfig_1.DB_TABLES.DOCUMENTS, "\n        WHERE loan_id = ?\n      ")).get(loanId);

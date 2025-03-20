@@ -17,8 +17,34 @@ import { OpenAI } from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
 import storageService from '@/services/storageService';
 import { STORAGE_CONFIG } from '@/configuration/storageConfig';
-import { documentDatabaseService } from '@/services/documentDatabaseService';
-import { databaseService } from '@/services/databaseService';
+
+// Dynamically import database services to prevent client-side bundling issues
+// These will be loaded conditionally based on environment
+let documentDatabaseService;
+let databaseService;
+
+// Check if we're in a server environment
+const isServer = typeof window === 'undefined';
+
+// Dynamically load database services only in server environment
+const loadDatabaseServices = async () => {
+  if (isServer) {
+    try {
+      // Import the database services only on the server
+      const dbServiceModule = await import('@/services/databaseService');
+      const docDbServiceModule = await import('@/services/documentDatabaseService');
+      
+      databaseService = dbServiceModule.default;
+      documentDatabaseService = docDbServiceModule.default;
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to load database services:', error);
+      return false;
+    }
+  }
+  return false;
+};
 
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
@@ -41,7 +67,7 @@ const CHUNK_OVERLAP = 500;
 
 // Storage mode flags
 const USE_LOCAL_STORAGE = true;
-const USE_DATABASE = true;
+const USE_DATABASE = isServer; // Only use database on server side
 
 // Function to generate a random file size between 100KB and 10MB
 const getRandomFileSize = (): number => {
@@ -113,15 +139,66 @@ const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
   return documents;
 };
 
-// Initialize the database if needed
-const initializeDatabase = async (): Promise<void> => {
-  if (USE_DATABASE) {
-    try {
-      await databaseService.initialize();
-      console.log('Database initialized for document storage');
-    } catch (error) {
-      console.error('Failed to initialize database:', error);
+// Check if database is available and initialized
+const isDatabaseAvailable = async (): Promise<boolean> => {
+  if (!isServer || !USE_DATABASE) {
+    return false;
+  }
+  
+  // Try to load database services if not already loaded
+  if (!databaseService || !documentDatabaseService) {
+    const loaded = await loadDatabaseServices();
+    if (!loaded) {
+      return false;
     }
+  }
+  
+  // Check if database service is available and initialized
+  try {
+    if (!databaseService.isEnvironmentSupported()) {
+      return false;
+    }
+    
+    // Check if database is initialized, or try to initialize it
+    if (!databaseService['initialized']) {
+      await databaseService.initialize();
+    }
+    
+    return databaseService['initialized'];
+  } catch (error) {
+    console.error('Error checking database availability:', error);
+    return false;
+  }
+};
+
+// Initialize the database if needed
+const initializeDatabase = async (): Promise<boolean> => {
+  if (!isServer || !USE_DATABASE) {
+    return false;
+  }
+  
+  try {
+    // Load database services if not already loaded
+    if (!databaseService || !documentDatabaseService) {
+      const loaded = await loadDatabaseServices();
+      if (!loaded) {
+        return false;
+      }
+    }
+    
+    // Check if database service is available
+    if (!databaseService.isEnvironmentSupported()) {
+      console.warn('Database environment not supported, skipping initialization');
+      return false;
+    }
+    
+    // Initialize the database
+    await databaseService.initialize();
+    console.log('Database initialized for document storage');
+    return true;
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    return false;
   }
 };
 
@@ -140,14 +217,16 @@ export const loanDocumentService = {
   },
   
   // Get documents for a specific loan
-  getDocumentsForLoan: (loanId: string, includeContent = false): LoanDocument[] => {
+  getDocumentsForLoan: async (loanId: string, includeContent = false): Promise<LoanDocument[]> => {
     try {
-      // Check if the database is initialized and should be used
-      if (USE_DATABASE && databaseService['initialized']) {
+      // Check if the database is available and should be used
+      const dbAvailable = await isDatabaseAvailable();
+      
+      if (dbAvailable && USE_DATABASE) {
         try {
           // Attempt to get documents from database
           console.log(`Getting documents for loan ${loanId} from database`);
-          const docs = documentDatabaseService.getDocumentsForLoan(loanId, includeContent);
+          const docs = await documentDatabaseService.getDocumentsForLoan(loanId, includeContent);
           
           // If we have results from the database, return them
           if (docs && docs.length > 0) {
@@ -171,26 +250,28 @@ export const loanDocumentService = {
   },
   
   // Get documents for a specific loan by category
-  getDocumentsByCategory: (loanId: string, category: DocumentCategory): LoanDocument[] => {
-    const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
+  getDocumentsByCategory: async (loanId: string, category: DocumentCategory): Promise<LoanDocument[]> => {
+    const loanDocs = await loanDocumentService.getDocumentsForLoan(loanId);
     return loanDocs.filter(doc => doc.category === category);
   },
   
   // Get documents for a specific loan by section
-  getDocumentsBySection: (loanId: string, section: string): LoanDocument[] => {
-    const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
+  getDocumentsBySection: async (loanId: string, section: string): Promise<LoanDocument[]> => {
+    const loanDocs = await loanDocumentService.getDocumentsForLoan(loanId);
     return loanDocs.filter(doc => doc.section === section);
   },
   
   // Get document by ID
-  getDocumentById: (docId: string, includeContent = false): LoanDocument | null => {
+  getDocumentById: async (docId: string, includeContent = false): Promise<LoanDocument | null> => {
     try {
-      // Check if the database is initialized and should be used
-      if (USE_DATABASE && databaseService['initialized']) {
+      // Check if the database is available and should be used
+      const dbAvailable = await isDatabaseAvailable();
+      
+      if (dbAvailable && USE_DATABASE) {
         try {
           // Attempt to get document from database
           console.log(`Getting document with ID ${docId} from database`);
-          const doc = documentDatabaseService.getDocumentById(docId, includeContent);
+          const doc = await documentDatabaseService.getDocumentById(docId, includeContent);
           
           // If we found the document in the database, return it
           if (doc) {

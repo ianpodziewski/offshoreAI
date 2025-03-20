@@ -1,17 +1,52 @@
 // services/databaseService.ts
-import Database from 'better-sqlite3';
-import fs from 'fs';
-import path from 'path';
+'use server';
+
+// Types for the dynamically imported modules
+// better-sqlite3 has a default export
+type DatabaseType = any; // Use any for better-sqlite3 to avoid complex typing issues
+type FsType = typeof import('fs');
+type PathType = typeof import('path');
+
+// Dynamically import dependencies to prevent client-side bundling
+let Database: DatabaseType | undefined;
+let fs: FsType | undefined;
+let path: PathType | undefined;
+
+// Check if we're in a Node.js environment
+const isServer = typeof window === 'undefined';
+
+// Import database dependencies only on the server side
+if (isServer) {
+  // Dynamic imports to avoid client-side bundling issues
+  try {
+    Database = require('better-sqlite3');
+    fs = require('fs');
+    path = require('path');
+  } catch (error) {
+    console.warn('Server-side dependencies could not be loaded:', error);
+  }
+}
+
+// Import configuration (this is safe as it's just static data)
 import { DATABASE_CONFIG, DB_TABLES } from '../configuration/databaseConfig';
+
+// Interface for database options
+interface DbOptions {
+  readonly: boolean;
+  timeout: number;
+  verbose?: (message?: any, ...optionalParams: any[]) => void;
+}
 
 /**
  * Database service for SQLite operations
  * This service provides connection management and basic database operations
+ * It only operates on the server-side
  */
 class DatabaseService {
   private static instance: DatabaseService;
-  private db: Database.Database | null = null;
+  private db: any = null; // Using 'any' instead of Database.Database to avoid client-side type errors
   private initialized = false;
+  private isServerSide = isServer;
 
   // Private constructor for singleton pattern
   private constructor() {}
@@ -27,23 +62,38 @@ class DatabaseService {
   }
 
   /**
+   * Check if we're in a server environment where database operations can be performed
+   * @returns Whether the current environment supports database operations
+   */
+  public isEnvironmentSupported(): boolean {
+    return this.isServerSide && !!Database && !!fs && !!path;
+  }
+
+  /**
    * Initialize the database, creating it if it doesn't exist
    * This should be called before any database operations
+   * Does nothing on the client side
    */
   public async initialize(): Promise<void> {
-    if (this.initialized) {
+    // Skip initialization if already initialized or not on server side
+    if (this.initialized || !this.isEnvironmentSupported()) {
+      if (!this.isServerSide) {
+        console.log('Database initialization skipped (client-side environment)');
+      }
       return;
     }
 
     try {
       // Ensure the data directory exists
-      const dbDir = path.dirname(DATABASE_CONFIG.dbFilePath);
-      if (!fs.existsSync(dbDir)) {
-        fs.mkdirSync(dbDir, { recursive: true });
+      if (path && fs) {
+        const dbDir = path.dirname(DATABASE_CONFIG.dbFilePath);
+        if (!fs.existsSync(dbDir)) {
+          fs.mkdirSync(dbDir, { recursive: true });
+        }
       }
 
       // Create database options with correct verbose setting
-      const dbOptions: Database.Options = {
+      const dbOptions: DbOptions = {
         readonly: DATABASE_CONFIG.sqliteOptions.readonly,
         timeout: DATABASE_CONFIG.sqliteOptions.timeout,
       };
@@ -54,21 +104,25 @@ class DatabaseService {
       }
 
       // Create database connection
-      this.db = new Database(DATABASE_CONFIG.dbFilePath, dbOptions);
-      
-      // Enable foreign keys support
-      this.db.pragma('foreign_keys = ON');
-      
-      // Use Write-Ahead Logging for better concurrency if configured
-      if (DATABASE_CONFIG.sqliteOptions.useWAL) {
-        this.db.pragma('journal_mode = WAL');
+      if (Database) {
+        this.db = new Database(DATABASE_CONFIG.dbFilePath, dbOptions);
+        
+        // Enable foreign keys support
+        this.db.pragma('foreign_keys = ON');
+        
+        // Use Write-Ahead Logging for better concurrency if configured
+        if (DATABASE_CONFIG.sqliteOptions.useWAL) {
+          this.db.pragma('journal_mode = WAL');
+        }
+        
+        // Initialize database schema
+        await this.initializeSchema();
+        
+        this.initialized = true;
+        console.log(`Database initialized at ${DATABASE_CONFIG.dbFilePath}`);
+      } else {
+        throw new Error('Database module not available');
       }
-      
-      // Initialize database schema
-      await this.initializeSchema();
-      
-      this.initialized = true;
-      console.log(`Database initialized at ${DATABASE_CONFIG.dbFilePath}`);
     } catch (error) {
       console.error('Failed to initialize database:', error);
       throw error;
@@ -79,8 +133,8 @@ class DatabaseService {
    * Create database schema if it doesn't exist
    */
   private async initializeSchema(): Promise<void> {
-    if (!this.db) {
-      throw new Error('Database not initialized');
+    if (!this.db || !this.isEnvironmentSupported()) {
+      throw new Error('Database not initialized or environment not supported');
     }
 
     // Create loan_documents table if it doesn't exist
@@ -125,19 +179,30 @@ class DatabaseService {
   /**
    * Get the database instance
    * @returns The database instance
+   * @throws Error if not initialized or not in a server environment
    */
-  public getDatabase(): Database.Database {
+  public getDatabase(): any {
+    if (!this.isEnvironmentSupported()) {
+      throw new Error('Database operations are only supported on the server side');
+    }
+    
     if (!this.db || !this.initialized) {
       throw new Error('Database not initialized. Call initialize() first.');
     }
+    
     return this.db;
   }
 
   /**
    * Close the database connection
    * This should be called when shutting down the application
+   * Does nothing on the client side
    */
   public close(): void {
+    if (!this.isEnvironmentSupported()) {
+      return;
+    }
+    
     if (this.db) {
       this.db.close();
       this.db = null;
@@ -150,32 +215,43 @@ class DatabaseService {
    * Run a database backup
    * @param backupName Optional name for the backup file
    * @returns Path to the backup file
+   * @throws Error if not initialized or not in a server environment
    */
   public async backup(backupName?: string): Promise<string> {
+    if (!this.isEnvironmentSupported()) {
+      throw new Error('Database operations are only supported on the server side');
+    }
+    
     if (!this.db || !this.initialized) {
       throw new Error('Database not initialized. Call initialize() first.');
     }
 
     // Ensure backup directory exists
-    if (!fs.existsSync(DATABASE_CONFIG.backupDir)) {
-      fs.mkdirSync(DATABASE_CONFIG.backupDir, { recursive: true });
+    if (fs && path) {
+      if (!fs.existsSync(DATABASE_CONFIG.backupDir)) {
+        fs.mkdirSync(DATABASE_CONFIG.backupDir, { recursive: true });
+      }
     }
 
     // Generate backup filename
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupFilename = backupName 
-      ? `${backupName}-${timestamp}.db` 
-      : `backup-${timestamp}.db`;
-    const backupPath = path.join(DATABASE_CONFIG.backupDir, backupFilename);
+    if (path) {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupFilename = backupName 
+        ? `${backupName}-${timestamp}.db` 
+        : `backup-${timestamp}.db`;
+      const backupPath = path.join(DATABASE_CONFIG.backupDir, backupFilename);
 
-    // Perform backup
-    try {
-      this.db.backup(backupPath);
-      console.log(`Database backed up to ${backupPath}`);
-      return backupPath;
-    } catch (error) {
-      console.error('Database backup failed:', error);
-      throw error;
+      // Perform backup
+      try {
+        this.db.backup(backupPath);
+        console.log(`Database backed up to ${backupPath}`);
+        return backupPath;
+      } catch (error) {
+        console.error('Database backup failed:', error);
+        throw error;
+      }
+    } else {
+      throw new Error('Path module not available for backup operation');
     }
   }
 }

@@ -1,9 +1,34 @@
-import path from 'path';
+// Make path module usage conditional based on environment
+let pathModule: typeof import('path') | undefined;
+
+// Check if we're in a Node.js environment
+const isServer = typeof window === 'undefined';
+
+// Import path module only on the server side
+if (isServer) {
+  try {
+    pathModule = require('path');
+  } catch (error) {
+    console.warn('Path module could not be loaded:', error);
+  }
+}
+
+/**
+ * Get a safe path join function that works in both server and client environments
+ */
+const safePathJoin = (...parts: string[]): string => {
+  if (isServer && pathModule) {
+    return pathModule.join(...parts);
+  }
+  // Simple fallback path join for client side
+  return parts.join('/').replace(/\/+/g, '/');
+};
 
 // Database configuration
 export const DATABASE_CONFIG = {
   // Database file path - uses the data directory in the project root
-  dbFilePath: process.env.SQLITE_DB_PATH || path.join(process.cwd(), 'data', 'loans.db'),
+  dbFilePath: process.env.SQLITE_DB_PATH || 
+    (isServer ? safePathJoin(process.cwd(), 'data', 'loans.db') : '/data/loans.db'),
   
   // Connection pool settings
   pool: {
@@ -24,7 +49,9 @@ export const DATABASE_CONFIG = {
   },
   
   // Location for database backups
-  backupDir: path.join(process.cwd(), 'data', 'backups')
+  backupDir: isServer ? 
+    safePathJoin(process.cwd(), 'data', 'backups') : 
+    '/data/backups'
 };
 
 // Table names

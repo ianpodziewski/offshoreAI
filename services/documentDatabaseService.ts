@@ -1,9 +1,15 @@
+'use server';
+
 import { databaseService } from './databaseService';
 import { DB_TABLES } from '../configuration/databaseConfig';
 import { LoanDocument, DocumentStatus } from '../utilities/loanDocumentStructure';
 
+// Check if we're in a Node.js environment
+const isServer = typeof window === 'undefined';
+
 /**
  * Service for database operations related to loan documents
+ * Safely handles both server and client environments
  */
 export class DocumentDatabaseService {
   private static instance: DocumentDatabaseService;
@@ -22,11 +28,25 @@ export class DocumentDatabaseService {
   }
 
   /**
+   * Check if the environment supports database operations
+   * @returns Whether database operations are supported
+   */
+  public isEnvironmentSupported(): boolean {
+    return isServer && databaseService.isEnvironmentSupported();
+  }
+
+  /**
    * Insert a document into the database
    * @param document The document to insert
    * @returns The inserted document ID
+   * @throws Error if the environment doesn't support database operations
    */
   public insertDocument(document: LoanDocument): string {
+    if (!this.isEnvironmentSupported()) {
+      console.warn('Document insertion attempted on client-side, operation skipped');
+      return document.id;
+    }
+
     const db = databaseService.getDatabase();
     
     try {
@@ -87,10 +107,31 @@ export class DocumentDatabaseService {
 
   /**
    * Update a document in the database
-   * @param document The document to update
+   * @param idOrDocument Document ID to update or document object with id
+   * @param updates Document fields to update (optional if first parameter is document)
    * @returns Whether the update was successful
+   * @throws Error if the environment doesn't support database operations
    */
-  public updateDocument(document: Partial<LoanDocument> & { id: string }): boolean {
+  public updateDocument(idOrDocument: string | (Partial<LoanDocument> & { id: string }), updates?: Partial<LoanDocument>): boolean {
+    if (!this.isEnvironmentSupported()) {
+      console.warn('Document update attempted on client-side, operation skipped');
+      return false;
+    }
+
+    let document: Partial<LoanDocument> & { id: string };
+    
+    // Handle both calling conventions: updateDocument(id, updates) and updateDocument(document)
+    if (typeof idOrDocument === 'string' && updates) {
+      // New style: (id, updates)
+      document = { ...updates, id: idOrDocument };
+    } else if (typeof idOrDocument === 'object' && idOrDocument.id) {
+      // Old style: (document)
+      document = idOrDocument;
+    } else {
+      console.error('Invalid parameters for updateDocument');
+      return false;
+    }
+
     const db = databaseService.getDatabase();
     
     try {
@@ -229,8 +270,14 @@ export class DocumentDatabaseService {
    * Delete a document from the database
    * @param documentId The ID of the document to delete
    * @returns Whether the deletion was successful
+   * @throws Error if the environment doesn't support database operations
    */
   public deleteDocument(documentId: string): boolean {
+    if (!this.isEnvironmentSupported()) {
+      console.warn('Document deletion attempted on client-side, operation skipped');
+      return false;
+    }
+
     const db = databaseService.getDatabase();
     
     try {
@@ -253,8 +300,14 @@ export class DocumentDatabaseService {
    * @param documentId The ID of the document to retrieve
    * @param includeContent Whether to include the document content
    * @returns The document, or null if not found
+   * @throws Error if the environment doesn't support database operations
    */
   public getDocumentById(documentId: string, includeContent = false): LoanDocument | null {
+    if (!this.isEnvironmentSupported()) {
+      console.warn('Document retrieval attempted on client-side, operation skipped');
+      return null;
+    }
+
     const db = databaseService.getDatabase();
     
     try {
@@ -301,8 +354,14 @@ export class DocumentDatabaseService {
    * @param loanId The loan ID
    * @param includeContent Whether to include document content
    * @returns Array of documents
+   * @throws Error if the environment doesn't support database operations
    */
   public getDocumentsForLoan(loanId: string, includeContent = false): LoanDocument[] {
+    if (!this.isEnvironmentSupported()) {
+      console.warn('Document retrieval for loan attempted on client-side, operation skipped');
+      return [];
+    }
+
     const db = databaseService.getDatabase();
     
     try {
@@ -349,8 +408,14 @@ export class DocumentDatabaseService {
    * Bulk insert multiple documents
    * @param documents Array of documents to insert
    * @returns Number of documents inserted
+   * @throws Error if the environment doesn't support database operations
    */
   public bulkInsertDocuments(documents: LoanDocument[]): number {
+    if (!this.isEnvironmentSupported()) {
+      console.warn('Bulk document insertion attempted on client-side, operation skipped');
+      return 0;
+    }
+
     const db = databaseService.getDatabase();
     
     try {
@@ -419,8 +484,14 @@ export class DocumentDatabaseService {
    * Count documents for a loan
    * @param loanId The loan ID
    * @returns Number of documents
+   * @throws Error if the environment doesn't support database operations
    */
   public countDocumentsForLoan(loanId: string): number {
+    if (!this.isEnvironmentSupported()) {
+      console.warn('Document count attempted on client-side, operation skipped');
+      return 0;
+    }
+
     const db = databaseService.getDatabase();
     
     try {
