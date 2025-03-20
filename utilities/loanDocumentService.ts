@@ -193,7 +193,7 @@ export const loanDocumentService = {
     let filteredDocs = allDocs;
     
     if (isUserUpload) {
-      // For user uploads: 
+      // For user uploads and generated docs with UPLOAD_ prefix: 
       // 1. Remove any documents with the same docType AND filename
       // 2. Keep other documents with the same docType but different filename
       filteredDocs = allDocs.filter(doc => 
@@ -204,7 +204,7 @@ export const loanDocumentService = {
       
       console.log(`For user upload: Filtered to ${filteredDocs.length} documents`);
     } else {
-      // For generated docs: behave as before
+      // For other generated docs: behave as before
       filteredDocs = allDocs.filter(doc => 
         !(doc.loanId === document.loanId && doc.docType === document.docType)
       );
@@ -460,8 +460,8 @@ export const loanDocumentService = {
         
         const status = statuses[statusIndex];
         
-        // Generate a filename
-        const filename = `${docType.docType.replace(/_/g, '-')}${fileType}`;
+        // Generate a filename - Add UPLOAD_ prefix to make it persist like uploaded files
+        const filename = `UPLOAD_GENERATED_${docType.docType.replace(/_/g, '-')}${fileType}`;
         
         // Generate document content based on the document type
         const content = generateDocumentContent(docType.docType, loanData);
@@ -584,7 +584,7 @@ export const loanDocumentService = {
         docTypeGroups[doc.docType].push(doc);
       });
       
-      // For each group, prioritize keeping user-uploaded documents
+      // For each group, prioritize keeping user-uploaded documents and those with UPLOAD_ prefix
       const dedupedLoanDocs: LoanDocument[] = [];
       
       Object.values(docTypeGroups).forEach(docsOfType => {
@@ -593,10 +593,10 @@ export const loanDocumentService = {
           dedupedLoanDocs.push(docsOfType[0]);
         } else {
           // Multiple documents of this type
-          // First, check if we have any non-sample documents (user uploaded)
+          // First, check if we have any non-sample documents (user uploaded or generated with UPLOAD_ prefix)
           const userDocs = docsOfType.filter(doc => 
             doc.status !== 'required' && 
-            !doc.filename.startsWith('SAMPLE_')
+            (doc.filename.startsWith('UPLOAD_') || !doc.filename.startsWith('SAMPLE_'))
           );
           
           if (userDocs.length > 0) {
