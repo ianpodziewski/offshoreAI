@@ -153,9 +153,45 @@ export function LoanDocumentStructure({
     
     // Show confirmation dialog
     if (window.confirm("Are you sure you want to delete this document?")) {
-      // Call the parent component's handler with the ID to delete
-      if (onViewDocument) {
-        onViewDocument(`delete_${documentId}`);
+      console.log(`Delete confirmed for document with ID: ${documentId}`);
+      
+      // Direct deletion approach - manipulate localStorage directly
+      try {
+        // Try both possible storage locations
+
+        // Delete from loan_documents (main storage for this page)
+        const loanDocsJson = localStorage.getItem('loan_documents');
+        if (loanDocsJson) {
+          const loanDocs = JSON.parse(loanDocsJson);
+          const filteredDocs = loanDocs.filter((doc: any) => doc.id !== documentId);
+          
+          if (filteredDocs.length !== loanDocs.length) {
+            localStorage.setItem('loan_documents', JSON.stringify(filteredDocs));
+            console.log(`Successfully deleted document from loan_documents storage`);
+          }
+        }
+        
+        // Delete from simple_documents if it exists
+        const simpleDocsJson = localStorage.getItem('simple_documents');
+        if (simpleDocsJson) {
+          const simpleDocs = JSON.parse(simpleDocsJson);
+          const filteredDocs = simpleDocs.filter((doc: any) => doc.id !== documentId);
+          
+          if (filteredDocs.length !== simpleDocs.length) {
+            localStorage.setItem('simple_documents', JSON.stringify(filteredDocs));
+            console.log(`Successfully deleted document from simple_documents storage`);
+          }
+        }
+        
+        // Now inform the parent component to update UI
+        if (onViewDocument) {
+          onViewDocument(`delete_${documentId}`);
+        }
+
+        // Force page refresh to ensure UI is updated
+        window.location.reload();
+      } catch (error) {
+        console.error(`Error deleting document: ${error}`);
       }
     }
   };

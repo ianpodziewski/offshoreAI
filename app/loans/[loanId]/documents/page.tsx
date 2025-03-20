@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   Card, 
@@ -130,36 +130,40 @@ export default function LoanDocumentsPage() {
     }
   }, [loanId]);
   
-  // Load documents
-  useEffect(() => {
-    if (loanId) {
-      console.log('Loading documents for loan:', loanId);
-      
-      // First ensure we have the documents without deduplication
-      // loanDocumentService.deduplicateLoanDocuments(loanId);
-      
-      // Get the documents
-      const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
-      console.log('Documents retrieved from localStorage:', loanDocs);
-      
-      // Log document names and statuses to debug
-      if (loanDocs.length > 0) {
-        console.log('Document details:');
-        loanDocs.forEach(doc => {
-          console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status})`);
-        });
-      }
-      
-      // Always set documents from localStorage, even if empty
-      console.log('Setting documents state with', loanDocs.length, 'documents');
-      setDocuments(loanDocs);
-      
-      if (loan?.loanType) {
-        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-        setCompletionStatus(status);
-      }
+  // Function to load documents
+  const loadDocuments = useCallback(() => {
+    if (!loanId) return;
+    
+    console.log('Loading documents for loan:', loanId);
+    
+    // Get the documents
+    const loanDocs = loanDocumentService.getDocumentsForLoan(loanId);
+    console.log('Documents retrieved from localStorage:', loanDocs.length);
+    
+    // Log document details
+    if (loanDocs.length > 0) {
+      console.log('Document details:');
+      loanDocs.forEach(doc => {
+        console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status}, id: ${doc.id})`);
+      });
+    }
+    
+    // Set documents
+    setDocuments(loanDocs);
+    
+    // Update completion status if loan type is available
+    if (loan?.loanType) {
+      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+      setCompletionStatus(status);
     }
   }, [loanId, loan]);
+  
+  // Load documents on initialization
+  useEffect(() => {
+    if (loanId) {
+      loadDocuments();
+    }
+  }, [loanId, loadDocuments]);
   
   // Initialize documents if none exist
   useEffect(() => {
@@ -167,14 +171,10 @@ export default function LoanDocumentsPage() {
       // Only initialize if no documents exist
       const placeholderDocs = loanDocumentService.initializeDocumentsForLoan(loanId, loan.loanType);
       
-      // Get all documents for this loan, including both placeholders and any that might already exist
-      const allLoanDocs = loanDocumentService.getDocumentsForLoan(loanId);
-      setDocuments(allLoanDocs);
-      
-      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-      setCompletionStatus(status);
+      // Reload all documents
+      loadDocuments();
     }
-  }, [loanId, loan, documents]);
+  }, [loanId, loan, documents.length, loadDocuments]);
   
   // Handle document upload
   const handleUploadDocument = (category: string, section: string, docType: string) => {
@@ -188,31 +188,21 @@ export default function LoanDocumentsPage() {
   
   // Handle document view
   const handleViewDocument = (documentId: string) => {
+    console.log(`handleViewDocument called with: ${documentId}`);
+    
     // Check if this is a delete action
     if (documentId.startsWith('delete_')) {
       const idToDelete = documentId.replace('delete_', '');
+      console.log(`Document deletion triggered for ID: ${idToDelete}`);
       
-      // Use the loanDocumentService to delete the document
-      const success = loanDocumentService.deleteDocument(idToDelete);
-      
-      if (success) {
-        console.log(`Successfully deleted document ${idToDelete}`);
-        
-        // Immediately update the UI by filtering out the deleted document
-        setDocuments(prevDocuments => 
-          prevDocuments.filter(doc => doc.id !== idToDelete)
-        );
-        
-        // Update completion status
-        if (loan?.loanType) {
-          const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-          setCompletionStatus(status);
-        }
-      }
+      // We don't need to do anything here, as the deletion has already occurred in LoanDocumentStructure
+      // Just reload the documents to refresh the UI
+      loadDocuments();
       return;
     }
     
     // For regular view actions...
+    console.log(`Regular view for document: ${documentId}`);
     // Add any document viewing logic here
   };
   
@@ -242,26 +232,16 @@ export default function LoanDocumentsPage() {
       isRequired: document.isRequired ?? true
     });
     
-    console.log('Document after processing:', newDoc);
-    console.log('Current documents:', documents);
-
-    // Add the new document to the existing documents array
-    const updatedDocuments = [...documents, newDoc];
-    setDocuments(updatedDocuments);
+    console.log('Document added:', newDoc);
     
-    // Force reloading the document list from localStorage to ensure sync
-    setTimeout(() => {
-      const refreshedDocs = loanDocumentService.getDocumentsForLoan(loanId);
-      setDocuments(refreshedDocs);
-    }, 100);
+    // Add the document to UI immediately
+    setDocuments(prevDocs => [...prevDocs, newDoc]);
     
-    console.log('Updated documents list:', updatedDocuments);
+    // Reload documents to ensure UI is in sync with storage
+    setTimeout(loadDocuments, 100);
     
-    // Update completion status
-    if (loan?.loanType) {
-      const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-      setCompletionStatus(status);
-    }
+    // Close the uploader
+    setIsUploaderOpen(false);
   };
   
   // Handle document status change
