@@ -63,8 +63,6 @@ var loanDocumentStructure_1 = require("./loanDocumentStructure");
 var loanDatabase_1 = require("./loanDatabase");
 var documentTemplateStrings_1 = require("./templates/documentTemplateStrings");
 var simplifiedDocumentService_1 = require("./simplifiedDocumentService");
-var documentDatabaseService_1 = require("@/services/documentDatabaseService");
-var databaseService_1 = require("@/services/databaseService");
 // Constants for storage keys
 var LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
 // Document statuses for fake documents (excluding 'required' since we want to show uploaded docs)
@@ -81,6 +79,11 @@ var CHUNK_OVERLAP = 500;
 // Storage mode flags
 var USE_LOCAL_STORAGE = true;
 var USE_DATABASE = true;
+// Check if we're in a server environment
+var isServer = typeof window === 'undefined';
+// Safely store database service references
+var documentDatabaseService = null;
+var databaseService = null;
 // Function to generate a random file size between 100KB and 10MB
 var getRandomFileSize = function () {
     return Math.floor(Math.random() * 9900000) + 100000; // 100KB to 10MB
@@ -96,6 +99,136 @@ var formatFileSize = function (bytes) {
     return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
 };
 exports.formatFileSize = formatFileSize;
+// Dynamically load database services only in server environment
+var loadDatabaseServices = function () { return __awaiter(void 0, void 0, void 0, function () {
+    var dbServiceModule, docDbServiceModule, error_1;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                if (!isServer) {
+                    console.log('Database services cannot be loaded in browser environment');
+                    return [2 /*return*/, false];
+                }
+                _a.label = 1;
+            case 1:
+                _a.trys.push([1, 4, , 5]);
+                return [4 /*yield*/, Promise.resolve().then(function () { return require('@/services/databaseService'); })];
+            case 2:
+                dbServiceModule = _a.sent();
+                return [4 /*yield*/, Promise.resolve().then(function () { return require('@/services/documentDatabaseService'); })];
+            case 3:
+                docDbServiceModule = _a.sent();
+                databaseService = dbServiceModule.default;
+                documentDatabaseService = docDbServiceModule.default;
+                return [2 /*return*/, true];
+            case 4:
+                error_1 = _a.sent();
+                console.error('Failed to load database services:', error_1);
+                return [2 /*return*/, false];
+            case 5: return [2 /*return*/];
+        }
+    });
+}); };
+// Check if database is available and initialized
+var isDatabaseAvailable = function () { return __awaiter(void 0, void 0, void 0, function () {
+    var loaded, error_2, error_3;
+    var _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                if (!isServer) {
+                    console.log('Database not available in browser environment');
+                    return [2 /*return*/, false];
+                }
+                if (!USE_DATABASE) {
+                    return [2 /*return*/, false];
+                }
+                if (!(!databaseService || !documentDatabaseService)) return [3 /*break*/, 2];
+                return [4 /*yield*/, loadDatabaseServices()];
+            case 1:
+                loaded = _c.sent();
+                if (!loaded) {
+                    return [2 /*return*/, false];
+                }
+                _c.label = 2;
+            case 2:
+                _c.trys.push([2, 7, , 8]);
+                if (!((_a = databaseService.isEnvironmentSupported) === null || _a === void 0 ? void 0 : _a.call(databaseService))) {
+                    return [2 /*return*/, false];
+                }
+                if (!!databaseService.initialized) return [3 /*break*/, 6];
+                _c.label = 3;
+            case 3:
+                _c.trys.push([3, 5, , 6]);
+                return [4 /*yield*/, ((_b = databaseService.initialize) === null || _b === void 0 ? void 0 : _b.call(databaseService))];
+            case 4:
+                _c.sent();
+                return [3 /*break*/, 6];
+            case 5:
+                error_2 = _c.sent();
+                console.error('Error initializing database:', error_2);
+                return [2 /*return*/, false];
+            case 6: return [2 /*return*/, !!databaseService.initialized];
+            case 7:
+                error_3 = _c.sent();
+                console.error('Error checking database availability:', error_3);
+                return [2 /*return*/, false];
+            case 8: return [2 /*return*/];
+        }
+    });
+}); };
+// Initialize the database if needed
+var initializeDatabase = function () { return __awaiter(void 0, void 0, void 0, function () {
+    var loaded, error_4, error_5;
+    var _a, _b;
+    return __generator(this, function (_c) {
+        switch (_c.label) {
+            case 0:
+                if (!isServer) {
+                    console.log('Cannot initialize database in browser environment');
+                    return [2 /*return*/, false];
+                }
+                if (!USE_DATABASE) {
+                    return [2 /*return*/, false];
+                }
+                _c.label = 1;
+            case 1:
+                _c.trys.push([1, 8, , 9]);
+                if (!(!databaseService || !documentDatabaseService)) return [3 /*break*/, 3];
+                return [4 /*yield*/, loadDatabaseServices()];
+            case 2:
+                loaded = _c.sent();
+                if (!loaded) {
+                    return [2 /*return*/, false];
+                }
+                _c.label = 3;
+            case 3:
+                // Check if database service is available
+                if (!((_a = databaseService.isEnvironmentSupported) === null || _a === void 0 ? void 0 : _a.call(databaseService))) {
+                    console.warn('Database environment not supported, skipping initialization');
+                    return [2 /*return*/, false];
+                }
+                _c.label = 4;
+            case 4:
+                _c.trys.push([4, 6, , 7]);
+                return [4 /*yield*/, ((_b = databaseService.initialize) === null || _b === void 0 ? void 0 : _b.call(databaseService))];
+            case 5:
+                _c.sent();
+                console.log('Database initialized for document storage');
+                return [2 /*return*/, true];
+            case 6:
+                error_4 = _c.sent();
+                console.error('Failed to initialize database:', error_4);
+                return [2 /*return*/, false];
+            case 7: return [3 /*break*/, 9];
+            case 8:
+                error_5 = _c.sent();
+                console.error('Failed to initialize database:', error_5);
+                return [2 /*return*/, false];
+            case 9: return [2 /*return*/];
+        }
+    });
+}); };
 // Generate fake document content
 var generateDocumentContent = function (docType, loan) {
     // First check if the loan object is valid
@@ -141,29 +274,6 @@ var deduplicateDocuments = function (documents) {
     // Return documents without deduplication
     return documents;
 };
-// Initialize the database if needed
-var initializeDatabase = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var error_1;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                if (!USE_DATABASE) return [3 /*break*/, 4];
-                _a.label = 1;
-            case 1:
-                _a.trys.push([1, 3, , 4]);
-                return [4 /*yield*/, databaseService_1.databaseService.initialize()];
-            case 2:
-                _a.sent();
-                console.log('Database initialized for document storage');
-                return [3 /*break*/, 4];
-            case 3:
-                error_1 = _a.sent();
-                console.error('Failed to initialize database:', error_1);
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
-        }
-    });
-}); };
 // Export the loan document service
 exports.loanDocumentService = {
     // Get all documents
@@ -179,76 +289,134 @@ exports.loanDocumentService = {
         }
     },
     // Get documents for a specific loan
-    getDocumentsForLoan: function (loanId, includeContent) {
-        if (includeContent === void 0) { includeContent = false; }
-        try {
-            // Check if the database is initialized and should be used
-            if (USE_DATABASE && databaseService_1.databaseService['initialized']) {
-                try {
-                    // Attempt to get documents from database
-                    console.log("Getting documents for loan ".concat(loanId, " from database"));
-                    var docs = documentDatabaseService_1.documentDatabaseService.getDocumentsForLoan(loanId, includeContent);
-                    // If we have results from the database, return them
-                    if (docs && docs.length > 0) {
-                        console.log("Found ".concat(docs.length, " documents in database for loan ").concat(loanId));
-                        return docs;
-                    }
-                }
-                catch (dbError) {
-                    console.error("Error getting documents from database for loan ".concat(loanId, ":"), dbError);
-                    // Fall through to localStorage if database retrieval fails
-                }
-            }
-            // Fallback to localStorage
-            console.log("Getting documents for loan ".concat(loanId, " from localStorage"));
-            var allDocs = exports.loanDocumentService.getAllDocuments();
-            return allDocs.filter(function (doc) { return doc.loanId === loanId; });
+    getDocumentsForLoan: function (loanId_1) {
+        var args_1 = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args_1[_i - 1] = arguments[_i];
         }
-        catch (error) {
-            console.error("Error getting documents for loan ".concat(loanId, ":"), error);
-            return [];
-        }
+        return __awaiter(void 0, __spreadArray([loanId_1], args_1, true), void 0, function (loanId, includeContent) {
+            var dbAvailable, docs, dbError_1, allDocs, error_6;
+            if (includeContent === void 0) { includeContent = false; }
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 7, , 8]);
+                        dbAvailable = false;
+                        if (!(isServer && USE_DATABASE)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, isDatabaseAvailable()];
+                    case 1:
+                        dbAvailable = _a.sent();
+                        _a.label = 2;
+                    case 2:
+                        if (!(dbAvailable && documentDatabaseService)) return [3 /*break*/, 6];
+                        _a.label = 3;
+                    case 3:
+                        _a.trys.push([3, 5, , 6]);
+                        // Attempt to get documents from database
+                        console.log("Getting documents for loan ".concat(loanId, " from database"));
+                        return [4 /*yield*/, documentDatabaseService.getDocumentsForLoan(loanId, includeContent)];
+                    case 4:
+                        docs = _a.sent();
+                        // If we have results from the database, return them
+                        if (docs && docs.length > 0) {
+                            console.log("Found ".concat(docs.length, " documents in database for loan ").concat(loanId));
+                            return [2 /*return*/, docs];
+                        }
+                        return [3 /*break*/, 6];
+                    case 5:
+                        dbError_1 = _a.sent();
+                        console.error("Error getting documents from database for loan ".concat(loanId, ":"), dbError_1);
+                        return [3 /*break*/, 6];
+                    case 6:
+                        // Fallback to localStorage
+                        console.log("Getting documents for loan ".concat(loanId, " from localStorage"));
+                        allDocs = exports.loanDocumentService.getAllDocuments();
+                        return [2 /*return*/, allDocs.filter(function (doc) { return doc.loanId === loanId; })];
+                    case 7:
+                        error_6 = _a.sent();
+                        console.error("Error getting documents for loan ".concat(loanId, ":"), error_6);
+                        return [2 /*return*/, []];
+                    case 8: return [2 /*return*/];
+                }
+            });
+        });
     },
     // Get documents for a specific loan by category
-    getDocumentsByCategory: function (loanId, category) {
-        var loanDocs = exports.loanDocumentService.getDocumentsForLoan(loanId);
-        return loanDocs.filter(function (doc) { return doc.category === category; });
-    },
-    // Get documents for a specific loan by section
-    getDocumentsBySection: function (loanId, section) {
-        var loanDocs = exports.loanDocumentService.getDocumentsForLoan(loanId);
-        return loanDocs.filter(function (doc) { return doc.section === section; });
-    },
-    // Get document by ID
-    getDocumentById: function (docId, includeContent) {
-        if (includeContent === void 0) { includeContent = false; }
-        try {
-            // Check if the database is initialized and should be used
-            if (USE_DATABASE && databaseService_1.databaseService['initialized']) {
-                try {
-                    // Attempt to get document from database
-                    console.log("Getting document with ID ".concat(docId, " from database"));
-                    var doc = documentDatabaseService_1.documentDatabaseService.getDocumentById(docId, includeContent);
-                    // If we found the document in the database, return it
-                    if (doc) {
-                        console.log("Found document ".concat(docId, " in database"));
-                        return doc;
-                    }
-                }
-                catch (dbError) {
-                    console.error("Error getting document ".concat(docId, " from database:"), dbError);
-                    // Fall through to localStorage if database retrieval fails
-                }
+    getDocumentsByCategory: function (loanId, category) { return __awaiter(void 0, void 0, void 0, function () {
+        var loanDocs;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, exports.loanDocumentService.getDocumentsForLoan(loanId)];
+                case 1:
+                    loanDocs = _a.sent();
+                    return [2 /*return*/, loanDocs.filter(function (doc) { return doc.category === category; })];
             }
-            // Fallback to localStorage
-            console.log("Getting document with ID ".concat(docId, " from localStorage"));
-            var allDocs = exports.loanDocumentService.getAllDocuments();
-            return allDocs.find(function (doc) { return doc.id === docId; }) || null;
+        });
+    }); },
+    // Get documents for a specific loan by section
+    getDocumentsBySection: function (loanId, section) { return __awaiter(void 0, void 0, void 0, function () {
+        var loanDocs;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, exports.loanDocumentService.getDocumentsForLoan(loanId)];
+                case 1:
+                    loanDocs = _a.sent();
+                    return [2 /*return*/, loanDocs.filter(function (doc) { return doc.section === section; })];
+            }
+        });
+    }); },
+    // Get document by ID
+    getDocumentById: function (docId_1) {
+        var args_1 = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args_1[_i - 1] = arguments[_i];
         }
-        catch (error) {
-            console.error("Error getting document with ID ".concat(docId, ":"), error);
-            return null;
-        }
+        return __awaiter(void 0, __spreadArray([docId_1], args_1, true), void 0, function (docId, includeContent) {
+            var dbAvailable, doc, dbError_2, allDocs, error_7;
+            if (includeContent === void 0) { includeContent = false; }
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        _a.trys.push([0, 7, , 8]);
+                        dbAvailable = false;
+                        if (!(isServer && USE_DATABASE)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, isDatabaseAvailable()];
+                    case 1:
+                        dbAvailable = _a.sent();
+                        _a.label = 2;
+                    case 2:
+                        if (!(dbAvailable && documentDatabaseService)) return [3 /*break*/, 6];
+                        _a.label = 3;
+                    case 3:
+                        _a.trys.push([3, 5, , 6]);
+                        // Attempt to get document from database
+                        console.log("Getting document with ID ".concat(docId, " from database"));
+                        return [4 /*yield*/, documentDatabaseService.getDocumentById(docId, includeContent)];
+                    case 4:
+                        doc = _a.sent();
+                        // If we found the document in the database, return it
+                        if (doc) {
+                            console.log("Found document ".concat(docId, " in database"));
+                            return [2 /*return*/, doc];
+                        }
+                        return [3 /*break*/, 6];
+                    case 5:
+                        dbError_2 = _a.sent();
+                        console.error("Error getting document ".concat(docId, " from database:"), dbError_2);
+                        return [3 /*break*/, 6];
+                    case 6:
+                        // Fallback to localStorage
+                        console.log("Getting document with ID ".concat(docId, " from localStorage"));
+                        allDocs = exports.loanDocumentService.getAllDocuments();
+                        return [2 /*return*/, allDocs.find(function (doc) { return doc.id === docId; }) || null];
+                    case 7:
+                        error_7 = _a.sent();
+                        console.error("Error getting document with ID ".concat(docId, ":"), error_7);
+                        return [2 /*return*/, null];
+                    case 8: return [2 /*return*/];
+                }
+            });
+        });
     },
     // Add a document
     addDocument: function (document) {
@@ -291,105 +459,109 @@ exports.loanDocumentService = {
         return document;
     },
     // Update a document
-    updateDocument: function (documentId, updates) { return __awaiter(void 0, void 0, void 0, function () {
-        var updatedDbDoc, dbError_1, allDocs, docIndex, error_2;
+    updateDocument: function (document) { return __awaiter(void 0, void 0, void 0, function () {
+        var dbAvailable, updated, dbError_3, allDocs, docIndex, error_8;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 5, , 6]);
-                    updatedDbDoc = null;
-                    if (!(USE_DATABASE && databaseService_1.databaseService['initialized'])) return [3 /*break*/, 4];
+                    if (!document.id) {
+                        console.error('Cannot update document without ID');
+                        return [2 /*return*/, false];
+                    }
                     _a.label = 1;
                 case 1:
-                    _a.trys.push([1, 3, , 4]);
-                    console.log("Attempting to update document ".concat(documentId, " in database"), updates);
-                    return [4 /*yield*/, documentDatabaseService_1.documentDatabaseService.updateDocument(documentId, updates)];
+                    _a.trys.push([1, 8, , 9]);
+                    dbAvailable = false;
+                    if (!(isServer && USE_DATABASE)) return [3 /*break*/, 3];
+                    return [4 /*yield*/, isDatabaseAvailable()];
                 case 2:
-                    updatedDbDoc = _a.sent();
-                    if (updatedDbDoc) {
-                        console.log("Successfully updated document ".concat(documentId, " in database"));
-                        // If we updated successfully in the database, return that document
-                        return [2 /*return*/, updatedDbDoc];
-                    }
-                    else {
-                        console.warn("Failed to update document ".concat(documentId, " in database"));
-                    }
-                    return [3 /*break*/, 4];
+                    dbAvailable = _a.sent();
+                    _a.label = 3;
                 case 3:
-                    dbError_1 = _a.sent();
-                    console.error("Error updating document ".concat(documentId, " in database:"), dbError_1);
-                    return [3 /*break*/, 4];
+                    updated = false;
+                    if (!(dbAvailable && documentDatabaseService)) return [3 /*break*/, 7];
+                    _a.label = 4;
                 case 4:
-                    allDocs = exports.loanDocumentService.getAllDocuments();
-                    docIndex = allDocs.findIndex(function (doc) { return doc.id === documentId; });
-                    if (docIndex === -1) {
-                        console.warn("Document with ID ".concat(documentId, " not found in localStorage, cannot update"));
-                        return [2 /*return*/, updatedDbDoc]; // Return db doc if we found it there
-                    }
-                    allDocs[docIndex] = __assign(__assign({}, allDocs[docIndex]), updates);
-                    localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
-                    console.log("Successfully updated document ".concat(documentId, " in localStorage"));
-                    return [2 /*return*/, allDocs[docIndex]];
+                    _a.trys.push([4, 6, , 7]);
+                    return [4 /*yield*/, documentDatabaseService.updateDocument(document)];
                 case 5:
-                    error_2 = _a.sent();
-                    console.error("Error updating document ".concat(documentId, ":"), error_2);
-                    return [2 /*return*/, null];
-                case 6: return [2 /*return*/];
+                    // Update in database
+                    updated = _a.sent();
+                    console.log("Document ".concat(document.id, " ").concat(updated ? 'updated in' : 'not found in', " database"));
+                    return [3 /*break*/, 7];
+                case 6:
+                    dbError_3 = _a.sent();
+                    console.error("Error updating document ".concat(document.id, " in database:"), dbError_3);
+                    return [3 /*break*/, 7];
+                case 7:
+                    allDocs = exports.loanDocumentService.getAllDocuments();
+                    docIndex = allDocs.findIndex(function (doc) { return doc.id === document.id; });
+                    if (docIndex >= 0) {
+                        allDocs[docIndex] = __assign(__assign({}, allDocs[docIndex]), document);
+                        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+                        console.log("Document ".concat(document.id, " updated in localStorage"));
+                        updated = true;
+                    }
+                    return [2 /*return*/, updated];
+                case 8:
+                    error_8 = _a.sent();
+                    console.error("Error updating document ".concat(document.id, ":"), error_8);
+                    return [2 /*return*/, false];
+                case 9: return [2 /*return*/];
             }
         });
     }); },
     // Delete a document
-    deleteDocument: function (documentId) {
-        try {
-            console.log("Attempting to delete document: ".concat(documentId));
-            // Try to delete from database if it's enabled and initialized
-            var dbDeleteSuccess = false;
-            if (USE_DATABASE && databaseService_1.databaseService['initialized']) {
-                try {
-                    console.log("Attempting to delete document ".concat(documentId, " from database"));
-                    dbDeleteSuccess = documentDatabaseService_1.documentDatabaseService.deleteDocument(documentId);
-                    if (dbDeleteSuccess) {
-                        console.log("Successfully deleted document ".concat(documentId, " from database"));
+    deleteDocument: function (docId) { return __awaiter(void 0, void 0, void 0, function () {
+        var dbAvailable, deleted, dbError_4, allDocs, docIndex, error_9;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 7, , 8]);
+                    dbAvailable = false;
+                    if (!(isServer && USE_DATABASE)) return [3 /*break*/, 2];
+                    return [4 /*yield*/, isDatabaseAvailable()];
+                case 1:
+                    dbAvailable = _a.sent();
+                    _a.label = 2;
+                case 2:
+                    deleted = false;
+                    if (!(dbAvailable && documentDatabaseService)) return [3 /*break*/, 6];
+                    _a.label = 3;
+                case 3:
+                    _a.trys.push([3, 5, , 6]);
+                    return [4 /*yield*/, documentDatabaseService.deleteDocument(docId)];
+                case 4:
+                    // Delete from database
+                    deleted = _a.sent();
+                    console.log("Document ".concat(docId, " ").concat(deleted ? 'deleted from' : 'not found in', " database"));
+                    return [3 /*break*/, 6];
+                case 5:
+                    dbError_4 = _a.sent();
+                    console.error("Error deleting document ".concat(docId, " from database:"), dbError_4);
+                    return [3 /*break*/, 6];
+                case 6:
+                    allDocs = exports.loanDocumentService.getAllDocuments();
+                    docIndex = allDocs.findIndex(function (doc) { return doc.id === docId; });
+                    if (docIndex >= 0) {
+                        allDocs.splice(docIndex, 1);
+                        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+                        console.log("Document ".concat(docId, " deleted from localStorage"));
+                        deleted = true;
                     }
-                    else {
-                        console.warn("Failed to delete document ".concat(documentId, " from database"));
-                    }
-                }
-                catch (dbError) {
-                    console.error("Error deleting document ".concat(documentId, " from database:"), dbError);
-                    // Continue to localStorage deletion if database deletion fails
-                }
+                    return [2 /*return*/, deleted];
+                case 7:
+                    error_9 = _a.sent();
+                    console.error("Error deleting document ".concat(docId, ":"), error_9);
+                    return [2 /*return*/, false];
+                case 8: return [2 /*return*/];
             }
-            // Always delete from localStorage as well
-            var allDocs = exports.loanDocumentService.getAllDocuments();
-            var docToDelete = allDocs.find(function (doc) { return doc.id === documentId; });
-            if (!docToDelete) {
-                console.warn("Document with ID ".concat(documentId, " not found in localStorage, nothing to delete"));
-                // If we successfully deleted from the database, consider the operation successful
-                return dbDeleteSuccess;
-            }
-            var filteredDocs = allDocs.filter(function (doc) { return doc.id !== documentId; });
-            // If no documents were filtered out, return false
-            if (filteredDocs.length === allDocs.length) {
-                console.warn("Document with ID ".concat(documentId, " not found in localStorage array of length ").concat(allDocs.length));
-                // If we successfully deleted from the database, consider the operation successful
-                return dbDeleteSuccess;
-            }
-            // Save the filtered documents back to localStorage
-            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
-            console.log("Successfully deleted document ".concat(documentId, " from localStorage"));
-            // The delete is successful if either database or localStorage deletion worked
-            return true;
-        }
-        catch (error) {
-            console.error("Error deleting document ".concat(documentId, ":"), error);
-            return false;
-        }
-    },
+        });
+    }); },
     // Update document status
     updateDocumentStatus: function (docId, status) { return __awaiter(void 0, void 0, void 0, function () {
         return __generator(this, function (_a) {
-            return [2 /*return*/, exports.loanDocumentService.updateDocument(docId, { status: status })];
+            return [2 /*return*/, exports.loanDocumentService.updateDocument({ id: docId, status: status })];
         });
     }); },
     // Get missing required documents for a loan
@@ -551,68 +723,42 @@ exports.loanDocumentService = {
     },
     // Generate fake documents for a loan
     generateFakeDocuments: function (loanId, loanType) { return __awaiter(void 0, void 0, void 0, function () {
-        var requiredDocTypes, loanData, fakeDocuments, _i, requiredDocTypes_3, docType, fileType, fileSize, uploadDate, statuses, statusWeights, randomValue, statusIndex, cumulativeWeight, i, status_1, filename, content, docId, fakeDocument, expirationDate, allExistingDocs, insertedCount, dbError_2, error_3;
+        var loan, requiredDocTypes, fakeDocuments, _i, requiredDocTypes_3, docType, docId, fileSize, fakeDocument, allExistingDocs, dbInitialized, insertedCount, dbError_5, error_10;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 5, , 6]);
-                    console.log("Generating fake documents for loan ".concat(loanId, " of type ").concat(loanType));
-                    requiredDocTypes = (0, loanDocumentStructure_1.getRequiredDocuments)(loanType);
-                    loanData = loanDatabase_1.loanDatabase.getLoanById(loanId);
-                    if (!loanData) {
-                        console.error("Loan data not found for loanId: ".concat(loanId));
+                    loan = loanDatabase_1.loanDatabase.getLoanById(loanId);
+                    if (!loan) {
+                        console.error("Cannot generate fake documents: loan ".concat(loanId, " not found"));
                         return [2 /*return*/, []];
                     }
+                    console.log("Generating fake documents for loan ".concat(loanId, " of type ").concat(loanType));
+                    requiredDocTypes = (0, loanDocumentStructure_1.getRequiredDocuments)(loanType);
                     fakeDocuments = [];
-                    // Process each document type
+                    // For each document type, create a fake document
                     for (_i = 0, requiredDocTypes_3 = requiredDocTypes; _i < requiredDocTypes_3.length; _i++) {
                         docType = requiredDocTypes_3[_i];
-                        fileType = '.html';
-                        fileSize = Math.floor(Math.random() * 1000000) + 100000;
-                        uploadDate = new Date().toISOString();
-                        statuses = ['pending', 'approved', 'rejected', 'reviewed'];
-                        statusWeights = [0.7, 0.1, 0.1, 0.1];
-                        randomValue = Math.random();
-                        statusIndex = 0;
-                        cumulativeWeight = 0;
-                        for (i = 0; i < statusWeights.length; i++) {
-                            cumulativeWeight += statusWeights[i];
-                            if (randomValue <= cumulativeWeight) {
-                                statusIndex = i;
-                                break;
-                            }
-                        }
-                        status_1 = 'pending';
-                        filename = "SAMPLE_".concat(docType.docType.replace(/_/g, '-')).concat(fileType);
-                        content = generateDocumentContent(docType.docType, loanData);
                         docId = (0, uuid_1.v4)();
-                        fakeDocument = {
+                        fileSize = getRandomFileSize();
+                        fakeDocument = (0, loanDocumentStructure_1.createDocument)({
                             id: docId,
                             loanId: loanId,
-                            filename: filename,
-                            fileType: fileType,
-                            fileSize: fileSize,
-                            dateUploaded: uploadDate,
+                            docType: docType.docType,
+                            filename: "SAMPLE_".concat(docType.docType, "-").concat(Math.floor(Math.random() * 10000), ".html"),
                             category: docType.category,
                             section: docType.section,
-                            subsection: docType.subsection,
-                            docType: docType.docType,
-                            status: status_1,
+                            subsection: docType.subsection || '',
+                            // Use a random status from the allowed fake status list
+                            status: FAKE_DOCUMENT_STATUSES[Math.floor(Math.random() * FAKE_DOCUMENT_STATUSES.length)],
+                            dateUploaded: new Date().toISOString(),
+                            fileType: '.html', // Standardize on HTML for simpler development
+                            fileSize: fileSize,
+                            content: generateDocumentContent(docType.docType, loan),
                             isRequired: true,
-                            version: 1,
-                            content: content, // Add the generated content
-                            notes: "This is a sample document for ".concat(loanData.borrowerName, " with loan amount ").concat(loanData.loanAmount, " for the property at ").concat(loanData.propertyAddress, ". Status: ").concat(status_1 === 'approved' ? 'Document verified and approved.' :
-                                status_1 === 'rejected' ? 'Document rejected. Please resubmit.' :
-                                    status_1 === 'reviewed' ? 'Document reviewed, pending approval.' :
-                                        'Document uploaded, awaiting review.')
-                        };
-                        // Add expiration date for certain document types
-                        if (['insurance_policy', 'appraisal_report', 'credit_report', 'background_check'].includes(docType.docType)) {
-                            expirationDate = new Date();
-                            expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-                            fakeDocument.expirationDate = expirationDate.toISOString();
-                        }
-                        // Add to the list of fake documents
+                            version: 1
+                        });
+                        // Add to the fake documents array
                         fakeDocuments.push(fakeDocument);
                         // Save to localStorage if enabled
                         if (USE_LOCAL_STORAGE) {
@@ -621,28 +767,31 @@ exports.loanDocumentService = {
                             localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allExistingDocs));
                         }
                     }
-                    if (!USE_DATABASE) return [3 /*break*/, 4];
+                    if (!(isServer && USE_DATABASE)) return [3 /*break*/, 4];
                     _a.label = 1;
                 case 1:
                     _a.trys.push([1, 3, , 4]);
-                    // Initialize database if not already initialized
                     return [4 /*yield*/, initializeDatabase()];
                 case 2:
-                    // Initialize database if not already initialized
-                    _a.sent();
-                    insertedCount = documentDatabaseService_1.documentDatabaseService.bulkInsertDocuments(fakeDocuments);
-                    console.log("Saved ".concat(insertedCount, " documents to SQLite database"));
+                    dbInitialized = _a.sent();
+                    if (dbInitialized && documentDatabaseService) {
+                        insertedCount = documentDatabaseService.bulkInsertDocuments(fakeDocuments);
+                        console.log("Saved ".concat(insertedCount, " documents to SQLite database"));
+                    }
+                    else {
+                        console.log('Database not available for storing documents');
+                    }
                     return [3 /*break*/, 4];
                 case 3:
-                    dbError_2 = _a.sent();
-                    console.error('Error saving documents to database:', dbError_2);
+                    dbError_5 = _a.sent();
+                    console.error('Error saving documents to database:', dbError_5);
                     return [3 /*break*/, 4];
                 case 4:
                     console.log("Generated and stored ".concat(fakeDocuments.length, " fake documents for loan ").concat(loanId));
                     return [2 /*return*/, fakeDocuments];
                 case 5:
-                    error_3 = _a.sent();
-                    console.error("Error generating fake documents for loan ".concat(loanId, ":"), error_3);
+                    error_10 = _a.sent();
+                    console.error("Error generating fake documents for loan ".concat(loanId, ":"), error_10);
                     return [2 /*return*/, []];
                 case 6: return [2 /*return*/];
             }
@@ -676,7 +825,7 @@ exports.loanDocumentService = {
     },
     // Generate fake documents for all loans
     generateFakeDocumentsForAllLoans: function () { return __awaiter(void 0, void 0, void 0, function () {
-        var loans, totalDocumentsGenerated, _i, loans_1, loan, fakeDocuments, error_4;
+        var loans, totalDocumentsGenerated, _i, loans_1, loan, fakeDocuments, error_11;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -698,8 +847,8 @@ exports.loanDocumentService = {
                     return [3 /*break*/, 1];
                 case 4: return [2 /*return*/, totalDocumentsGenerated];
                 case 5:
-                    error_4 = _a.sent();
-                    console.error('Error generating fake documents for all loans:', error_4);
+                    error_11 = _a.sent();
+                    console.error('Error generating fake documents for all loans:', error_11);
                     return [2 /*return*/, 0];
                 case 6: return [2 /*return*/];
             }

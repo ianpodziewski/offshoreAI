@@ -18,34 +18,6 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import storageService from '@/services/storageService';
 import { STORAGE_CONFIG } from '@/configuration/storageConfig';
 
-// Dynamically import database services to prevent client-side bundling issues
-// These will be loaded conditionally based on environment
-let documentDatabaseService;
-let databaseService;
-
-// Check if we're in a server environment
-const isServer = typeof window === 'undefined';
-
-// Dynamically load database services only in server environment
-const loadDatabaseServices = async () => {
-  if (isServer) {
-    try {
-      // Import the database services only on the server
-      const dbServiceModule = await import('@/services/databaseService');
-      const docDbServiceModule = await import('@/services/documentDatabaseService');
-      
-      databaseService = dbServiceModule.default;
-      documentDatabaseService = docDbServiceModule.default;
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to load database services:', error);
-      return false;
-    }
-  }
-  return false;
-};
-
 // Constants for storage keys
 const LOAN_DOCUMENTS_STORAGE_KEY = 'loan_documents';
 
@@ -67,10 +39,17 @@ const CHUNK_OVERLAP = 500;
 
 // Storage mode flags
 const USE_LOCAL_STORAGE = true;
-const USE_DATABASE = isServer; // Only use database on server side
+const USE_DATABASE = true;
+
+// Check if we're in a server environment
+const isServer = typeof window === 'undefined';
+
+// Safely store database service references
+let documentDatabaseService: any = null;
+let databaseService: any = null;
 
 // Function to generate a random file size between 100KB and 10MB
-const getRandomFileSize = (): number => {
+const getRandomFileSize = () => {
   return Math.floor(Math.random() * 9900000) + 100000; // 100KB to 10MB
 };
 
@@ -80,6 +59,111 @@ export const formatFileSize = (bytes: number): string => {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+};
+
+// Dynamically load database services only in server environment
+const loadDatabaseServices = async (): Promise<boolean> => {
+  if (!isServer) {
+    console.log('Database services cannot be loaded in browser environment');
+    return false;
+  }
+  
+  try {
+    // Import the database services only on the server
+    const dbServiceModule = await import('@/services/databaseService');
+    const docDbServiceModule = await import('@/services/documentDatabaseService');
+    
+    databaseService = dbServiceModule.default;
+    documentDatabaseService = docDbServiceModule.default;
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to load database services:', error);
+    return false;
+  }
+};
+
+// Check if database is available and initialized
+const isDatabaseAvailable = async (): Promise<boolean> => {
+  if (!isServer) {
+    console.log('Database not available in browser environment');
+    return false;
+  }
+  
+  if (!USE_DATABASE) {
+    return false;
+  }
+  
+  // Try to load database services if not already loaded
+  if (!databaseService || !documentDatabaseService) {
+    const loaded = await loadDatabaseServices();
+    if (!loaded) {
+      return false;
+    }
+  }
+  
+  // Check if database service is available and initialized
+  try {
+    if (!databaseService.isEnvironmentSupported?.()) {
+      return false;
+    }
+    
+    // Check if database is initialized, or try to initialize it
+    if (!databaseService.initialized) {
+      try {
+        await databaseService.initialize?.();
+      } catch (error) {
+        console.error('Error initializing database:', error);
+        return false;
+      }
+    }
+    
+    return !!databaseService.initialized;
+  } catch (error) {
+    console.error('Error checking database availability:', error);
+    return false;
+  }
+};
+
+// Initialize the database if needed
+const initializeDatabase = async (): Promise<boolean> => {
+  if (!isServer) {
+    console.log('Cannot initialize database in browser environment');
+    return false;
+  }
+  
+  if (!USE_DATABASE) {
+    return false;
+  }
+  
+  try {
+    // Load database services if not already loaded
+    if (!databaseService || !documentDatabaseService) {
+      const loaded = await loadDatabaseServices();
+      if (!loaded) {
+        return false;
+      }
+    }
+    
+    // Check if database service is available
+    if (!databaseService.isEnvironmentSupported?.()) {
+      console.warn('Database environment not supported, skipping initialization');
+      return false;
+    }
+    
+    // Initialize the database
+    try {
+      await databaseService.initialize?.();
+      console.log('Database initialized for document storage');
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize database:', error);
+      return false;
+    }
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    return false;
+  }
 };
 
 // Generate fake document content
@@ -139,69 +223,6 @@ const deduplicateDocuments = (documents: LoanDocument[]): LoanDocument[] => {
   return documents;
 };
 
-// Check if database is available and initialized
-const isDatabaseAvailable = async (): Promise<boolean> => {
-  if (!isServer || !USE_DATABASE) {
-    return false;
-  }
-  
-  // Try to load database services if not already loaded
-  if (!databaseService || !documentDatabaseService) {
-    const loaded = await loadDatabaseServices();
-    if (!loaded) {
-      return false;
-    }
-  }
-  
-  // Check if database service is available and initialized
-  try {
-    if (!databaseService.isEnvironmentSupported()) {
-      return false;
-    }
-    
-    // Check if database is initialized, or try to initialize it
-    if (!databaseService['initialized']) {
-      await databaseService.initialize();
-    }
-    
-    return databaseService['initialized'];
-  } catch (error) {
-    console.error('Error checking database availability:', error);
-    return false;
-  }
-};
-
-// Initialize the database if needed
-const initializeDatabase = async (): Promise<boolean> => {
-  if (!isServer || !USE_DATABASE) {
-    return false;
-  }
-  
-  try {
-    // Load database services if not already loaded
-    if (!databaseService || !documentDatabaseService) {
-      const loaded = await loadDatabaseServices();
-      if (!loaded) {
-        return false;
-      }
-    }
-    
-    // Check if database service is available
-    if (!databaseService.isEnvironmentSupported()) {
-      console.warn('Database environment not supported, skipping initialization');
-      return false;
-    }
-    
-    // Initialize the database
-    await databaseService.initialize();
-    console.log('Database initialized for document storage');
-    return true;
-  } catch (error) {
-    console.error('Failed to initialize database:', error);
-    return false;
-  }
-};
-
 // Export the loan document service
 export const loanDocumentService = {
   // Get all documents
@@ -220,9 +241,13 @@ export const loanDocumentService = {
   getDocumentsForLoan: async (loanId: string, includeContent = false): Promise<LoanDocument[]> => {
     try {
       // Check if the database is available and should be used
-      const dbAvailable = await isDatabaseAvailable();
+      let dbAvailable = false;
       
-      if (dbAvailable && USE_DATABASE) {
+      if (isServer && USE_DATABASE) {
+        dbAvailable = await isDatabaseAvailable();
+      }
+      
+      if (dbAvailable && documentDatabaseService) {
         try {
           // Attempt to get documents from database
           console.log(`Getting documents for loan ${loanId} from database`);
@@ -265,9 +290,13 @@ export const loanDocumentService = {
   getDocumentById: async (docId: string, includeContent = false): Promise<LoanDocument | null> => {
     try {
       // Check if the database is available and should be used
-      const dbAvailable = await isDatabaseAvailable();
+      let dbAvailable = false;
       
-      if (dbAvailable && USE_DATABASE) {
+      if (isServer && USE_DATABASE) {
+        dbAvailable = await isDatabaseAvailable();
+      }
+      
+      if (dbAvailable && documentDatabaseService) {
         try {
           // Attempt to get document from database
           console.log(`Getting document with ID ${docId} from database`);
@@ -342,103 +371,97 @@ export const loanDocumentService = {
   },
   
   // Update a document
-  updateDocument: async (documentId: string, updates: Partial<LoanDocument>): Promise<LoanDocument | null> => {
+  updateDocument: async (document: Partial<LoanDocument>): Promise<boolean> => {
+    if (!document.id) {
+      console.error('Cannot update document without ID');
+      return false;
+    }
+    
     try {
-      // Try to update in database if it's enabled and initialized
-      let updatedDbDoc = null;
-      if (USE_DATABASE && databaseService['initialized']) {
+      // Check if the database is available and should be used
+      let dbAvailable = false;
+      
+      if (isServer && USE_DATABASE) {
+        dbAvailable = await isDatabaseAvailable();
+      }
+      
+      let updated = false;
+      
+      // Try to update in database first if available
+      if (dbAvailable && documentDatabaseService) {
         try {
-          console.log(`Attempting to update document ${documentId} in database`, updates);
-          updatedDbDoc = await documentDatabaseService.updateDocument(documentId, updates);
-          if (updatedDbDoc) {
-            console.log(`Successfully updated document ${documentId} in database`);
-            // If we updated successfully in the database, return that document
-            return updatedDbDoc;
-          } else {
-            console.warn(`Failed to update document ${documentId} in database`);
-          }
+          // Update in database
+          updated = await documentDatabaseService.updateDocument(document);
+          console.log(`Document ${document.id} ${updated ? 'updated in' : 'not found in'} database`);
         } catch (dbError) {
-          console.error(`Error updating document ${documentId} in database:`, dbError);
-          // Continue to localStorage update if database update fails
+          console.error(`Error updating document ${document.id} in database:`, dbError);
+          // Fall through to localStorage
         }
       }
       
-      // Always update in localStorage as well
+      // Also update in localStorage
       const allDocs = loanDocumentService.getAllDocuments();
-      const docIndex = allDocs.findIndex(doc => doc.id === documentId);
+      const docIndex = allDocs.findIndex(doc => doc.id === document.id);
       
-      if (docIndex === -1) {
-        console.warn(`Document with ID ${documentId} not found in localStorage, cannot update`);
-        return updatedDbDoc; // Return db doc if we found it there
+      if (docIndex >= 0) {
+        allDocs[docIndex] = { ...allDocs[docIndex], ...document };
+        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+        console.log(`Document ${document.id} updated in localStorage`);
+        updated = true;
       }
       
-      allDocs[docIndex] = { ...allDocs[docIndex], ...updates };
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
-      console.log(`Successfully updated document ${documentId} in localStorage`);
-      
-      return allDocs[docIndex];
+      return updated;
     } catch (error) {
-      console.error(`Error updating document ${documentId}:`, error);
-      return null;
+      console.error(`Error updating document ${document.id}:`, error);
+      return false;
     }
   },
   
   // Delete a document
-  deleteDocument: (documentId: string): boolean => {
+  deleteDocument: async (docId: string): Promise<boolean> => {
     try {
-      console.log(`Attempting to delete document: ${documentId}`);
+      // Check if the database is available and should be used
+      let dbAvailable = false;
       
-      // Try to delete from database if it's enabled and initialized
-      let dbDeleteSuccess = false;
-      if (USE_DATABASE && databaseService['initialized']) {
+      if (isServer && USE_DATABASE) {
+        dbAvailable = await isDatabaseAvailable();
+      }
+      
+      let deleted = false;
+      
+      // Try to delete from database first if available
+      if (dbAvailable && documentDatabaseService) {
         try {
-          console.log(`Attempting to delete document ${documentId} from database`);
-          dbDeleteSuccess = documentDatabaseService.deleteDocument(documentId);
-          if (dbDeleteSuccess) {
-            console.log(`Successfully deleted document ${documentId} from database`);
-          } else {
-            console.warn(`Failed to delete document ${documentId} from database`);
-          }
+          // Delete from database
+          deleted = await documentDatabaseService.deleteDocument(docId);
+          console.log(`Document ${docId} ${deleted ? 'deleted from' : 'not found in'} database`);
         } catch (dbError) {
-          console.error(`Error deleting document ${documentId} from database:`, dbError);
-          // Continue to localStorage deletion if database deletion fails
+          console.error(`Error deleting document ${docId} from database:`, dbError);
+          // Fall through to localStorage
         }
       }
       
-      // Always delete from localStorage as well
+      // Also delete from localStorage if found
       const allDocs = loanDocumentService.getAllDocuments();
-      const docToDelete = allDocs.find(doc => doc.id === documentId);
+      const docIndex = allDocs.findIndex(doc => doc.id === docId);
       
-      if (!docToDelete) {
-        console.warn(`Document with ID ${documentId} not found in localStorage, nothing to delete`);
-        // If we successfully deleted from the database, consider the operation successful
-        return dbDeleteSuccess;
+      if (docIndex >= 0) {
+        allDocs.splice(docIndex, 1);
+        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(allDocs));
+        console.log(`Document ${docId} deleted from localStorage`);
+        deleted = true;
       }
       
-      const filteredDocs = allDocs.filter(doc => doc.id !== documentId);
-      
-      // If no documents were filtered out, return false
-      if (filteredDocs.length === allDocs.length) {
-        console.warn(`Document with ID ${documentId} not found in localStorage array of length ${allDocs.length}`);
-        // If we successfully deleted from the database, consider the operation successful
-        return dbDeleteSuccess;
-      }
-      
-      // Save the filtered documents back to localStorage
-      localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(filteredDocs));
-      console.log(`Successfully deleted document ${documentId} from localStorage`);
-      
-      // The delete is successful if either database or localStorage deletion worked
-      return true;
+      return deleted;
     } catch (error) {
-      console.error(`Error deleting document ${documentId}:`, error);
+      console.error(`Error deleting document ${docId}:`, error);
       return false;
     }
   },
   
   // Update document status
   updateDocumentStatus: async (docId: string, status: DocumentStatus): Promise<LoanDocument | null> => {
-    return loanDocumentService.updateDocument(docId, { status });
+    return loanDocumentService.updateDocument({ id: docId, status });
   },
   
   // Get missing required documents for a loan
@@ -633,86 +656,50 @@ export const loanDocumentService = {
   // Generate fake documents for a loan
   generateFakeDocuments: async (loanId: string, loanType: string): Promise<LoanDocument[]> => {
     try {
+      // First get the loan data - needed for document generation
+      const loan = loanDatabase.getLoanById(loanId);
+      
+      if (!loan) {
+        console.error(`Cannot generate fake documents: loan ${loanId} not found`);
+        return [];
+      }
+      
       console.log(`Generating fake documents for loan ${loanId} of type ${loanType}`);
       
       // Get all required document types for this loan type
       const requiredDocTypes = getRequiredDocuments(loanType);
       
-      // Fetch loan data
-      const loanData = loanDatabase.getLoanById(loanId);
-      if (!loanData) {
-        console.error(`Loan data not found for loanId: ${loanId}`);
-        return [];
-      }
-      
-      // Create an array to store the fake documents
+      // Create an array of fake documents
       const fakeDocuments: LoanDocument[] = [];
       
-      // Process each document type
+      // For each document type, create a fake document
       for (const docType of requiredDocTypes) {
-        // Always use HTML file type for consistent handling
-        const fileType = '.html';
-        const fileSize = Math.floor(Math.random() * 1000000) + 100000; // Random size between 100KB and 1.1MB
-        const uploadDate = new Date().toISOString();
-        
-        // Generate random status with higher probability for 'pending'
-        const statuses: DocumentStatus[] = ['pending', 'approved', 'rejected', 'reviewed'];
-        const statusWeights = [0.7, 0.1, 0.1, 0.1]; // Higher probability for 'pending'
-        const randomValue = Math.random();
-        let statusIndex = 0;
-        let cumulativeWeight = 0;
-        
-        for (let i = 0; i < statusWeights.length; i++) {
-          cumulativeWeight += statusWeights[i];
-          if (randomValue <= cumulativeWeight) {
-            statusIndex = i;
-            break;
-          }
-        }
-        
-        // Ensure we never have 'required' status for generated documents
-        // Force to 'pending' to ensure it's treated as persistent
-        const status: DocumentStatus = 'pending';
-        
-        // Generate a filename - Using SAMPLE_ prefix as requested
-        const filename = `SAMPLE_${docType.docType.replace(/_/g, '-')}${fileType}`;
-        
-        // Generate document content based on the document type
-        const content = generateDocumentContent(docType.docType, loanData);
-        
-        // Create a unique ID with timestamp to ensure uniqueness
+        // Create a unique ID for the document
         const docId = uuidv4();
         
-        // Create the fake document
-        const fakeDocument: LoanDocument = {
+        // Generate fake file size
+        const fileSize = getRandomFileSize();
+        
+        // Create the document with initial data
+        const fakeDocument: LoanDocument = createDocument({
           id: docId,
           loanId,
-          filename,
-          fileType,
-          fileSize,
-          dateUploaded: uploadDate,
-          category: docType.category,
-          section: docType.section,
-          subsection: docType.subsection,
           docType: docType.docType,
-          status,
+          filename: `SAMPLE_${docType.docType}-${Math.floor(Math.random() * 10000)}.html`,
+          category: docType.category as DocumentCategory,
+          section: docType.section,
+          subsection: docType.subsection || '',
+          // Use a random status from the allowed fake status list
+          status: FAKE_DOCUMENT_STATUSES[Math.floor(Math.random() * FAKE_DOCUMENT_STATUSES.length)],
+          dateUploaded: new Date().toISOString(),
+          fileType: '.html', // Standardize on HTML for simpler development
+          fileSize,
+          content: generateDocumentContent(docType.docType, loan),
           isRequired: true,
-          version: 1,
-          content, // Add the generated content
-          notes: `This is a sample document for ${loanData.borrowerName} with loan amount ${loanData.loanAmount} for the property at ${loanData.propertyAddress}. Status: ${status === 'approved' ? 'Document verified and approved.' : 
-                   status === 'rejected' ? 'Document rejected. Please resubmit.' : 
-                   status === 'reviewed' ? 'Document reviewed, pending approval.' : 
-                   'Document uploaded, awaiting review.'}`
-        };
+          version: 1
+        });
         
-        // Add expiration date for certain document types
-        if (['insurance_policy', 'appraisal_report', 'credit_report', 'background_check'].includes(docType.docType)) {
-          const expirationDate = new Date();
-          expirationDate.setFullYear(expirationDate.getFullYear() + 1);
-          fakeDocument.expirationDate = expirationDate.toISOString();
-        }
-        
-        // Add to the list of fake documents
+        // Add to the fake documents array
         fakeDocuments.push(fakeDocument);
         
         // Save to localStorage if enabled
@@ -723,22 +710,24 @@ export const loanDocumentService = {
         }
       }
       
-      // Save to database if enabled
-      if (USE_DATABASE) {
+      // Save to database if available and enabled
+      if (isServer && USE_DATABASE) {
         try {
           // Initialize database if not already initialized
-          await initializeDatabase();
+          const dbInitialized = await initializeDatabase();
           
-          // Store documents in database
-          const insertedCount = documentDatabaseService.bulkInsertDocuments(fakeDocuments);
-          console.log(`Saved ${insertedCount} documents to SQLite database`);
+          if (dbInitialized && documentDatabaseService) {
+            const insertedCount = documentDatabaseService.bulkInsertDocuments(fakeDocuments);
+            console.log(`Saved ${insertedCount} documents to SQLite database`);
+          } else {
+            console.log('Database not available for storing documents');
+          }
         } catch (dbError) {
           console.error('Error saving documents to database:', dbError);
         }
       }
       
       console.log(`Generated and stored ${fakeDocuments.length} fake documents for loan ${loanId}`);
-      
       return fakeDocuments;
     } catch (error) {
       console.error(`Error generating fake documents for loan ${loanId}:`, error);
