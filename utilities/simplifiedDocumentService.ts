@@ -803,18 +803,27 @@ export const simpleDocumentService = {
     }
   },
   
-  // Clear all chat documents
-  clearChatDocuments: (): void => {
+  // Clear only chat documents
+  clearChatDocuments: async (): Promise<void> => {
     try {
       const allDocs = simpleDocumentService.getAllDocuments();
-      // Keep all documents that are NOT chat documents
-      const nonChatDocs = allDocs.filter(doc => 
-        doc.category !== 'chat' && doc.loanId !== 'chat-uploads'
-      );
+      // Filter out documents with category 'chat'
+      const nonChatDocs = allDocs.filter(doc => doc.category !== 'chat');
       
-      // Save back only the non-chat documents
+      // Save the filtered documents back to localStorage
       localStorage.setItem(STORAGE_KEY, JSON.stringify(nonChatDocs));
-      console.log("Chat documents cleared successfully");
+      
+      // Remove the content from IndexedDB for chat documents
+      const chatDocs = allDocs.filter(doc => doc.category === 'chat');
+      for (const doc of chatDocs) {
+        try {
+          await deleteContentFromIndexedDB(doc.id);
+        } catch (error) {
+          console.warn(`Could not delete content from IndexedDB for document ${doc.id}:`, error);
+        }
+      }
+      
+      console.log(`Cleared ${chatDocs.length} chat documents`);
     } catch (error) {
       console.error('Error clearing chat documents:', error);
     }

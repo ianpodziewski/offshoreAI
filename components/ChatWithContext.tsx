@@ -45,6 +45,18 @@ export default function ChatWithContext() {
 
   const [chatDocuments, setChatDocuments] = useState<SimpleDocument[]>([]);
 
+  // Function to clear chat documents
+  const clearChatDocuments = useCallback(async () => {
+    try {
+      await simpleDocumentService.clearChatDocuments();
+      // Update state to reflect the cleared documents
+      setChatDocuments([]);
+      console.log("Chat documents cleared from UI");
+    } catch (error) {
+      console.error("Error clearing chat documents:", error);
+    }
+  }, []);
+
   // Load actual chat uploads instead of mock documents
   useEffect(() => {
     const loadChatDocuments = () => {
@@ -70,7 +82,7 @@ export default function ChatWithContext() {
         {/* Main Chat (3 columns) */}
         <div className="lg:col-span-3 flex flex-col h-[calc(100vh-180px)] bg-gray-900 rounded-lg border border-gray-800 shadow-lg overflow-hidden">
           {/* Chat header */}
-          <ChatHeader clearMessages={clearMessages} />
+          <ChatHeader clearMessages={clearMessages} clearChatDocuments={clearChatDocuments} />
           
           {/* Messages container */}
           <div className="flex-1 overflow-y-auto p-4">
