@@ -130,32 +130,76 @@ export default function LoanDocumentsPage() {
     }
   }, [loanId]);
   
-  // Function to load documents
+  // Function to load documents with robust error handling
   const loadDocuments = useCallback(async () => {
-    if (!loanId) return;
-    
-    console.log('Loading documents for loan:', loanId);
-    
     try {
-      // Get the documents - use await since getDocumentsForLoan is now async
-      const loanDocs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
-      console.log('Documents retrieved from localStorage:', loanDocs.length);
+      console.log(`Loading documents for loan: ${loanId}`);
       
-      // Log document details
-      if (loanDocs.length > 0) {
-        console.log('Document details:');
-        loanDocs.forEach((doc: LoanDocument) => {
-          console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status}, id: ${doc.id})`);
-        });
+      if (!loanId) {
+        console.error('Cannot load documents: missing loanId');
+        setDocuments([]);
+        return;
+      }
+      
+      // Get loan data if needed
+      let currentLoan = loan;
+      if (!currentLoan) {
+        try {
+          currentLoan = loanDatabase.getLoanById(loanId as string);
+        } catch (loanError) {
+          console.error('Error getting loan data:', loanError);
+        }
+      }
+      
+      // Get documents for this loan
+      let loanDocs: LoanDocument[] = [];
+      try {
+        loanDocs = await loanDocumentService.getDocumentsForLoan(loanId as string);
+        
+        // Validate that we got an array back
+        if (!Array.isArray(loanDocs)) {
+          console.error('getDocumentsForLoan did not return an array');
+          loanDocs = [];
+        }
+        
+        console.log(`Documents retrieved from localStorage: ${loanDocs.length}`);
+        
+        // Log document details for debugging if there are documents
+        if (loanDocs.length > 0) {
+          console.log('Document details:');
+          loanDocs.forEach(doc => {
+            console.log(`- ${doc.filename} (docType: ${doc.docType}, status: ${doc.status}, id: ${doc.id})`);
+          });
+        }
+      } catch (docsError) {
+        console.error('Error retrieving documents:', docsError);
+        loanDocs = [];
       }
       
       // Set documents
       setDocuments(loanDocs);
       
       // Update completion status if loan type is available
-      if (loan?.loanType) {
-        const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-        setCompletionStatus(status);
+      if (currentLoan?.loanType) {
+        try {
+          const status = loanDocumentService.getDocumentCompletionStatus(loanId as string, currentLoan.loanType);
+          setCompletionStatus(status);
+        } catch (statusError) {
+          console.error('Error getting document completion status:', statusError);
+          // Set default completion status
+          setCompletionStatus({
+            total: 0,
+            completed: 0,
+            percentage: 0,
+            byCategory: {
+              borrower: { total: 0, completed: 0, percentage: 0 },
+              property: { total: 0, completed: 0, percentage: 0 },
+              closing: { total: 0, completed: 0, percentage: 0 },
+              servicing: { total: 0, completed: 0, percentage: 0 },
+              misc: { total: 0, completed: 0, percentage: 0 }
+            }
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading documents:', error);
@@ -182,17 +226,29 @@ export default function LoanDocumentsPage() {
     if (loanId && loan?.loanType && documents.length === 0) {
       // Create an async function inside useEffect
       const initializeAndLoadDocuments = async () => {
-        // Only initialize if no documents exist
-        const placeholderDocs = loanDocumentService.initializeDocumentsForLoan(loanId, loan.loanType);
-        
-        // Reload all documents - await the async function
-        await loadDocuments();
+        try {
+          console.log(`Initializing documents for loan ${loanId} with type ${loan.loanType}`);
+          
+          // Only initialize if no documents exist
+          const placeholderDocs = loanDocumentService.initializeDocumentsForLoan(loanId, loan.loanType);
+          
+          if (Array.isArray(placeholderDocs) && placeholderDocs.length > 0) {
+            console.log(`Created ${placeholderDocs.length} placeholder documents`);
+          } else {
+            console.log('No new placeholder documents needed or created');
+          }
+          
+          // Reload all documents - await the async function
+          await loadDocuments();
+        } catch (error) {
+          console.error('Error initializing documents:', error);
+        }
       };
       
       // Call the async function
       initializeAndLoadDocuments();
     }
-  }, [loanId, loan, documents.length, loadDocuments]);
+  }, [loanId, loan?.loanType, documents.length, loadDocuments]);
   
   // Handle document upload
   const handleUploadDocument = (category: string, section: string, docType: string) => {
@@ -342,32 +398,61 @@ export default function LoanDocumentsPage() {
                   onClick={async () => {
                     try {
                       console.log(`Generating sample documents for loan ${loanId} with type ${loan.loanType}`);
+                      
+                      // Validate required data before proceeding
+                      if (!loanId || !loan?.loanType) {
+                        alert('Cannot generate documents: Missing loan ID or loan type');
+                        return;
+                      }
+                      
+                      // Generate the documents
                       const fakeDocuments = await loanDocumentService.generateFakeDocuments(loanId, loan.loanType);
-                      if (fakeDocuments.length > 0) {
+                      
+                      // Check if documents were generated
+                      if (Array.isArray(fakeDocuments) && fakeDocuments.length > 0) {
                         // After document generation - no deduplication
                         // loanDocumentService.deduplicateLoanDocuments(loanId);
                         
-                        // Load the documents
-                        const dedupedDocs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
-                        
-                        // Log the deduplicated docs to help with debugging
-                        console.log('Deduplicated documents after generation:', dedupedDocs);
-                        
-                        // Set the documents and ensure local state is updated
-                        setDocuments(dedupedDocs);
-                        
-                        // Update completion status
-                        if (loan?.loanType) {
-                          const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
-                          setCompletionStatus(status);
+                        try {
+                          // Load the documents
+                          const dedupedDocs: LoanDocument[] = await loanDocumentService.getDocumentsForLoan(loanId);
+                          
+                          // Ensure we got a valid array back
+                          if (Array.isArray(dedupedDocs)) {
+                            // Log the deduplicated docs to help with debugging
+                            console.log('Documents after generation:', dedupedDocs);
+                            
+                            // Set the documents and ensure local state is updated
+                            setDocuments(dedupedDocs);
+                            
+                            // Update completion status
+                            if (loan?.loanType) {
+                              try {
+                                const status = loanDocumentService.getDocumentCompletionStatus(loanId, loan.loanType);
+                                setCompletionStatus(status);
+                              } catch (statusError) {
+                                console.error('Error updating completion status:', statusError);
+                                // Don't block the UI update if status calculation fails
+                              }
+                            }
+                            
+                            // Show success message (modified to be more accurate about storage depending on Redis availability)
+                            const storageMode = typeof window !== 'undefined' && 
+                                              (!process.env.REDIS_URL || window.localStorage.getItem('USE_FALLBACK') === 'true') ? 
+                                              'localStorage only' : 'localStorage and Redis';
+                            
+                            alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored in ${storageMode} and will persist across page refreshes.`);
+                          } else {
+                            console.error('Invalid documents array returned after generation');
+                            alert('There was an issue loading the generated documents. Please try again or refresh the page.');
+                          }
+                        } catch (loadError) {
+                          console.error('Error loading documents after generation:', loadError);
+                          alert('Documents were generated but there was an error loading them. Please refresh the page to see the new documents.');
                         }
-                        
-                        // Show success message (modified to be more accurate about storage depending on Redis availability)
-                        const storageMode = typeof window !== 'undefined' && 
-                                           (!process.env.REDIS_URL || window.localStorage.getItem('USE_FALLBACK') === 'true') ? 
-                                           'localStorage only' : 'localStorage and Redis';
-                        
-                        alert(`Successfully generated ${fakeDocuments.length} documents. These documents are stored in ${storageMode} and will persist across page refreshes.`);
+                      } else {
+                        console.error('No documents were generated or invalid response');
+                        alert('No documents were generated. Please check the console for details.');
                       }
                     } catch (error) {
                       console.error('Error generating fake documents:', error);

@@ -229,7 +229,13 @@ export const loanDocumentService = {
   getAllDocuments: (): LoanDocument[] => {
     try {
       // Always check localStorage first
-      const docsFromStorage = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+      let docsFromStorage;
+      try {
+        docsFromStorage = localStorage.getItem(LOAN_DOCUMENTS_STORAGE_KEY);
+      } catch (storageError) {
+        console.error('Error accessing localStorage:', storageError);
+        return [];
+      }
       
       if (!docsFromStorage) {
         return [];
@@ -240,10 +246,14 @@ export const loanDocumentService = {
         const parsedDocs = JSON.parse(docsFromStorage);
         
         // Validate that parsedDocs is an array
-        if (!Array.isArray(parsedDocs)) {
+        if (!parsedDocs || !Array.isArray(parsedDocs)) {
           console.error('Invalid document data in localStorage: not an array');
           // Reset localStorage to prevent future errors
-          localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, '[]');
+          try {
+            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, '[]');
+          } catch (resetError) {
+            console.error('Error resetting localStorage:', resetError);
+          }
           return [];
         }
         
@@ -590,63 +600,129 @@ export const loanDocumentService = {
     try {
       console.log(`Initializing documents for loan ${loanId} with type ${loanType}`);
       
-      // Get all required document types for this loan type
-      const requiredDocTypes = getRequiredDocuments(loanType);
+      // Validate input parameters
+      if (!loanId || !loanType) {
+        console.error('Cannot initialize documents: missing loanId or loanType');
+        return [];
+      }
       
-      // Get existing documents from storage
-      const existingDocs = loanDocumentService.getAllDocuments();
-      const existingLoanDocs = existingDocs.filter(doc => doc.loanId === loanId);
+      // Get all required document types for this loan type
+      let requiredDocTypes = [];
+      try {
+        requiredDocTypes = getRequiredDocuments(loanType);
+        
+        // Validate required doc types is an array
+        if (!Array.isArray(requiredDocTypes)) {
+          console.error(`Invalid required document types for loan type ${loanType}`);
+          return [];
+        }
+        
+        // Make sure we have actual types
+        if (requiredDocTypes.length === 0) {
+          console.warn(`No required document types found for loan type ${loanType}`);
+          return [];
+        }
+      } catch (docTypesError) {
+        console.error(`Error getting required document types: ${docTypesError}`);
+        return [];
+      }
+      
+      // Get existing documents from storage with robust error handling
+      let existingDocs = [];
+      try {
+        const docs = loanDocumentService.getAllDocuments();
+        if (Array.isArray(docs)) {
+          existingDocs = docs;
+        } else {
+          console.warn('getAllDocuments did not return an array, using empty array');
+        }
+      } catch (getDocsError) {
+        console.error(`Error getting existing documents: ${getDocsError}`);
+      }
+      
+      // Filter for this loan's existing documents with validation
+      const existingLoanDocs = Array.isArray(existingDocs) 
+        ? existingDocs.filter(doc => doc && typeof doc === 'object' && doc.loanId === loanId)
+        : [];
       
       // Create placeholder documents only for docTypes that don't have any persistent documents
       const placeholderDocs: LoanDocument[] = [];
+      let newDocsCreated = 0;
       
       for (const docType of requiredDocTypes) {
-        // Check if there's already a persistent document for this docType
-        const hasExistingDocument = existingLoanDocs.some(doc => 
-          doc.docType === docType.docType && 
-          (
-            doc.status !== 'required' || 
-            doc.filename.startsWith('UPLOAD_') || 
-            doc.filename.startsWith('SAMPLE_PERSISTENT_') ||
-            doc.filename.startsWith('SAMPLE_')
-          )
-        );
-        
-        // If no existing document, create a placeholder
-        if (!hasExistingDocument) {
-          placeholderDocs.push({
-            id: uuidv4(),
-            loanId,
-            filename: `SAMPLE_${docType.label}.html`,
-            dateUploaded: new Date().toISOString(),
-            category: docType.category,
-            section: docType.section,
-            subsection: docType.subsection,
-            docType: docType.docType,
-            status: 'required' as DocumentStatus,
-            isRequired: true,
-            version: 1
-          });
+        try {
+          // Skip invalid document types
+          if (!docType || typeof docType !== 'object' || !docType.docType) {
+            console.warn('Skipping invalid document type');
+            continue;
+          }
+          
+          // Check if there's already a persistent document for this docType with robust validation
+          const hasExistingDocument = Array.isArray(existingLoanDocs) && existingLoanDocs.some(doc => 
+            doc && 
+            typeof doc === 'object' && 
+            doc.docType === docType.docType && 
+            (
+              doc.status !== 'required' || 
+              doc.filename.startsWith('UPLOAD_') || 
+              doc.filename.startsWith('SAMPLE_PERSISTENT_') ||
+              doc.filename.startsWith('SAMPLE_')
+            )
+          );
+          
+          // If no existing document, create a placeholder
+          if (!hasExistingDocument) {
+            const newDocument: LoanDocument = {
+              id: uuidv4(),
+              loanId,
+              filename: `SAMPLE_${docType.label || docType.docType}.html`,
+              dateUploaded: new Date().toISOString(),
+              category: docType.category as DocumentCategory,
+              section: docType.section || '',
+              subsection: docType.subsection || '',
+              docType: docType.docType,
+              status: 'required' as DocumentStatus,
+              isRequired: true,
+              version: 1
+            };
+            
+            placeholderDocs.push(newDocument);
+            newDocsCreated++;
+          }
+        } catch (docError) {
+          console.error(`Error creating placeholder for document type ${docType?.docType || 'unknown'}:`, docError);
+          // Continue to next document
         }
       }
       
-      // Filter out any exact duplicates that already exist
-      const nonDuplicateDocs = placeholderDocs.filter(newDoc => 
-        !existingDocs.some(existingDoc => 
-          existingDoc.loanId === loanId && 
-          existingDoc.docType === newDoc.docType &&
-          existingDoc.status === newDoc.status
-        )
-      );
-      
-      console.log(`Created ${nonDuplicateDocs.length} new placeholder documents out of ${requiredDocTypes.length} required document types`);
-      
-      // Save the combined documents
-      if (nonDuplicateDocs.length > 0) {
-        localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify([...existingDocs, ...nonDuplicateDocs]));
+      // Save the placeholders to storage if any were created
+      if (placeholderDocs.length > 0) {
+        try {
+          // Get all existing documents again to make sure we're working with the latest data
+          const allExistingDocs = loanDocumentService.getAllDocuments();
+          
+          // Make sure we have an array
+          if (Array.isArray(allExistingDocs)) {
+            // Create updated documents list with the new placeholders
+            const updatedDocs = [...allExistingDocs, ...placeholderDocs];
+            
+            // Save to localStorage
+            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(updatedDocs));
+            
+            console.log(`Created ${newDocsCreated} new placeholder documents out of ${requiredDocTypes.length} required document types`);
+          } else {
+            console.error('getAllDocuments did not return an array when saving placeholders');
+            // Just save the placeholders we created
+            localStorage.setItem(LOAN_DOCUMENTS_STORAGE_KEY, JSON.stringify(placeholderDocs));
+          }
+        } catch (saveError) {
+          console.error('Error saving placeholder documents to localStorage:', saveError);
+        }
+      } else {
+        console.log(`No new placeholder documents needed for loan ${loanId} (all ${requiredDocTypes.length} required documents exist)`);
       }
       
-      return nonDuplicateDocs;
+      return placeholderDocs;
     } catch (error) {
       console.error('Error initializing documents for loan:', error);
       return [];
@@ -696,22 +772,28 @@ export const loanDocumentService = {
         return defaultResult;
       }
       
-      // Get existing documents
+      // Get existing documents - defensive approach
       let existingDocs = [];
       try {
-        // Use getAllDocuments which is already validated
-        const allDocs = loanDocumentService.getAllDocuments();
+        // Get all documents and ensure it's an array
+        let allDocs = loanDocumentService.getAllDocuments();
         
-        // Ensure allDocs is an array
-        if (!Array.isArray(allDocs)) {
-          console.error('getAllDocuments did not return an array');
-          return defaultResult;
+        // Make absolutely sure we have an array even if getAllDocuments fails
+        if (!allDocs || !Array.isArray(allDocs)) {
+          console.warn('getAllDocuments did not return a valid array, using empty array');
+          allDocs = [];
         }
         
-        // Filter for this loan's documents
+        // Filter for this loan's documents with defensive checks for each document
         existingDocs = allDocs.filter(doc => 
           doc && typeof doc === 'object' && doc.loanId === loanId
         );
+
+        // Additional validation to ensure existingDocs is definitely an array
+        if (!Array.isArray(existingDocs)) {
+          console.warn('existingDocs is not an array after filtering, using empty array');
+          existingDocs = [];
+        }
       } catch (docsError) {
         console.error(`Error getting existing documents: ${docsError}`);
         existingDocs = [];
@@ -723,22 +805,35 @@ export const loanDocumentService = {
       // Get unique docTypes that have at least one document (status not 'required')
       let uniqueCompletedDocTypes = new Set();
       try {
-        // Make sure existingDocs is an array before filtering
+        // Defensive check - make sure existingDocs is an array
         if (Array.isArray(existingDocs)) {
-          // Filter valid documents
+          // Filter valid documents with robust checks
           const validDocs = existingDocs.filter(doc => 
-            doc && doc.status && doc.status !== 'required' && doc.docType
+            doc && 
+            typeof doc === 'object' &&
+            doc.status && 
+            typeof doc.status === 'string' &&
+            doc.status !== 'required' && 
+            doc.docType && 
+            typeof doc.docType === 'string'
           );
           
-          // Extract unique docTypes
-          uniqueCompletedDocTypes = new Set(
-            validDocs.map(doc => doc.docType)
-          );
+          // Extract unique docTypes with validation
+          if (Array.isArray(validDocs)) {
+            uniqueCompletedDocTypes = new Set(
+              validDocs.map(doc => doc.docType)
+            );
+          } else {
+            console.error('validDocs is not an array after filtering');
+            uniqueCompletedDocTypes = new Set();
+          }
         } else {
           console.error('existingDocs is not an array');
+          uniqueCompletedDocTypes = new Set();
         }
       } catch (filterError) {
         console.error(`Error filtering completed documents: ${filterError}`);
+        uniqueCompletedDocTypes = new Set();
       }
       
       // Convert the Set to an array for further processing
@@ -747,15 +842,21 @@ export const loanDocumentService = {
       // Count completed document sockets (those with at least one document)
       let completed = 0;
       try {
-        completed = uniqueCompletedDocTypesArray.filter(docType => 
-          requiredDocTypes.some(rt => rt && rt.docType === docType)
-        ).length;
+        // Defensive programming for array methods
+        if (Array.isArray(uniqueCompletedDocTypesArray) && Array.isArray(requiredDocTypes)) {
+          completed = uniqueCompletedDocTypesArray.filter(docType => 
+            requiredDocTypes.some(rt => rt && typeof rt === 'object' && rt.docType === docType)
+          ).length;
+        } else {
+          console.warn('Either uniqueCompletedDocTypesArray or requiredDocTypes is not an array');
+          completed = 0;
+        }
       } catch (countError) {
         console.error(`Error counting completed documents: ${countError}`);
         completed = 0;
       }
       
-      // Calculate completion percentage
+      // Calculate completion percentage with safety check for division by zero
       const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
       
       // Calculate completion by category
@@ -773,9 +874,15 @@ export const loanDocumentService = {
         
         for (const category of categories) {
           try {
-            // Filter required docs for this category
+            // Ensure requiredDocTypes is an array before filtering
+            if (!Array.isArray(requiredDocTypes)) {
+              console.warn(`requiredDocTypes is not an array when processing category ${category}`);
+              continue;
+            }
+
+            // Filter required docs for this category with robust validation
             const categoryRequiredDocs = requiredDocTypes.filter(doc => 
-              doc && doc.category === category
+              doc && typeof doc === 'object' && doc.category === category
             );
             
             const categoryTotal = categoryRequiredDocs.length;
@@ -783,28 +890,38 @@ export const loanDocumentService = {
             // Get completed docs for this category
             let categoryCompletedCount = 0;
             
+            // Defensive check for existingDocs before filtering
             if (Array.isArray(existingDocs)) {
               // Get all docs for this category that aren't 'required' status
               const categoryDocs = existingDocs.filter(doc => 
                 doc && 
+                typeof doc === 'object' &&
                 doc.category === category && 
                 doc.status && 
+                typeof doc.status === 'string' &&
                 doc.status !== 'required' && 
-                doc.docType
+                doc.docType && 
+                typeof doc.docType === 'string'
               );
               
-              // Get unique document types
-              const categoryCompletedDocTypes = new Set(
-                categoryDocs.map(doc => doc.docType)
-              );
-              
-              // Count unique completed document types that are required
-              categoryCompletedCount = Array.from(categoryCompletedDocTypes).filter(docType => 
-                categoryRequiredDocs.some(rt => rt && rt.docType === docType)
-              ).length;
+              // Ensure categoryDocs is an array before processing
+              if (Array.isArray(categoryDocs)) {
+                // Get unique document types
+                const categoryCompletedDocTypes = new Set(
+                  categoryDocs.map(doc => doc.docType)
+                );
+                
+                // Ensure safe array operations with type checking
+                if (Array.isArray(categoryRequiredDocs)) {
+                  // Count unique completed document types that are required
+                  categoryCompletedCount = Array.from(categoryCompletedDocTypes).filter(docType => 
+                    categoryRequiredDocs.some(rt => rt && typeof rt === 'object' && rt.docType === docType)
+                  ).length;
+                }
+              }
             }
             
-            // Calculate percentage
+            // Calculate percentage with division by zero check
             const categoryPercentage = categoryTotal > 0 
               ? Math.round((categoryCompletedCount / categoryTotal) * 100) 
               : 0;
