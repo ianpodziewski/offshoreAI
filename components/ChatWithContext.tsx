@@ -32,16 +32,6 @@ function MessageList({
   );
 }
 
-// Define lender guidelines text constant
-const LENDER_GUIDELINES = `
-General Guidelines for Offshore Lending:
-1. Compliance with international regulations is mandatory
-2. Risk assessment must be thorough and documented
-3. Customer identification procedures must be rigorous
-4. Transaction monitoring should be continuous
-5. Reporting of suspicious activity must be prompt
-`;
-
 export default function ChatWithContext() {
   const {
     messages,
@@ -72,12 +62,6 @@ export default function ChatWithContext() {
 
     // Cleanup interval on component unmount
     return () => clearInterval(intervalId);
-  }, []);
-
-  // Add a useEffect to incorporate the LENDER_GUIDELINES to the chat context
-  useEffect(() => {
-    // Use the LENDER_GUIDELINES as context for the chat assistant
-    console.log("Guidelines available for chat context");
   }, []);
 
   return (

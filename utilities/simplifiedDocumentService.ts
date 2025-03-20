@@ -627,10 +627,13 @@ export const simpleDocumentService = {
       const allDocs = simpleDocumentService.getAllDocuments();
       
       // Find ALL matching documents of this type for the loan
-      const existingDocs = allDocs.filter(doc => 
-        doc.loanId === loanId && 
-        (doc.docType === docType || doc.filename === file.name)
-      );
+      // Skip this for chat uploads - we want to keep multiple chat documents
+      const existingDocs = loanId === 'chat-uploads' 
+        ? [] // Empty array for chat uploads to avoid deleting previous uploads
+        : allDocs.filter(doc => 
+            doc.loanId === loanId && 
+            (doc.docType === docType || doc.filename === file.name)
+          );
       
       // Create document ID
       const docId = uuidv4();
