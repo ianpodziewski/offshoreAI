@@ -272,11 +272,6 @@ export class DocumentService {
             continue;
           }
           
-          // Use a random status
-          const status = SAMPLE_DOCUMENT_STATUSES[
-            Math.floor(Math.random() * SAMPLE_DOCUMENT_STATUSES.length)
-          ];
-          
           // Create the document
           const sampleDoc: LoanDocument = {
             id: uuidv4(),
@@ -286,13 +281,13 @@ export class DocumentService {
             category: docType.category as DocumentCategory,
             section: docType.section || '',
             subsection: docType.subsection || '',
-            status,
             dateUploaded: new Date().toISOString(),
             fileType: '.html',
             fileSize: this.getRandomFileSize(),
             content,
             isRequired: true,
-            version: 1
+            version: 1,
+            status: 'pending' as DocumentStatus
           };
           
           sampleDocuments.push(sampleDoc);

@@ -1,51 +1,36 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { DocumentStatus, LoanDocument, DocumentCategory, getAllDocumentTypes } from '@/utilities/loanDocumentStructure';
+import { DocumentStatus, LoanDocument } from '@/utilities/loanDocumentStructure';
 import { Button } from './Button';
 
 interface DocumentUploadFormProps {
   loanId: string;
+  docType?: string;  // Optional - if provided from FileSocket
+  category?: string; // Optional - if provided from FileSocket
+  section?: string;  // Optional - if provided from FileSocket
   onClose: () => void;
   onSubmit: (document: LoanDocument) => Promise<void>;
 }
 
-export function DocumentUploadForm({ loanId, onClose, onSubmit }: DocumentUploadFormProps) {
+export function DocumentUploadForm({ 
+  loanId, 
+  docType = '', 
+  category = 'borrower',
+  section = '',
+  onClose, 
+  onSubmit 
+}: DocumentUploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [docType, setDocType] = useState<string>('');
-  const [category, setCategory] = useState<DocumentCategory>('borrower');
-  const [section, setSection] = useState<string>('');
-  const [subsection, setSubsection] = useState<string>('');
-  const [status, setStatus] = useState<DocumentStatus>('received');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Get document types for dropdown
-  const documentTypes = getAllDocumentTypes();
   
-  // Get sections for selected category
-  const sections = Array.from(
-    new Set(
-      documentTypes
-        .filter(doc => doc.category === category)
-        .map(doc => doc.section)
-    )
-  );
-  
-  // Get subsections for selected section
-  const subsections = Array.from(
-    new Set(
-      documentTypes
-        .filter(doc => doc.category === category && doc.section === section)
-        .map(doc => doc.subsection)
-    )
-  );
-  
-  // Get doc types for selected category, section, and subsection
-  const availableDocTypes = documentTypes.filter(
-    doc => doc.category === category && 
-          (section === '' || doc.section === section) && 
-          (subsection === '' || doc.subsection === subsection)
-  );
+  // Add debug info
+  console.log(`DocumentUploadForm initialized with:`, {
+    loanId,
+    docType,
+    category,
+    section
+  });
   
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -62,23 +47,11 @@ export function DocumentUploadForm({ loanId, onClose, onSubmit }: DocumentUpload
       return;
     }
     
-    if (!docType) {
-      setError('Please select a document type');
-      return;
-    }
-    
     try {
       setSubmitting(true);
+      console.log("Preparing to submit document...");
       
-      // Get document type info
-      const docTypeInfo = documentTypes.find(dt => dt.docType === docType);
-      
-      if (!docTypeInfo) {
-        setError('Invalid document type selected');
-        return;
-      }
-      
-      // Create document object
+      // Create document object with minimal required info
       const newDocument: LoanDocument = {
         id: uuidv4(),
         loanId,
@@ -86,14 +59,23 @@ export function DocumentUploadForm({ loanId, onClose, onSubmit }: DocumentUpload
         fileType: file.type,
         fileSize: file.size,
         dateUploaded: new Date().toISOString(),
-        category: docTypeInfo.category,
-        section: section || docTypeInfo.section,
-        subsection: subsection || docTypeInfo.subsection,
-        docType,
-        status,
-        isRequired: docTypeInfo.isRequired,
+        category: category as any, // Cast to match your DocumentCategory type
+        section: section,
+        subsection: '',
+        docType: docType,
+        status: 'received' as DocumentStatus,
+        isRequired: false,
         version: 1
       };
+      
+      console.log("Document prepared for submission:", {
+        id: newDocument.id,
+        loanId: newDocument.loanId,
+        filename: newDocument.filename,
+        docType: newDocument.docType,
+        category: newDocument.category,
+        section: newDocument.section
+      });
       
       // For text-based files, read the content
       if (file.type === 'text/plain' || 
@@ -103,8 +85,10 @@ export function DocumentUploadForm({ loanId, onClose, onSubmit }: DocumentUpload
       }
       
       await onSubmit(newDocument);
+      console.log("Document submitted successfully");
+      onClose(); // Close the modal after successful upload
     } catch (err) {
-      console.error('Error uploading document:', err);
+      console.error('Error in form submission:', err);
       setError('An error occurred while uploading the document. Please try again.');
     } finally {
       setSubmitting(false);
@@ -123,123 +107,90 @@ export function DocumentUploadForm({ loanId, onClose, onSubmit }: DocumentUpload
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Upload Document</h2>
+      <div className="bg-[#1A2234] border border-gray-700 rounded-lg p-6 w-full max-w-md">
+        <h2 className="text-xl font-bold mb-4 text-white flex items-center">
+          <svg 
+            className="w-5 h-5 mr-2 text-indigo-400" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={1.5} 
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
+          </svg>
+          Upload Document
+          {docType && (
+            <span className="ml-2 text-sm text-gray-300">
+              ({docType})
+            </span>
+          )}
+        </h2>
         
         {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+          <div className="mb-4 p-3 bg-red-900 bg-opacity-30 text-red-300 border border-red-700 rounded">
             {error}
           </div>
         )}
         
         <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">File</label>
-            <input
-              type="file"
-              onChange={handleFileChange}
-              className="w-full border border-gray-300 rounded p-2"
-              disabled={submitting}
-              required
-            />
-            {file && (
-              <p className="text-sm text-gray-600 mt-1">
-                Selected file: {file.name} ({Math.round(file.size / 1024)} KB)
-              </p>
-            )}
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Category</label>
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value as DocumentCategory);
-                setSection('');
-                setSubsection('');
-                setDocType('');
-              }}
-              className="w-full border border-gray-300 rounded p-2"
-              disabled={submitting}
-              required
-            >
-              <option value="borrower">Borrower</option>
-              <option value="property">Property</option>
-              <option value="closing">Closing</option>
-              <option value="servicing">Servicing</option>
-              <option value="misc">Miscellaneous</option>
-            </select>
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Section (Optional)</label>
-            <select
-              value={section}
-              onChange={(e) => {
-                setSection(e.target.value);
-                setSubsection('');
-                setDocType('');
-              }}
-              className="w-full border border-gray-300 rounded p-2"
-              disabled={submitting}
-            >
-              <option value="">-- Select Section --</option>
-              {sections.map(s => (
-                <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Subsection (Optional)</label>
-            <select
-              value={subsection}
-              onChange={(e) => {
-                setSubsection(e.target.value);
-                setDocType('');
-              }}
-              className="w-full border border-gray-300 rounded p-2"
-              disabled={submitting || section === ''}
-            >
-              <option value="">-- Select Subsection --</option>
-              {subsections.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Document Type</label>
-            <select
-              value={docType}
-              onChange={(e) => setDocType(e.target.value)}
-              className="w-full border border-gray-300 rounded p-2"
-              disabled={submitting}
-              required
-            >
-              <option value="">-- Select Document Type --</option>
-              {availableDocTypes.map(dt => (
-                <option key={dt.docType} value={dt.docType}>
-                  {dt.label || dt.docType.replace(/_/g, ' ')}
-                </option>
-              ))}
-            </select>
-          </div>
-          
           <div className="mb-6">
-            <label className="block text-sm font-medium mb-1">Status</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as DocumentStatus)}
-              className="w-full border border-gray-300 rounded p-2"
-              disabled={submitting}
-            >
-              <option value="received">Received</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            <label className="block text-sm font-medium mb-2 text-gray-300">Select File</label>
+            <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-indigo-500 transition-colors cursor-pointer bg-[#131B2E]">
+              <input
+                type="file"
+                onChange={handleFileChange}
+                className="hidden"
+                id="file-upload"
+                disabled={submitting}
+                required
+              />
+              <label htmlFor="file-upload" className="cursor-pointer">
+                {!file ? (
+                  <div className="space-y-2">
+                    <svg 
+                      className="w-10 h-10 mx-auto text-gray-400" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={1} 
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <p className="text-gray-300">
+                      <span className="text-indigo-400 hover:text-indigo-300">Browse</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">Supported formats: PDF, DOC, DOCX, JPG, PNG</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 py-2">
+                    <svg 
+                      className="w-8 h-8 mx-auto text-green-400" 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                    <p className="text-sm font-medium text-gray-300 break-all">{file.name}</p>
+                    <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                    <p className="text-xs text-indigo-400 hover:text-indigo-300">Click to change file</p>
+                  </div>
+                )}
+              </label>
+            </div>
           </div>
           
           <div className="flex justify-end space-x-3">
@@ -248,20 +199,22 @@ export function DocumentUploadForm({ loanId, onClose, onSubmit }: DocumentUpload
               variant="outline" 
               onClick={onClose}
               disabled={submitting}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
               variant="primary"
-              disabled={submitting}
+              disabled={submitting || !file}
               isLoading={submitting}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              Upload Document
+              Upload
             </Button>
           </div>
         </form>
       </div>
     </div>
   );
-} 
+}

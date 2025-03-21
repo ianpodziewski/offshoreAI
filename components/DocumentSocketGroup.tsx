@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { LoanDocument } from '@/utilities/loanDocumentStructure';
 import { FileSocket } from './FileSocket';
 
@@ -15,8 +15,9 @@ interface DocumentSocketGroupProps {
   title: string;
   docTypes: DocumentType[];
   documents: LoanDocument[];
-  onUpload: () => void;
+  onUpload: (docType: string, category: string, section: string) => void;
   onViewDocument: (document: LoanDocument) => void;
+  onDeleteDocument: (document: LoanDocument) => void;
 }
 
 export function DocumentSocketGroup({
@@ -24,18 +25,40 @@ export function DocumentSocketGroup({
   docTypes,
   documents,
   onUpload,
-  onViewDocument
+  onViewDocument,
+  onDeleteDocument
 }: DocumentSocketGroupProps) {
-  // Helper to find a document by docType
+  // Add debug logging for documents
+  useEffect(() => {
+    console.log(`[${title}] Document types:`, docTypes.map(dt => dt.docType));
+    console.log(`[${title}] Available documents:`, documents);
+  }, [title, docTypes, documents]);
+
+  // Helper to find a document by docType with debug logging
   const findDocumentByType = (docType: string): LoanDocument | undefined => {
-    return documents.find(doc => doc.docType === docType);
+    console.log(`Looking for document with docType: ${docType}`);
+    console.log(`Available documents for comparison:`, documents.map(doc => ({ 
+      id: doc.id, 
+      docType: doc.docType,
+      filename: doc.filename
+    })));
+    
+    const match = documents.find(doc => doc.docType === docType);
+    
+    if (match) {
+      console.log(`Found matching document:`, match);
+    } else {
+      console.log(`No matching document found for docType: ${docType}`);
+    }
+    
+    return match;
   };
   
   return (
     <div className="mb-8">
-      <h3 className="text-lg font-semibold mb-3 border-b pb-2">{title}</h3>
+      <h3 className="text-lg font-semibold mb-3 border-b border-gray-700 pb-2 text-white">{title}</h3>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="space-y-4">
         {docTypes.map(docType => (
           <FileSocket
             key={docType.docType}
@@ -47,9 +70,10 @@ export function DocumentSocketGroup({
             document={findDocumentByType(docType.docType)}
             onUpload={onUpload}
             onView={onViewDocument}
+            onDelete={onDeleteDocument}
           />
         ))}
       </div>
     </div>
   );
-} 
+}

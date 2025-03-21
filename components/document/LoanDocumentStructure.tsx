@@ -35,7 +35,7 @@ import {
 import { DOCUMENT_STRUCTURE, DocumentCategory, DocumentStatus } from '@/utilities/loanDocumentStructure';
 import { formatFileSize } from '@/utilities/loanDocumentService';
 import { StoplightChecklist } from './StoplightChecklist';
-
+import { documentService } from '@/utilities/documentService';
 interface LoanDocumentStructureProps {
   loanId: string;
   loanType: string;
@@ -147,7 +147,7 @@ export function LoanDocumentStructure({
   };
   
   // Delete document 
-  const handleDeleteDocument = (e: React.MouseEvent, documentId: string) => {
+  const handleDeleteDocument = async (e: React.MouseEvent, documentId: string) => {
     e.preventDefault();
     e.stopPropagation();
     
@@ -155,41 +155,28 @@ export function LoanDocumentStructure({
     if (window.confirm("Are you sure you want to delete this document?")) {
       console.log(`Delete confirmed for document with ID: ${documentId}`);
       
-      // Direct deletion approach - manipulate localStorage directly
       try {
-        // Try both possible storage locations
-
-        // Delete from loan_documents (main storage for this page)
-        const loanDocsJson = localStorage.getItem('loan_documents');
-        if (loanDocsJson) {
-          const loanDocs = JSON.parse(loanDocsJson);
-          const filteredDocs = loanDocs.filter((doc: any) => doc.id !== documentId);
-          
-          if (filteredDocs.length !== loanDocs.length) {
-            localStorage.setItem('loan_documents', JSON.stringify(filteredDocs));
-            console.log(`Successfully deleted document from loan_documents storage`);
-          }
-        }
+        // Use document service instead of direct localStorage manipulation
+        const success = await documentService.deleteDocument(documentId);
         
-        // Delete from simple_documents if it exists
-        const simpleDocsJson = localStorage.getItem('simple_documents');
-        if (simpleDocsJson) {
-          const simpleDocs = JSON.parse(simpleDocsJson);
-          const filteredDocs = simpleDocs.filter((doc: any) => doc.id !== documentId);
+        if (success) {
+          console.log(`Successfully deleted document ${documentId} via document service`);
           
-          if (filteredDocs.length !== simpleDocs.length) {
-            localStorage.setItem('simple_documents', JSON.stringify(filteredDocs));
-            console.log(`Successfully deleted document from simple_documents storage`);
-          }
+          // Add a small delay before UI update
+          setTimeout(() => {
+            // Inform parent component to update UI
+            if (onViewDocument) {
+              onViewDocument(`delete_${documentId}`);
+            }
+            
+            // Optionally refresh the page - you might want to remove this
+            // and rely on component state updates instead
+            window.location.reload();
+          }, 300);
+        } else {
+          console.error(`Failed to delete document ${documentId}`);
+          // You could add a toast notification here if you have that functionality
         }
-        
-        // Now inform the parent component to update UI
-        if (onViewDocument) {
-          onViewDocument(`delete_${documentId}`);
-        }
-
-        // Force page refresh to ensure UI is updated
-        window.location.reload();
       } catch (error) {
         console.error(`Error deleting document: ${error}`);
       }

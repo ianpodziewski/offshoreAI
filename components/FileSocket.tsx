@@ -1,7 +1,9 @@
 import React from 'react';
 import { Tooltip } from './Tooltip';
 import { LoanDocument, DocumentStatus } from '@/utilities/loanDocumentStructure';
+import { useMemo } from 'react';
 
+// Update the interface to correctly accept docType parameters
 interface FileSocketProps {
   docType: string;
   label: string;
@@ -9,8 +11,10 @@ interface FileSocketProps {
   section: string;
   isRequired: boolean;
   document?: LoanDocument | null;
-  onUpload: () => void;
+  // Update this to match what we need - passing docType information
+  onUpload: (docType: string, category: string, section: string) => void;
   onView: (document: LoanDocument) => void;
+  onDelete?: (document: LoanDocument) => void;
 }
 
 export function FileSocket({
@@ -21,105 +25,152 @@ export function FileSocket({
   isRequired,
   document,
   onUpload,
-  onView
+  onView,
+  onDelete
 }: FileSocketProps) {
-  // Determine socket status
-  const isEmpty = !document;
-  const status = document?.status || (isRequired ? 'required' : 'optional');
+  // Find all documents with this docType (to support multiple files)
+  const documents = useMemo(() => {
+    // In a real implementation, you would fetch all documents with this docType
+    // For now, we'll just put the single document in an array if it exists
+    return document ? [document] : [];
+  }, [document]);
   
-  // Get status color 
-  const getStatusColor = (): string => {
-    const statusColors: Record<DocumentStatus, string> = {
-      pending: 'bg-yellow-100 border-yellow-300 text-yellow-800',
-      approved: 'bg-green-100 border-green-300 text-green-800',
-      rejected: 'bg-red-100 border-red-300 text-red-800',
-      required: 'bg-gray-100 border-gray-300 text-gray-800',
-      optional: 'bg-blue-100 border-blue-300 text-blue-800',
-      received: 'bg-indigo-100 border-indigo-300 text-indigo-800',
-      reviewed: 'bg-purple-100 border-purple-300 text-purple-800',
-      expired: 'bg-orange-100 border-orange-300 text-orange-800'
-    };
-    
-    return statusColors[status] || 'bg-gray-100 border-gray-300 text-gray-800';
+  const isEmpty = documents.length === 0;
+  
+  // Handle delete click
+  const handleDelete = (e: React.MouseEvent, doc: LoanDocument) => {
+    e.preventDefault();
+    e.stopPropagation(); // Prevent triggering the parent onClick (onView)
+    if (onDelete) {
+      onDelete(doc);
+    }
   };
   
-  // Generate document icon
-  const renderIcon = () => {
-    if (isEmpty) {
-      return (
-        <svg 
-          className="w-10 h-10 text-gray-400" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={1.5} 
-            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-          />
-        </svg>
-      );
-    }
-    
-    return (
-      <svg 
-        className="w-10 h-10 text-blue-500" 
-        fill="none" 
-        stroke="currentColor" 
-        viewBox="0 0 24 24" 
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
-          strokeWidth={1.5} 
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"  
-        />
-      </svg>
-    );
+  // Handle socket-specific upload
+  const handleSocketUpload = () => {
+    onUpload(docType, category, section);
   };
   
   return (
-    <div 
-      className={`
-        ${getStatusColor()}
-        border rounded-lg p-3 flex flex-col items-center transition-all
-        ${isEmpty ? 'opacity-70 hover:opacity-100' : 'hover:shadow-md'}
-        cursor-pointer
-      `}
-      onClick={() => isEmpty ? onUpload() : (document && onView(document))}
-    >
-      <div className="text-center mb-2">
-        {renderIcon()}
+    <div className="w-full mb-4">
+      {/* Header Card - Now passing docType info when clicked */}
+      <div 
+        className="bg-[#1A2234] border border-gray-700 rounded-t-lg p-4 flex justify-between items-center shadow-sm cursor-pointer hover:bg-[#1E2638] transition-colors"
+        onClick={handleSocketUpload}
+      >
+        <div className="flex items-center">
+          <svg 
+            className="w-6 h-6 text-indigo-400 mr-2" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24" 
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={1.5} 
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"  
+            />
+          </svg>
+          <h3 className="font-medium text-white">{label}</h3>
+          {isRequired && (
+            <span className="ml-2 bg-red-500 bg-opacity-20 text-red-400 text-xs px-2 py-0.5 rounded-full border border-red-500">
+              Required
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center">
+          {/* Plus icon instead of Upload button */}
+          <div 
+            className="w-8 h-8 bg-indigo-600 hover:bg-indigo-700 rounded-full flex items-center justify-center text-white cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation(); // Prevent double triggering
+              handleSocketUpload(); // Use the same handler to ensure consistency
+            }}
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
+              />
+            </svg>
+          </div>
+        </div>
       </div>
       
-      <Tooltip
-        content={
-          <div className="space-y-1 text-xs">
-            <p><strong>Type:</strong> {docType.replace(/_/g, ' ')}</p>
-            <p><strong>Category:</strong> {category}</p>
-            <p><strong>Section:</strong> {section.replace(/_/g, ' ')}</p>
-            <p><strong>Required:</strong> {isRequired ? 'Yes' : 'No'}</p>
-            {document && (
-              <>
-                <p><strong>Status:</strong> {document.status}</p>
-                <p><strong>Date:</strong> {new Date(document.dateUploaded).toLocaleDateString()}</p>
-              </>
-            )}
+      {/* Files Container - No padding at all */}
+      <div className="bg-[#1A2234] border-l border-r border-b border-gray-700 rounded-b-lg">
+        {isEmpty ? (
+          <div className="text-center py-6 text-gray-400">
+            <p>No documents uploaded yet</p>
           </div>
-        }
-      >
-        <h3 className="text-sm font-medium text-center">
-          {label}
-        </h3>
-      </Tooltip>
-      
-      <div className="mt-2 text-xs px-2 py-0.5 rounded-full text-center">
-        {isEmpty ? (isRequired ? 'Required' : 'Optional') : document?.status}
+        ) : (
+          documents.map((doc, index) => (
+            <div 
+              key={doc.id || index}
+              className="flex justify-between items-center bg-[#131B2E] border-t border-gray-700 first:border-t-0 p-4 hover:bg-[#1F2937] cursor-pointer"
+              onClick={() => onView(doc)}
+            >
+              <div className="flex items-center">
+                <svg 
+                  className="w-5 h-5 text-indigo-400 mr-2" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={1.5} 
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"  
+                  />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-white">{doc.filename || 'Document'}</p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(doc.dateUploaded).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center">
+                {/* Trash can icon */}
+                <button
+                  className="text-red-500 hover:text-red-400 transition-colors p-1"
+                  onClick={(e) => handleDelete(e, doc)}
+                  aria-label="Delete document"
+                >
+                  <svg 
+                    className="w-5 h-5" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24" 
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={1.5} 
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
-} 
+}
