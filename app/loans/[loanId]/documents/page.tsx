@@ -52,7 +52,6 @@ export default function DocumentsPage() {
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'sockets'>('sockets');
   
   // New state for tracking the selected document type for upload
   const [selectedDocType, setSelectedDocType] = useState<{
@@ -161,10 +160,6 @@ export default function DocumentsPage() {
     setSelectedDocument(null);
   };
 
-  const handleToggleViewMode = () => {
-    setViewMode(viewMode === 'list' ? 'sockets' : 'list');
-  };
-
   // Implement a document submission handler with the correct documentService method
   const handleSubmitDocument = async (document: LoanDocument): Promise<void> => {
     try {
@@ -225,16 +220,26 @@ export default function DocumentsPage() {
     fetchDocuments();
   };
 
+  // Modified handleGenerateSampleDocuments function for DocumentsPage.tsx
   const handleGenerateSampleDocuments = async () => {
     try {
       if (!loan) {
         showToast('Error', 'Loan data not available', 'error');
         return;
       }
-  
+
       showToast('Info', 'Generating sample documents...', 'info');
-  
-      // First, find and delete all existing sample documents
+
+      // Get current document types that already have user uploads
+      // (we don't want to overwrite these with samples)
+      const existingUserDocs = documents.filter(doc => 
+        !doc.filename?.startsWith('SAMPLE_')
+      );
+      
+      // Create a set of doc types that already have user uploads
+      const userDocTypes = new Set(existingUserDocs.map(doc => doc.docType));
+
+      // First, find and delete only existing sample documents
       const existingSamples = documents.filter(doc => 
         doc.filename && doc.filename.startsWith('SAMPLE_')
       );
@@ -247,16 +252,26 @@ export default function DocumentsPage() {
           await documentService.deleteDocument(doc.id);
         }
       }
-  
-      // Generate new sample documents
+
+      // Generate new sample documents - for ALL doc types
+      // We'll filter them later based on existing user uploads
       const generatedDocs = await documentService.generateSampleDocuments(loanId, loan.loanType);
       
-      if (generatedDocs.length === 0) {
-        showToast('Warning', 'No documents were generated', 'warning');
+      // Filter out any generated samples for doc types that already have user uploads
+      const filteredDocs = generatedDocs.filter(doc => !userDocTypes.has(doc.docType));
+      
+      if (filteredDocs.length === 0) {
+        showToast('Warning', 'No new sample documents were generated', 'warning');
       } else {
-        showToast('Success', `Generated ${generatedDocs.length} sample documents`, 'success');
+        // Save each document individually using addDocument 
+        // since saveDocuments is not available
+        for (const doc of filteredDocs) {
+          await documentService.addDocument(doc);
+        }
+        
+        showToast('Success', `Generated ${filteredDocs.length} sample documents`, 'success');
       }
-  
+
       // Reload documents
       loadDocuments();
     } catch (err) {
@@ -583,13 +598,6 @@ export default function DocumentsPage() {
                   Delete All Documents
                 </Button>
               </div>
-              <Button 
-                onClick={handleToggleViewMode} 
-                variant="outline" 
-                size="sm"
-              >
-                {viewMode === 'list' ? 'Socket View' : 'List View'}
-              </Button>
             </div>
 
             {/* Update the Document Completion Status card */}
@@ -684,49 +692,25 @@ export default function DocumentsPage() {
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                 {error}
               </div>
-            ) : documents.length === 0 && viewMode === 'list' ? (
-              <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-8 rounded text-center">
-                <p className="mb-4">No documents found for this loan.</p>
-                <p>Click "Generate Sample Documents" to create sample documents for this loan.</p>
-              </div>
             ) : (
-              <>
-                {viewMode === 'list' ? (
-                  // List view of documents
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {documents.map((document) => (
-                      <DocumentCard
-                        key={document.id}
-                        document={document}
-                        onClick={() => handleViewDocument(document)}
-                        onStatusChange={async (status: DocumentStatus) => {
-                          // Your status change handler...
-                        }}
-                        onDelete={() => handleDeleteDocument(document)}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  // Socket view of documents with filtering
-                  <div className="space-y-8">
-                    {organizedDocTypes
-                      .filter(group => !activeFilter || group.category === activeFilter)
-                      .map((group) => (
-                      <DocumentSocketGroup
-                        key={`${group.category}|${group.section}`}
-                        title={group.title}
-                        docTypes={group.docTypes}
-                        documents={documents}
-                        onUpload={(docType, category, section) => 
-                          handleUploadDocument(docType, category, section)
-                        }
-                        onViewDocument={handleViewDocument}
-                        onDeleteDocument={handleDeleteDocument}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
+              // Only show Socket view
+              <div className="space-y-8">
+                {organizedDocTypes
+                  .filter(group => !activeFilter || group.category === activeFilter)
+                  .map((group) => (
+                  <DocumentSocketGroup
+                    key={`${group.category}|${group.section}`}
+                    title={group.title}
+                    docTypes={group.docTypes}
+                    documents={documents}
+                    onUpload={(docType, category, section) => 
+                      handleUploadDocument(docType, category, section)
+                    }
+                    onViewDocument={handleViewDocument}
+                    onDeleteDocument={handleDeleteDocument}
+                  />
+                ))}
+              </div>
             )}
           </div>
 

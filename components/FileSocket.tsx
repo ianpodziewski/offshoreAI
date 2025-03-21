@@ -3,7 +3,6 @@ import { Tooltip } from './Tooltip';
 import { LoanDocument, DocumentStatus } from '@/utilities/loanDocumentStructure';
 import { useMemo } from 'react';
 
-// Update the interface to correctly accept docType parameters
 interface FileSocketProps {
   docType: string;
   label: string;
@@ -11,8 +10,7 @@ interface FileSocketProps {
   section: string;
   isRequired: boolean;
   document?: LoanDocument | null;
-  // Update this to match what we need - passing docType information
-  onUpload: (docType: string, category: string, section: string) => void;
+  onUpload: () => void;
   onView: (document: LoanDocument) => void;
   onDelete?: (document: LoanDocument) => void;
 }
@@ -30,9 +28,15 @@ export function FileSocket({
 }: FileSocketProps) {
   // Find all documents with this docType (to support multiple files)
   const documents = useMemo(() => {
-    // In a real implementation, you would fetch all documents with this docType
-    // For now, we'll just put the single document in an array if it exists
-    return document ? [document] : [];
+    // In a real implementation, we should fetch ALL documents with this docType
+    if (!document) return [];
+    
+    // For testing purposes, if this is a sample document and we have a non-sample uploaded document,
+    // we should show both - this is a dummy implementation to test UI
+    const isSample = document.filename?.startsWith('SAMPLE_') || false;
+    
+    // Just to test multiple document display - you should replace this with actual document fetching
+    return [document];
   }, [document]);
   
   const isEmpty = documents.length === 0;
@@ -46,17 +50,12 @@ export function FileSocket({
     }
   };
   
-  // Handle socket-specific upload
-  const handleSocketUpload = () => {
-    onUpload(docType, category, section);
-  };
-  
   return (
     <div className="w-full mb-4">
-      {/* Header Card - Now passing docType info when clicked */}
+      {/* Header Card */}
       <div 
         className="bg-[#1A2234] border border-gray-700 rounded-t-lg p-4 flex justify-between items-center shadow-sm cursor-pointer hover:bg-[#1E2638] transition-colors"
-        onClick={handleSocketUpload}
+        onClick={onUpload}
       >
         <div className="flex items-center">
           <svg 
@@ -86,8 +85,8 @@ export function FileSocket({
           <div 
             className="w-8 h-8 bg-indigo-600 hover:bg-indigo-700 rounded-full flex items-center justify-center text-white cursor-pointer"
             onClick={(e) => {
-              e.stopPropagation(); // Prevent double triggering
-              handleSocketUpload(); // Use the same handler to ensure consistency
+              e.stopPropagation(); // Add this to prevent double triggering (optional)
+              onUpload();
             }}
           >
             <svg 
@@ -108,7 +107,7 @@ export function FileSocket({
         </div>
       </div>
       
-      {/* Files Container - No padding at all */}
+      {/* Files Container */}
       <div className="bg-[#1A2234] border-l border-r border-b border-gray-700 rounded-b-lg">
         {isEmpty ? (
           <div className="text-center py-6 text-gray-400">
@@ -140,6 +139,11 @@ export function FileSocket({
                   <p className="text-sm font-medium text-white">{doc.filename || 'Document'}</p>
                   <p className="text-xs text-gray-400">
                     {new Date(doc.dateUploaded).toLocaleDateString()}
+                    {doc.filename?.startsWith('SAMPLE_') && (
+                      <span className="ml-2 bg-yellow-500 bg-opacity-20 text-yellow-400 text-xs px-2 py-0.5 rounded-full">
+                        Sample
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
