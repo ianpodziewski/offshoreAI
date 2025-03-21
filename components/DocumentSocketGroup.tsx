@@ -1,3 +1,5 @@
+// \offshoreAI\components\DocumentSocketGroup.tsx
+
 import React from 'react';
 import { LoanDocument } from '@/utilities/loanDocumentStructure';
 import { FileSocket } from './FileSocket';
@@ -36,6 +38,13 @@ export function DocumentSocketGroup({
     console.log(`Found ${docs.length} documents for docType ${docType}:`, 
       docs.map(d => ({ id: d.id, filename: d.filename })));
     return docs;
+  };
+
+  // Handle opening document in a new tab
+  const handleOpenInNewTab = (document: LoanDocument) => {
+    // Open the document in a new tab
+    window.open(`/document-view?id=${document.id}&loanId=${document.loanId}`, '_blank');
+    console.log("Opening document in new tab:", document.id);
   };
   
   return (
@@ -145,8 +154,34 @@ export function DocumentSocketGroup({
                             </p>
                           </div>
                         </div>
-                        
-                        <div className="flex items-center">
+
+                        <div className="flex items-center space-x-2">
+                          {/* Open in new tab button */}
+                          <button
+                            className="text-blue-500 hover:text-blue-400 transition-colors p-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenInNewTab(doc);
+                            }}
+                            aria-label="Open in new tab"
+                            title="Open in new tab"
+                          >
+                            <svg 
+                              className="w-5 h-5" 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24" 
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={1.5} 
+                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" 
+                              />
+                            </svg>
+                          </button>
+                          
                           {/* Trash can icon */}
                           <button
                             className="text-red-500 hover:text-red-400 transition-colors p-1"

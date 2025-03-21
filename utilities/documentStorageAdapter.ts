@@ -1,3 +1,5 @@
+// \offshoreAI\utilities\documentStorageAdapter.ts
+
 import { LoanDocument, DocumentStatus, DocumentCategory } from './loanDocumentStructure';
 
 // Storage keys

@@ -39,6 +39,34 @@ export function DocumentUploadForm({
     }
   };
   
+  // Helper function to read file as base64
+  const readFileAsBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          // Remove the data URL prefix (data:application/pdf;base64,)
+          const base64 = reader.result.split(',')[1];
+          resolve(base64);
+        } else {
+          reject(new Error('Failed to convert file to base64'));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+  
+  // Helper function to read file content as text
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  };
+  
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     
@@ -51,12 +79,16 @@ export function DocumentUploadForm({
       setSubmitting(true);
       console.log("Preparing to submit document...");
       
+      // Get the file extension from the filename
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const fileType = fileExtension ? `.${fileExtension}` : '';
+      
       // Create document object with minimal required info
       const newDocument: LoanDocument = {
         id: uuidv4(),
         loanId,
         filename: file.name,
-        fileType: file.type,
+        fileType: fileType,
         fileSize: file.size,
         dateUploaded: new Date().toISOString(),
         category: category as any, // Cast to match your DocumentCategory type
@@ -68,21 +100,46 @@ export function DocumentUploadForm({
         version: 1
       };
       
+      // For text-based files, read the content as text
+      if (
+        file.type === 'text/plain' || 
+        file.type === 'text/html' || 
+        file.type === 'application/json' ||
+        fileExtension === 'txt' ||
+        fileExtension === 'html' ||
+        fileExtension === 'json'
+      ) {
+        newDocument.content = await readFileAsText(file);
+      } 
+      // For binary files like PDFs, read as base64
+      else if (
+        file.type === 'application/pdf' || 
+        fileExtension === 'pdf' ||
+        file.type.includes('pdf')
+      ) {
+        // Store the base64 data for PDFs
+        newDocument.fileData = await readFileAsBase64(file);
+      }
+      // For other binary files, also store as base64
+      else if (
+        file.type.includes('image') || 
+        ['jpg', 'jpeg', 'png', 'gif'].includes(fileExtension || '') ||
+        ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(fileExtension || '')
+      ) {
+        newDocument.fileData = await readFileAsBase64(file);
+      }
+      
       console.log("Document prepared for submission:", {
         id: newDocument.id,
         loanId: newDocument.loanId,
         filename: newDocument.filename,
         docType: newDocument.docType,
         category: newDocument.category,
-        section: newDocument.section
+        section: newDocument.section,
+        fileType: newDocument.fileType,
+        hasContent: !!newDocument.content,
+        hasFileData: !!newDocument.fileData
       });
-      
-      // For text-based files, read the content
-      if (file.type === 'text/plain' || 
-          file.type === 'text/html' || 
-          file.type === 'application/json') {
-        newDocument.content = await readFileAsText(file);
-      }
       
       await onSubmit(newDocument);
       console.log("Document submitted successfully");
@@ -93,16 +150,6 @@ export function DocumentUploadForm({
     } finally {
       setSubmitting(false);
     }
-  };
-  
-  // Helper function to read file content
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsText(file);
-    });
   };
   
   return (

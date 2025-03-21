@@ -20,21 +20,23 @@ export type DocumentCategory =
 export interface LoanDocument {
   id: string;
   loanId: string;
+  docType: string;
   filename: string;
-  fileType?: string;
-  fileSize?: number;
-  dateUploaded: string;
   category: DocumentCategory;
   section: string;
   subsection: string;
-  docType: string;
+  dateUploaded: string;
   status: DocumentStatus;
+  isRequired: boolean;
   content?: string; // Base64 encoded content or HTML for generated documents
+  version?: number;
   notes?: string;
   assignedTo?: string;
-  isRequired: boolean;
   expirationDate?: string;
-  version?: number;
+  fileSize?: number;
+  fileType?: string;
+  fileData?: string;
+  fileUrl?: string;
 }
 
 // Document structure definition
