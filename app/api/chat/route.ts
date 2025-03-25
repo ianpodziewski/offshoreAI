@@ -10,7 +10,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { PINECONE_INDEX_NAME } from "@/configuration/pinecone";
 import { simpleDocumentService } from "@/utilities/simplifiedDocumentService";
 
-// Maximum tokens that can be safely sent to the model
+// Maximumtokens that can be safely sent to the model
 const MAX_TOKENS_LIMIT = 7000; // Leave some buffer from the 8192 max
 const ESTIMATED_CHARS_PER_TOKEN = 4; // Rough estimate of characters per token
 const MAX_CHARS = MAX_TOKENS_LIMIT * ESTIMATED_CHARS_PER_TOKEN;
