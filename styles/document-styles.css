@@ -1,0 +1,22 @@
+/* styles/document-styles.css */
+
+/* This will be loaded in the app styles folder but can be applied to the entire application */
+
+/* Document print styles - these ensure documents look good when printed */
+@media print {
+    .document {
+      padding: 0.5in !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+    }
+    
+    .watermark {
+      display: block !important;
+      opacity: 0.1 !important;
+    }
+    
+    @page {
+      margin: 0.5in;
+    }
+  }

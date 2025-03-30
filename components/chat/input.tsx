@@ -1,18 +1,19 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Input, FileInput } from "@/components/ui/input"; // ✅ Import FileInput
+import { useState, useRef, useEffect } from "react";
+import { Input, FileInput } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowUp, Plus, Paperclip } from "lucide-react";  // <-- Added Paperclip import
+import { ArrowUp, Plus, Paperclip, X } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import ChatFooter from "@/components/chat/footer";
+import { simpleDocumentService } from "@/utilities/simplifiedDocumentService";
 
 interface ChatInputProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleSubmit: (combinedInput: string, file?: File) => void;
   input: string;
   isLoading: boolean;
+  onUploadComplete?: () => Promise<void>;
 }
 
 export default function ChatInput({
@@ -20,10 +21,15 @@ export default function ChatInput({
   handleSubmit,
   input,
   isLoading,
+  onUploadComplete
 }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm({
     defaultValues: {
@@ -31,325 +37,211 @@ export default function ChatInput({
     },
   });
 
-  // Trigger the file input when clicking the Plus button
+  // Focus input field when component mounts
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+P or Cmd+P to upload file
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        openFileDialog();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const openFileDialog = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   };
 
-  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-      console.log("📂 File selected:", e.target.files[0].name);
+      const selectedFile = e.target.files[0];
+      setFile(selectedFile);
+      setSelectedFileName(selectedFile.name);
+      console.log("📂 File selected:", selectedFile.name);
+      
+      // Focus back on the input field after file selection
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
     } else {
       console.warn("⚠️ No file selected.");
     }
   };
 
-  // Remove selected file (new functionality)
   const removeFile = () => {
     setFile(null);
+    setSelectedFileName(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+    
+    // Focus back on the input field
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
   };
 
-  // Handle form submission
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const resetFileInput = () => {
+    setFile(null);
+    setSelectedFileName(null);
+    form.reset({ message: "" });
+    
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    
+    setFileInputKey(prev => prev + 1);
+  };
+
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    console.log("📤 Submitting chat input:", { input, file });
-
-    if (!input.trim() && !file) {
+    if (!input.trim() && !file && !selectedFileName) {
       console.warn("⚠️ No input or file provided.");
       return;
     }
 
-    // Capture the current file in a local variable
     const fileToSubmit = file;
+    const fileNameToSubmit = selectedFileName;
 
-    console.log("🚀 Calling handleSubmit with:", { message: input, file: fileToSubmit });
-
-    if (typeof handleSubmit !== "function") {
-      console.error("❌ handleSubmit is not a function!", handleSubmit);
-      return;
+    if (fileToSubmit) {
+      setIsUploadingDocument(true);
+      try {
+        const chatLoanId = 'chat-uploads';
+        const result = await simpleDocumentService.addDocument(fileToSubmit, chatLoanId);
+        console.log("✅ Document added to Recent Documents:", result);
+        
+        if (onUploadComplete) {
+          await onUploadComplete();
+        }
+      } catch (error) {
+        console.error("❌ Error saving document to Recent Documents:", error);
+      } finally {
+        setIsUploadingDocument(false);
+      }
     }
 
-    // Send data up to the parent with the captured file value
-    handleSubmit(input, fileToSubmit || undefined);
+    let fileToPass = fileToSubmit;
+    if (!fileToSubmit && fileNameToSubmit) {
+      fileToPass = new File([""], fileNameToSubmit, { type: "application/octet-stream" });
+    }
 
-    // Clear out file state and the text input:
-    // 1) The local form (react-hook-form)
-    // 2) The parent component’s `input` prop
-    setFile(null);
-    form.reset({ message: "" });
+    handleSubmit(input, fileToPass || undefined);
 
-    // Create a mock event to reset the parent’s controlled input
     const mockEvent = {
       target: { value: "" },
       currentTarget: { value: "" },
     } as React.ChangeEvent<HTMLInputElement>;
     handleInputChange(mockEvent);
+    
+    resetFileInput();
   };
 
   return (
-    <div className="z-10 flex flex-col justify-center items-center fixed bottom-0 w-full p-5 bg-white shadow-[0_-10px_15px_-2px_rgba(255,255,255,1)] text-base">
-      <div className="max-w-screen-lg w-full">
-        {/* Moved Selected File Bubble ABOVE the form */}
-        {file && (
-          <div className="mb-2 inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
-            <Paperclip className="w-5 h-5 text-gray-500 mr-2" />
-            <span className="text-sm text-gray-800">{file.name}</span>
-            <button
-              type="button"
-              onClick={removeFile}
-              className="ml-4 text-sm text-red-500 hover:underline"
-            >
-              Remove
-            </button>
-          </div>
-        )}
-
-        <Form {...form}>
-          <form
-            onSubmit={onSubmit}
-            className={`flex-0 flex w-full p-1 border rounded-full shadow-sm ${
-              isFocused ? "ring-2 ring-ring ring-offset-2" : ""
-            }`}
+    <div className="w-full">
+      {/* Selected File Bubble */}
+      {(file || selectedFileName) && (
+        <div className="mb-2 inline-flex items-center px-3 py-2 border border-gray-700 rounded-lg bg-gray-800 shadow-md">
+          <Paperclip className="w-5 h-5 text-blue-400 mr-2" />
+          <span className="text-sm text-gray-200">{file?.name || selectedFileName}</span>
+          <button
+            type="button"
+            onClick={removeFile}
+            className="ml-4 p-1 rounded-full hover:bg-gray-700 text-gray-400 hover:text-red-400 transition-colors"
+            aria-label="Remove file"
           >
-            {/* File Input (Hidden) */}
-            <FileInput
-              ref={fileInputRef}
-              accept=".pdf,.docx,.txt"
-              onChange={handleFileChange}
-              className="hidden"
-            />
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
-            {/* Text Input */}
-            <FormField
-              control={form.control}
-              name="message"
-              render={({ field }) => (
-                <FormItem className="flex-grow">
-                  <FormControl>
-                    <Input
-                      {...field}
-                      onChange={(e) => {
-                        handleInputChange(e);
-                        console.log("📝 Input changed:", e.target.value);
-                      }}
-                      value={input}
-                      className="border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-                      onFocus={() => setIsFocused(true)}
-                      onBlur={() => setIsFocused(false)}
-                      placeholder="Type your message here..."
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+      <Form {...form}>
+        <form
+          onSubmit={onSubmit}
+          className={`flex w-full p-1.5 border ${
+            isFocused 
+              ? "border-blue-500 ring-2 ring-blue-500/20" 
+              : "border-gray-700"
+          } rounded-full shadow-md bg-gray-800 transition-all duration-200`}
+        >
+          <FileInput
+            key={fileInputKey}
+            ref={fileInputRef}
+            accept=".pdf,.docx,.txt"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
-            {/* Plus Button (Triggers File Upload) */}
+          <FormField
+            control={form.control}
+            name="message"
+            render={({ field }) => (
+              <FormItem className="flex-grow">
+                <FormControl>
+                  <Input
+                    {...field}
+                    ref={inputRef}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                    }}
+                    value={input}
+                    className="border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-white placeholder:text-gray-500"
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                    placeholder="Type your message here..."
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <div className="flex items-center">
             <Button
               type="button"
               variant="ghost"
-              className="rounded-full w-10 h-10 p-0 flex items-center justify-center mr-2"
+              size="icon"
+              className="rounded-full w-9 h-9 text-gray-400 hover:text-blue-400 hover:bg-gray-700"
               onClick={openFileDialog}
+              disabled={isLoading || isUploadingDocument}
+              title="Upload file (Ctrl+P)"
             >
               <Plus className="w-5 h-5" />
             </Button>
 
-            {/* Send Button */}
             <Button
               type="submit"
-              className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
-              disabled={(input.trim() === "" && !file) || isLoading}
+              size="icon"
+              className={`rounded-full w-9 h-9 ml-1 ${
+                isLoading || isUploadingDocument
+                  ? "bg-gray-700 text-gray-500"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
+              disabled={(input.trim() === "" && !file && !selectedFileName) || isLoading || isUploadingDocument}
             >
               <ArrowUp className="w-5 h-5" />
             </Button>
-          </form>
-        </Form>
-      </div>
-      <ChatFooter />
+          </div>
+        </form>
+      </Form>
+      
+      {isUploadingDocument && (
+        <div className="mt-2 text-xs text-gray-400 flex items-center">
+          <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-blue-500 border-r-2 border-blue-500 border-b-2 border-transparent mr-2"></div>
+          Uploading document...
+        </div>
+      )}
     </div>
   );
 }
-
-
-// "use client";
-
-// import { useState, useRef } from "react";
-// import { Input, FileInput } from "@/components/ui/input"; // ✅ Import FileInput
-// import { Button } from "@/components/ui/button";
-// import { ArrowUp, Plus, Paperclip } from "lucide-react";  // <-- Added Paperclip import
-// import { useForm } from "react-hook-form";
-// import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-// import ChatFooter from "@/components/chat/footer";
-
-// interface ChatInputProps {
-//   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-//   handleSubmit: (combinedInput: string, file?: File) => void;
-//   input: string;
-//   isLoading: boolean;
-// }
-
-// export default function ChatInput({
-//   handleInputChange,
-//   handleSubmit,
-//   input,
-//   isLoading,
-// }: ChatInputProps) {
-//   const [isFocused, setIsFocused] = useState(false);
-//   const [file, setFile] = useState<File | null>(null);
-//   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-//   const form = useForm({
-//     defaultValues: {
-//       message: "",
-//     },
-//   });
-
-//   // Trigger the file input when clicking the Plus button
-//   const openFileDialog = () => {
-//     if (fileInputRef.current) {
-//       fileInputRef.current.click();
-//     }
-//   };
-
-//   // Handle file selection
-//   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     if (e.target.files && e.target.files[0]) {
-//       setFile(e.target.files[0]);
-//       console.log("📂 File selected:", e.target.files[0].name);
-//     } else {
-//       console.warn("⚠️ No file selected.");
-//     }
-//   };
-
-//   // Remove selected file (new functionality)
-//   const removeFile = () => {
-//     setFile(null);
-//     if (fileInputRef.current) {
-//       fileInputRef.current.value = "";
-//     }
-//   };
-
-//   // Handle form submission
-//   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-//     e.preventDefault();
-
-//     console.log("📤 Submitting chat input:", { input, file });
-
-//     if (!input.trim() && !file) {
-//       console.warn("⚠️ No input or file provided.");
-//       return;
-//     }
-
-//     console.log("🚀 Calling handleSubmit with:", { message: input, file });
-
-//     if (typeof handleSubmit !== "function") {
-//       console.error("❌ handleSubmit is not a function!", handleSubmit);
-//       return;
-//     }
-
-//     // Send data up to the parent
-//     handleSubmit(input, file || undefined);
-
-//     // Clear out file state and the text input in both:
-//     // 1) The local form (react-hook-form)
-//     // 2) The parent component’s `input` prop
-//     setFile(null);
-//     form.reset({ message: "" });
-
-//     // Create a mock event to reset the parent’s controlled input
-//     const mockEvent = {
-//       target: { value: "" },
-//       currentTarget: { value: "" },
-//     } as React.ChangeEvent<HTMLInputElement>;
-//     handleInputChange(mockEvent);
-//   };
-
-//   return (
-//     <div className="z-10 flex flex-col justify-center items-center fixed bottom-0 w-full p-5 bg-white shadow-[0_-10px_15px_-2px_rgba(255,255,255,1)] text-base">
-//       <div className="max-w-screen-lg w-full">
-//         {/* Moved Selected File Bubble ABOVE the form */}
-//         {file && (
-//           <div className="mb-2 inline-flex items-center px-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm">
-//             <Paperclip className="w-5 h-5 text-gray-500 mr-2" />
-//             <span className="text-sm text-gray-800">{file.name}</span>
-//             <button
-//               type="button"
-//               onClick={removeFile}
-//               className="ml-4 text-sm text-red-500 hover:underline"
-//             >
-//               Remove
-//             </button>
-//           </div>
-//         )}
-
-//         <Form {...form}>
-//           <form
-//             onSubmit={onSubmit}
-//             className={`flex-0 flex w-full p-1 border rounded-full shadow-sm ${
-//               isFocused ? "ring-2 ring-ring ring-offset-2" : ""
-//             }`}
-//           >
-//             {/* File Input (Hidden) */}
-//             <FileInput
-//               ref={fileInputRef}
-//               accept=".pdf,.docx,.txt"
-//               onChange={handleFileChange}
-//               className="hidden"
-//             />
-
-//             {/* Text Input */}
-//             <FormField
-//               control={form.control}
-//               name="message"
-//               render={({ field }) => (
-//                 <FormItem className="flex-grow">
-//                   <FormControl>
-//                     <Input
-//                       {...field}
-//                       onChange={(e) => {
-//                         handleInputChange(e);
-//                         console.log("📝 Input changed:", e.target.value);
-//                       }}
-//                       value={input}
-//                       className="border-none focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-//                       onFocus={() => setIsFocused(true)}
-//                       onBlur={() => setIsFocused(false)}
-//                       placeholder="Type your message here..."
-//                     />
-//                   </FormControl>
-//                 </FormItem>
-//               )}
-//             />
-
-//             {/* Plus Button (Triggers File Upload) */}
-//             <Button
-//               type="button"
-//               variant="ghost"
-//               className="rounded-full w-10 h-10 p-0 flex items-center justify-center mr-2"
-//               onClick={openFileDialog}
-//             >
-//               <Plus className="w-5 h-5" />
-//             </Button>
-
-//             {/* Send Button */}
-//             <Button
-//               type="submit"
-//               className="rounded-full w-10 h-10 p-0 flex items-center justify-center"
-//               disabled={input.trim() === "" || isLoading}
-//             >
-//               <ArrowUp className="w-5 h-5" />
-//             </Button>
-//           </form>
-//         </Form>
-//       </div>
-//       <ChatFooter />
-//     </div>
-//   );
-// }

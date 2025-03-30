@@ -1,21 +1,8 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
 import { PAGE_TITLE, PAGE_DESCRIPTION } from "@/configuration/ui";
 import "./globals.css";
 import { ErrorWrapper } from "./parts/error/error-wrapper";
 import { TooltipProvider } from "@/components/ui/tooltip";
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
 
 export const metadata: Metadata = {
   title: PAGE_TITLE,
@@ -27,12 +14,26 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Make sure this is only called on the server side
+  if (typeof window === 'undefined') {
+    const requiredEnvVars = [
+      { name: 'OPENAI_API_KEY', value: process.env.OPENAI_API_KEY },
+      { name: 'PINECONE_API_KEY', value: process.env.PINECONE_API_KEY }
+    ];
+    
+    for (const { name, value } of requiredEnvVars) {
+      if (!value) {
+        console.error(`⚠️ Warning: ${name} environment variable is not set`);
+      } else {
+        console.log(`✅ ${name} environment variable is set`);
+      }
+    }
+  }
+
   return (
     <html lang="en">
       <TooltipProvider>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
+        <body className="bg-background text-foreground antialiased">
           <ErrorWrapper>{children}</ErrorWrapper>
         </body>
       </TooltipProvider>
